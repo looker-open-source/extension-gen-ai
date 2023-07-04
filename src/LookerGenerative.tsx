@@ -15,7 +15,7 @@
 import React, { useContext, useEffect, useState , FormEvent, useCallback, ReactElement} from 'react'
 import { Button, ComponentsProvider, FieldTextArea, Space, Span, SpaceVertical} from '@looker/components'
 import { ExtensionContext , ExtensionContextData} from '@looker/extension-sdk-react'
-import { type ILook, IRequestAllLookmlModels, ILookmlModel , ISqlQueryCreate, ILookmlModelExploreFieldset,ILookmlModelExploreField, ISqlQuery, query, } from '@looker/sdk'
+import { type ILook, IRequestAllLookmlModels, ILookmlModel , ISqlQueryCreate, ILookmlModelExploreFieldset,ILookmlModelExploreField, ISqlQuery, query,IQuery } from '@looker/sdk'
 import { ExploreList } from './ExploreList'
 import { Switch, Route, useHistory, useRouteMatch } from 'react-router-dom'
 import { MessageBar, Box, Heading } from '@looker/components'
@@ -89,7 +89,6 @@ export const LookerGenerative: React.FC = () => {
   
   
   const handleClear = () => {
-
     setPrompt('Default Prompt');    
     exploreDivElement?.removeChild(exploreDivElement.firstChild!);
 
@@ -273,55 +272,30 @@ export const LookerGenerative: React.FC = () => {
               core40SDK.create_query(json_dict).then(
                 results =>
                 {
+                  // If want to clean old results
+                  // if(true){
+                  //   handleClear();
+                  // } 
+                  setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);
                   // @ts-ignore
-                  console.log("Explore Url: " + results.value.explore_url)
+                  const view = results.value.view;
                   // @ts-ignore
-                  const query_id = results.value.id;
-                  console.log("Query Id:" + query_id);                  
+                  const query_id = results.value.client_id;
+                  console.log("Query Id:" + query_id);     
+                  // @ts-ignore
+                  const modelName = results.value.model;             
                   // // Update the Explore with New QueryId                  
                   LookerEmbedSDK.init(hostUrl!);
                   // if(currentExploreId!= null){
                   console.log("explore not null: " + currentExploreId);
-                  LookerEmbedSDK.createExploreWithUrl("https://cloudcelatam.cloud.looker.com/"+ "embed/explore/"+ "dataml-latam-argolis" + "/"  + "joao" + "?qid=" + "dLmGbgXilWwHeNTLmjt8Ey")  
+                  LookerEmbedSDK.createExploreWithUrl(hostUrl+ "/embed/explore/"+ modelName + "/"  + view + "?qid=" + query_id)  
                   .appendTo(exploreDivElement!)              
                   .build()        
                   .connect()
                   .then(setupExplore)
                   .catch((error: Error) => {
                     console.error('Connection error', error)
-                  });
-                  // }
-
-                  // debugger;
-                  // // @ts-ignore
-                  // console.log("Explore Url: " + results.value.explore_url)
-                  // // @ts-ignore
-                  // const query_id = results.value.client_id;
-                  // // @ts-ignore
-                  // const share_url = results.value.share_url;
-                  // // @ts-ignore
-                  // const urlValue = results.value.url;
-                  // // @ts-ignore
-                  // const viewName = results.value.view;
-                  // console.log("Query Id:" + query_id);                  
-                  // // // Update the Explore with New QueryId                  
-                  // LookerEmbedSDK.init(hostUrl!);
-
-                  // if(query_id!=null && currentLookerModel != null && viewName!=null){
-                  //   console.log("current model not null: " + currentLookerModel);
-                  //   LookerEmbedSDK.createExploreWithUrl(hostUrl+ "/embed/explore/"+ currentLookerModel.name! + "/"  + viewName! + "?qid=" + query_id)
-                  //   .appendTo(exploreDivElement!)              
-                  //   .build()        
-                  //   .connect()
-                  //   .then(setupExplore)
-                  //   .catch((error: Error) => {
-                  //     console.error('Connection error', error)
-                  //   })
-                    
-                  // }
-                  // else {
-                  //   console.log("currentlookermodel is null");
-                  // }         
+                  });                          
                 }
               );              
             }
@@ -349,11 +323,11 @@ export const LookerGenerative: React.FC = () => {
     setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);
     // }
     // if (el && hostUrl) {
-    console.log("Entrou aqui "+ hostUrl);
+    // console.log("Entrou aqui "+ hostUrl);
     setExploreDivElement(el); 
-    LookerEmbedSDK.init(hostUrl!);
+    // LookerEmbedSDK.init(hostUrl!);
     // if(currentExploreId!= null){
-    console.log("explore not null: " + currentExploreId);
+    // console.log("explore not null: " + currentExploreId);
     // LookerEmbedSDK.createExploreWithUrl("https://cloudcelatam.cloud.looker.com/"+ "embed/explore/"+ "dataml-latam-argolis" + "/"  + "joao" + "?qid=" + "dLmGbgXilWwHeNTLmjt8Ey")  
     // .appendTo(exploreDivelement!)              
     // .build()        
