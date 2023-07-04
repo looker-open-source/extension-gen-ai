@@ -282,14 +282,14 @@ export const LookerGenerative: React.FC = () => {
                   LookerEmbedSDK.init(hostUrl!);
                   // if(currentExploreId!= null){
                   console.log("explore not null: " + currentExploreId);
-                  LookerEmbedSDK.createExploreWithUrl(hostUrl+ "/embed/explore/"+ "PROJECT_ID" + "/"  + "joao" + "?qid=" + "dLmGbgXilWwHeNTLmjt8Ey")  
+                  LookerEmbedSDK.createExploreWithUrl("https://cloudcelatam.cloud.looker.com/"+ "embed/explore/"+ "PROJECT_ID" + "/"  + "joao" + "?qid=" + "dLmGbgXilWwHeNTLmjt8Ey")  
                   .appendTo(exploreDivElement!)              
                   .build()        
                   .connect()
                   .then(setupExplore)
                   .catch((error: Error) => {
                     console.error('Connection error', error)
-                  })
+                  });
                   // }
 
                   // debugger;
@@ -345,6 +345,7 @@ export const LookerGenerative: React.FC = () => {
 
   const embedCtrRef = useCallback((el) => {
     // if(hostUrl == null) {
+
     setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);
     // }
     // if (el && hostUrl) {
@@ -353,14 +354,14 @@ export const LookerGenerative: React.FC = () => {
     LookerEmbedSDK.init(hostUrl!);
     // if(currentExploreId!= null){
     console.log("explore not null: " + currentExploreId);
-    LookerEmbedSDK.createExploreWithUrl("https://cloudcelatam.cloud.looker.com/"+ "embed/explore/"+ "PROJECT_ID" + "/"  + "joao" + "?qid=" + "dLmGbgXilWwHeNTLmjt8Ey")  
-    .appendTo(el!)              
-    .build()        
-    .connect()
-    .then(setupExplore)
-    .catch((error: Error) => {
-      console.error('Connection error', error)
-    })
+    // LookerEmbedSDK.createExploreWithUrl("https://cloudcelatam.cloud.looker.com/"+ "embed/explore/"+ "PROJECT_ID" + "/"  + "joao" + "?qid=" + "dLmGbgXilWwHeNTLmjt8Ey")  
+    // .appendTo(exploreDivelement!)              
+    // .build()        
+    // .connect()
+    // .then(setupExplore)
+    // .catch((error: Error) => {
+    //   console.error('Connection error', error)
+    // })
           
     // }
   }, [])
