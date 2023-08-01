@@ -17,15 +17,25 @@
   * HelloWorld makes a simple call to the Looker API using the Extension Framework's built in authentication,
   * and returns the logged in user.
 */
-import React from 'react'
-import { ExtensionProvider } from '@looker/extension-sdk-react'
+import React from 'react';
+import { ComponentsProvider, Tabs2, Tab2 } from "@looker/components";
+import { ExtensionProvider} from '@looker/extension-sdk-react'
 import { hot } from 'react-hot-loader/root'
 
-import { LookerGenerative } from './LookerGenerative'
+import { LookerExploreGenerative as LookerExploreGenerative } from './LookerExploreGenerative'
+import { LookerDashboardGenerative as LookerDashboardGenerative } from './LookerDashboardGenerative'
 
 export const App = hot(() => (
   <ExtensionProvider>
-    <LookerGenerative/>
-    {/* <ExtensionLookGenAi/> */}
+    <ComponentsProvider>
+      <Tabs2 defaultTabId="dashboards">
+        <Tab2 id="explore" label="Looker Generative Explores">
+          <LookerExploreGenerative/>
+        </Tab2>
+        <Tab2 id="dashboards" label="Looker Generative Insights on Dashboards">
+        <LookerDashboardGenerative/>
+        </Tab2>      
+      </Tabs2>  
+    </ComponentsProvider>
   </ExtensionProvider>
 ))
