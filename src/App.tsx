@@ -28,7 +28,7 @@ import { LookerDashboardGenerative as LookerDashboardGenerative } from './Looker
 export const App = hot(() => (
   <ExtensionProvider>
     <ComponentsProvider>
-      <Tabs2 defaultTabId="dashboards">
+      <Tabs2 defaultTabId="explore">
         <Tab2 id="explore" label="Looker Generative Explores">
           <LookerExploreGenerative/>
         </Tab2>
