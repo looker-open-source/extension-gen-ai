@@ -73,7 +73,7 @@ export const LookerDashboardGenerative: React.FC = () => {
   
   const [hostUrl, setHostUrl] = useState<string>()
 
-  const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD";
+  const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
   const defaultPromptValue = "Can you summarize the following datasets in 10 bullet points?";
 
   useEffect(() => {
@@ -206,7 +206,7 @@ export const LookerDashboardGenerative: React.FC = () => {
     `;
     // console.log("Query to Run: " + query_to_run);
     const sql_query_create_param: ISqlQueryCreate = {
-      connection_name:"dataml-latam-argolis",
+      connection_name: "@{CONNECTION_NAME}",
       sql: query_to_run         
     }
 
