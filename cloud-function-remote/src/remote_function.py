@@ -7,6 +7,7 @@ from vertexai.preview.language_models import TextGenerationModel
 
 PROJECT_ID = "PROJECT_ID"  # @param {type:"string"}
 LOCATION = "us-central1"  # @param {type:"string"}
+TUNED_MODEL_URL = "projects/94990521171/locations/us-central1/models/7522623261755047936"
 
 vertexai.init(project=PROJECT_ID, location=LOCATION)
 
@@ -20,7 +21,7 @@ def bq_vertex_remote(request):
     return_value = []
     request_json = request.get_json()
     calls = request_json['calls']
-    tuned_model = TextGenerationModel.get_tuned_model('projects/94990521171/locations/us-central1/models/7522623261755047936')    
+    tuned_model = TextGenerationModel.get_tuned_model(TUNED_MODEL_URL)    
     for call in calls:
       if call is not None and len(call) == 1:
         prompt = call[0]
@@ -29,7 +30,7 @@ def bq_vertex_remote(request):
           genai_return = tuned_model.predict(
             prompt=prompt,
             temperature= 0.2,
-            max_output_tokens= 256,
+            max_output_tokens= 1024,
             top_p= 0.8,
             top_k= 40
             )
