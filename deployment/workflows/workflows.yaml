@@ -1,0 +1,84 @@
+# This is a workflow to run the fine tuning LLM job on Vertex AI
+main:
+    params: [input]
+    steps:
+    - runFineTunningModel:
+        call: http.post        
+        args:
+            url: "https://europe-west4-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/europe-west4/pipelineJobs"
+            auth:
+                type: OAuth2
+            body: {
+                    "displayName": "llm-looker-finetuning",
+                    "runtimeConfig": {
+                        "gcsOutputDirectory": "GCS_BUCKET_NAME/output",
+                        "parameterValues": {
+                        "project": "PROJECT_ID",
+                        "model_display_name": "looker-llm",
+                        "dataset_uri": "GCS_BUCKET_NAME/finetuning.jsonl",
+                        "location": "us-central1",
+                        "large_model_reference": "text-bison@001",
+                        "train_steps": 100,
+                        "learning_rate_multiplier": 0.002
+                        }
+                    },
+                    "templateUri": "https://us-kfp.pkg.dev/ml-pipeline/large-language-model-pipelines/tune-large-model/v2.0.0"
+                }
+        result: fineTuningResult
+    - extractPipelineResourceName:
+        assign:
+            - pipelineFullResourceName: ${fineTuningResult.body.name}
+            - pipelineResourceNameMatch: ${text.find_all_regex(pipelineFullResourceName, "pipelineJobs/.*")}
+            - pipelineResourceName: ${pipelineResourceNameMatch[0].match}
+    - logResourceName:
+        call: sys.log
+        args:
+            text: ${pipelineResourceName}
+            severity: INFO
+    - checkStatus:
+        call: http.get        
+        args:
+            url: ${"https://europe-west4-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/europe-west4/" + pipelineResourceName}
+            auth:
+                type: OAuth2 
+        result: checkFineTuningStatus
+    - extractStatus:
+        assign:
+            - pipelineStatus:  ${checkFineTuningStatus.body.state}            
+    - assertFinishedTraining:
+        switch:
+            - condition: ${pipelineStatus != "PIPELINE_STATE_RUNNING" or pipelineStatus != "PIPELINE_STATE_PENDING" or pipelineStatus != "PIPELINE_STATE_QUEUED"}
+              next: extractCurrentTaskDetails
+        next: sleepPooling
+    - sleepPooling:
+        call: sys.sleep #Pooling through Sleep
+        args: 
+            seconds: 10
+        next: checkStatus
+    - extractCurrentTaskDetails:
+        assign:
+            - taskDetails: ${checkFineTuningStatus.body.jobDetail.taskDetails}
+            - outputModel: ""
+    - checkTaskDetais:
+        for:
+            value: currentTaskDetail
+            in: ${taskDetails}
+            steps:
+                - checkStepName:
+                    switch:
+                        - condition: ${currentTaskDetail.taskName == "deployment-graph"}
+                          next: setTaskDetail
+                    next: continue
+                - setTaskDetail:
+                    assign:
+                        - taskDetail:  ${currentTaskDetail}
+                        - outputModel: ${currentTaskDetail.execution.metadata}
+                    next: break
+
+    - printTaskDetail:
+        call: sys.log
+        args:
+            text: ${outputModel["output:model_resource_name"]}
+            severity: INFO
+    - returnOutput:
+        return: ${outputModel["output:model_resource_name"]}
