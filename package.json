@@ -14,10 +14,10 @@
   },
   "dependencies": {
     "@looker/components": "^4.0.4",
-    "@looker/embed-sdk": "^1.8.0",
-    "@looker/extension-sdk": "^0.16.4",
-    "@looker/extension-sdk-react": "^0.10.4",
     "@looker/icons": "^1.5.21",
+    "@looker/embed-sdk": "^1.8.0",
+    "@looker/extension-sdk": "^22.20.0",
+    "@looker/extension-sdk-react": "^22.20.0",
     "@looker/sdk": "^22.20.0",
     "@looker/sdk-rtl": "^21.4.0",
     "@styled-icons/material": "10.34.0",
@@ -62,7 +62,7 @@
     "webpack": "^5.10.0",
     "webpack-bundle-analyzer": "^4.5.0",
     "webpack-cli": "^4.9.1",
-    "webpack-dev-server": "^4.15.1"
+    "webpack-dev-server": "^3.11.2"
   },
   "babel": {
     "presets": [
