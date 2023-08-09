@@ -4,7 +4,7 @@
   "description": "Bootstrapped Looker Extension with React and Typescript",
   "main": "dist/bundle.js",
   "author": "Ricardo Geh",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "scripts": {
     "analyze": "export ANALYZE_MODE=static && yarn build",
     "build": "export BABEL_ENV=build && webpack --config webpack.prod.js",
