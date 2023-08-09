@@ -6,9 +6,13 @@
       - [Workflow for Data Exploration](#workflow-for-data-exploration)
     - [2.2 Business Insights](#22-business-insights)
       - [Workflow for Business Insights](#workflow-for-business-insights)
-  - [3. Getting Started for Development Environment](#3-getting-started-for-development-environment)
-  - [4. Deploying the extension](#4-deploying-the-extension)
+  - [3. Getting Started](#3-getting-started)
+  - [4. Developing the Looker Extension Environment](#4-developing-the-looker-extension-environment)
+  - [5. Deploying the Looker Extension](#5-deploying-the-looker-extension)
   - [5. Setting Up Vertex and LLM Backends](#5-setting-up-vertex-and-llm-backends)
+    - [5.1 Deploy the infrastructure using Terraform](#51-deploy-the-infrastructure-using-terraform)
+    - [5.2 Execute the Workflow](#52-execute-the-workflow)
+    - [5.3 Test the environment with a Simple Query](#53-test-the-environment-with-a-simple-query)
 
 ## 1. Overview
 This repository compiles prescriptive code samples demonstrating how to create a Looker Extension integrating Looker with Vertex AI Large Language Models (LLMs).
@@ -32,7 +36,16 @@ User chooses a Looker Dashboard and asks questions using natural language. In th
 #### Workflow for Business Insights
 ![Workflow](/images/looker-extension-workflow-business-insights.png)
 
-## 3. Getting Started for Development Environment
+## 3. Getting Started
+First, clone the repository to Cloud Shell or your machine
+```
+git clone https://github.com/looker-opensource/looker-ai
+```
+
+Then follow instructions for [4. Developing the Extension](#3-getting-started-for-development-environment) or [5. Deploying the Extension](#4-deploying-the-extension)
+
+
+## 4. Developing the Looker Extension Environment
 
 1. Install the dependencies with [Yarn](https://yarnpkg.com/).
 
@@ -65,7 +78,7 @@ User chooses a Looker Dashboard and asks questions using natural language. In th
 
 5. Create a `manifest` file
 
-   Either drag and upload the `manifest.lkml` file in this directory into your Looker project, or create a `manifest.lkml` with the same content. Change the `id`, `label`, or `url` as needed.
+   Either drag and upload the `manifest.lkml` file in this directory into your Looker project, or create a `manifest.lkml` with the same content. Change the  `label` or `url` as needed.
 
    ```
     project_name: "looker-genai"
@@ -101,7 +114,7 @@ User chooses a Looker Dashboard and asks questions using natural language. In th
    - The extension will load the JavaScript from the `url` you provided in the `application` definition. By default, this is `https://localhost:8080/bundle.js`. If you change the port your server runs on in the `package.json`, you will need to also update it in the `manifest.lkml`.
    - Reloading the extension page will bring in any new code changes from the extension template.
 
-## 4. Deploying the extension
+## 5. Deploying the Looker Extension
 
 To allow other people to use the extension, build the JavaScript bundle file and directly include it in the project.
 
@@ -126,3 +139,30 @@ To allow other people to use the extension, build the JavaScript bundle file and
     }
    ```
 ## 5. Setting Up Vertex and LLM Backends
+The architecture needs the following infrastructure:
+- VertexAI Fine Tuned LLM Model with the Looker App Examples
+- Cloud Function that will call the Vertex AI Tuned Model Endpoint
+- BigQuery Datasets, Connections and Remote UDF that will call the Cloud Function
+  
+All these dependencies will be deployed through Terraform in conjunction with Cloud Workflows for executing the LLM fine tuned training.
+
+Follow the steps below:
+
+
+### 5.1 Deploy the infrastructure using Terraform
+
+Deploy the terraform script:
+```
+  cd deployment
+  terraform init
+  terraform apply 
+```
+
+### 5.2 Execute the Workflow
+
+Inside `gcloud` environment, invoke the Cloud Workflows
+```
+gcloud workflows execute fine_tuning_model
+```
+
+### 5.3 Test the environment with a Simple Query

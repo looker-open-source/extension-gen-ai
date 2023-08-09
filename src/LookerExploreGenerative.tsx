@@ -191,10 +191,10 @@ export const LookerExploreGenerative: React.FC = () => {
 
     Now, generate the output with model: ${modelName} and view: "${viewName}".
     Make sure to use data from the input_dictionary to select filters, sorts and pivots.     
-    input_dictionary : ${jsonPayloadLookMLExplore}    
-    Input: ${prompt}    
+    Input: ${prompt}
+    Input_dictionary : ${jsonPayloadLookMLExplore}  
   `
-  return generatedPrompt  ;
+  return generatedPrompt;
   
   }
  
