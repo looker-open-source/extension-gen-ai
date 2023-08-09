@@ -171,8 +171,8 @@ export const LookerDashboardGenerative: React.FC = () => {
     `;
     // console.log("Query to Run: " + query_to_run);
     const sql_query_create_param: ISqlQueryCreate = {
-      connection_name: "@{CONNECTION_NAME}",
-      sql: query_to_run         
+      connection_name:"dataml-latam-argolis",
+      sql: query_to_run
     }
 
     // Create SQL Query to Run
