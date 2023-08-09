@@ -1,7 +1,12 @@
-# This is a workflow to run the fine tuning LLM job on Vertex AI
+# This is a sample workflow to test or replace with your source code.
+#
+# This workflow passes the region where the workflow is deployed
+# to the Wikipedia API and returns a list of related Wikipedia articles.
+# A region is retrieved from the GOOGLE_CLOUD_LOCATION system variable
+# unless you input your own search term; for example, {"searchTerm": "asia"}.
 main:
-    params: [input]
-    steps:
+    params: [input]        
+    steps:                    
     - runFineTunningModel:
         call: http.post        
         args:
@@ -44,17 +49,26 @@ main:
         result: checkFineTuningStatus
     - extractStatus:
         assign:
-            - pipelineStatus:  ${checkFineTuningStatus.body.state}            
+            - pipelineStatus:  ${checkFineTuningStatus.body.state}
+    - logStatus:
+        call: sys.log
+        args:
+            text: ${pipelineStatus}
+            severity: INFO            
     - assertFinishedTraining:
         switch:
-            - condition: ${pipelineStatus != "PIPELINE_STATE_RUNNING" or pipelineStatus != "PIPELINE_STATE_PENDING" or pipelineStatus != "PIPELINE_STATE_QUEUED"}
+            - condition: ${pipelineStatus == "PIPELINE_STATE_SUCCEEDED"}
               next: extractCurrentTaskDetails
+            - condition: ${pipelineStatus == "PIPELINE_STATE_FAILED" or pipelineStatus == "PIPELINE_STATE_CANCELLING"}
+              next: returnErrorPipelineStatus
         next: sleepPooling
+    - returnErrorPipelineStatus:
+        return: "Error Pipeline Failed"
     - sleepPooling:
         call: sys.sleep #Pooling through Sleep
         args: 
-            seconds: 10
-        next: checkStatus
+            seconds: 20
+        next: checkStatus    
     - extractCurrentTaskDetails:
         assign:
             - taskDetails: ${checkFineTuningStatus.body.jobDetail.taskDetails}
@@ -80,5 +94,40 @@ main:
         args:
             text: ${outputModel["output:model_resource_name"]}
             severity: INFO
-    - returnOutput:
-        return: ${outputModel["output:model_resource_name"]}
+    - create_function:
+        call: googleapis.cloudfunctions.v1.projects.locations.functions.create
+        args:
+        location: ${"projects/" + project + "/locations/" + location}
+        body:
+            name: ${"projects/" + project + "/locations/" + location + "/functions/" + name}
+            description: "cloud function to be remote udf function for bigquery to call vertex ai fine tuned model"
+            entryPoint: "bq_vertex_remote"
+            runtime: "python311"
+            serviceAccountEmail: ${service_account}
+            sourceArchiveUrl: ${sourceArchiveUrl}
+            httpsTrigger:
+            securityLevel: "SECURE_OPTIONAL"
+            environmentVariables:                
+                PROJECT_ID : "${var.project_id}"
+                LOCATION : "us-central1"
+                TUNED_MODEL_URL : ${outputModel["output:model_resource_name"]}
+    - create_remote_function:
+        call: googleapis.bigquery.v2.jobs.query
+        args:
+            projectId: ${project_id}
+            body:
+                query: |
+                    CREATE OR REPLACE FUNCTION 
+                    `${var.project_id}`.llm_${random_string.random.result}.bq_vertex_remote(prompt STRING) RETURNS STRING
+                    REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result}` 
+                    OPTIONS (endpoint = '${create_function.functions_bq_remote_udf.https_trigger_url}')
+    - grant_permission_to_all:
+        call: googleapis.cloudfunctions.v1.projects.locations.functions.setIamPolicy
+        args:
+          resource: ${"projects/" + project + "/locations/" + location + "/functions/" + name}
+          body:
+            policy:
+              bindings:
+                - members: ${service_account}
+                  role: "roles/cloudfunctions.invoker"
+

@@ -13,33 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-variable "project_id" {
-  type = string
-  default = "dataml-latam-argolis"
+
+module "project-services" {
+  source                      = "terraform-google-modules/project-factory/google//modules/project_services"
+  version                     = "14.2.1"
+  disable_services_on_destroy = false
+
+  project_id  = var.project_id
+  enable_apis = true
+
+  activate_apis = [
+    "cloudresourcemanager.googleapis.com",
+    "bigquery.googleapis.com",
+    "bigqueryconnection.googleapis.com",    
+    "cloudapis.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "cloudfunctions.googleapis.com",
+    "iam.googleapis.com",
+    "serviceusage.googleapis.com",
+    "storage-api.googleapis.com",
+    "storage.googleapis.com",
+    "workflows.googleapis.com",
+    "aiplatform.googleapis.com"
+  ]
 }
-variable "training_region"{
-  type = string
-  default = "europe-west4"
+
+resource "time_sleep" "wait_after_apis_activate" {
+  depends_on      = [module.project-services]
+  create_duration = "120s"
 }
 
-provider "google" {
-  project = var.project_id
+data "google_organization" "org" {
+  domain = var.org_domain
 }
+data "google_project" "project" {}
 
-# [START workflows_api_enable]
-resource "google_project_service" "workflows" {
-  service            = "workflows.googleapis.com"
-  disable_on_destroy = false
+resource "google_organization_policy" "cloudfunction_ingress" {
+  org_id     = data.google_organization.org.org_id
+  constraint = "constraints/cloudfunctions.allowedIngressSettings"
+  list_policy {
+    suggested_value = "ALLOW_ALL"
+    allow {
+      all = true
+    }
+  }
 }
-
-# [START workflows_api_enable]
-resource "google_project_service" "storage" {
-  service            = "storage.googleapis.com"
-  disable_on_destroy = false
-}
-
-
-
 # [START storage_create_new_bucket_tf]
 # Create new storage bucket in the US multi-region
 # with coldline storage
@@ -54,7 +72,7 @@ resource "google_storage_bucket" "bucket-training-model" {
   name          = "looker-ai-llm-training-${random_string.random.result}"
   location      = "us"
   uniform_bucket_level_access = true
-  depends_on = [google_project_service.storage, random_string.random]
+  depends_on = [random_string.random]
   force_destroy = true
 }
 
@@ -67,30 +85,57 @@ resource "google_storage_bucket_object" "training" {
 }
 
 # [START workflows_serviceaccount_create]
-resource "google_service_account" "workflows_service_account" {
-  account_id   = "looker-l-workflows-sa"
-  display_name = "Sample Workflows Service Account"
+resource "google_service_account" "looker_llm_service_account" {
+  account_id   = "looker-llm-sa"
+  display_name = "Looker LLM SA"
+}
+# TODO: Remove Editor and apply right permissions
+resource "google_project_iam_member" "iam_permission_looker_bq" {
+  project = var.project_id
+  role    = "roles/editor"
+  member  = format("serviceAccount:%s", google_service_account.looker_llm_service_account.email)
+}
+resource "google_project_iam_member" "iam_permission_looker_aiplatform" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = format("serviceAccount:%s", google_service_account.looker_llm_service_account.email)
 }
 
+resource "google_project_iam_member" "iam_service_account_act_as" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = format("serviceAccount:%s", google_service_account.looker_llm_service_account.email)
+}
+
+# [START workflows_serviceaccount_create]
+resource "google_service_account" "workflows_service_account" {
+  account_id   = "looker-llm-workflows-sa"
+  display_name = "Looker LLM Workflows"
+}
+
+# IAM permission for BigQuery
 resource "google_project_iam_member" "iam_permission" {
   project = var.project_id
   role    = "roles/bigquery.jobUser"
   member  = format("serviceAccount:%s", google_service_account.workflows_service_account.email)
 }
+# IAM permission for Cloud Workflows
 resource "google_project_iam_member" "iam_permission_workflow" {  
   project = var.project_id
   role    = "roles/workflows.admin"
   member  = format("serviceAccount:%s", google_service_account.workflows_service_account.email)
 }
+# IAM permission as Editor
 resource "google_project_iam_member" "iam_permission_editor" {  
   project = var.project_id
   role    = "roles/editor"
   member  = format("serviceAccount:%s", google_service_account.workflows_service_account.email)
 }
 
+# Cloud Workflows to Fine tune the LLM Model for Looker LLM Application
 resource "google_workflows_workflow" "workflow_fine_tuning" {
   name            = "fine_tuning_model"
-  region          = "us-central1"
+  region          = "${var.deployment_region}"
   description     = "Workflow to run a fine tuning model"  
   service_account = google_service_account.workflows_service_account.id
   source_contents = <<-EOF
@@ -117,7 +162,7 @@ main:
                         "project": "${var.project_id}",
                         "model_display_name": "looker-llm",
                         "dataset_uri": "${google_storage_bucket.bucket-training-model.url}/${google_storage_bucket_object.training.output_name}",
-                        "location": "us-central1",
+                        "location": "${var.deployment_region}",
                         "large_model_reference": "text-bison@001",
                         "train_steps": 100,
                         "learning_rate_multiplier": 0.002
@@ -131,6 +176,7 @@ main:
             - pipelineFullResourceName: $${fineTuningResult.body.name}
             - pipelineResourceNameMatch: $${text.find_all_regex(pipelineFullResourceName, "pipelineJobs/.*")}
             - pipelineResourceName: $${pipelineResourceNameMatch[0].match}
+            - cloudFunctionName: "looker-llm-bq-remote"
     - logResourceName:
         call: sys.log
         args:
@@ -139,7 +185,7 @@ main:
     - checkStatus:
         call: http.get        
         args:
-            url: $${"https://europe-west4-aiplatform.googleapis.com/v1/projects/dataml-latam-argolis/locations/europe-west4/" + pipelineResourceName}
+            url: $${"https://${var.training_region}-aiplatform.googleapis.com/v1/projects/${var.project_id}/locations/${var.training_region}/" + pipelineResourceName}
             auth:
                 type: OAuth2 
         result: checkFineTuningStatus
@@ -190,12 +236,78 @@ main:
         args:
             text: $${outputModel["output:model_resource_name"]}
             severity: INFO
-    - returnOutput:
-        return: $${outputModel["output:model_resource_name"]}
+    - create_function:
+        call: googleapis.cloudfunctions.v1.projects.locations.functions.create
+        args:
+          location: "projects/${data.google_project.project.number}/locations/${var.deployment_region}"
+          body:
+            name: "projects/${data.google_project.project.number}/locations/${var.deployment_region}/functions/bq_vertex_remote"
+            description: "cloud function to be remote udf function for bigquery to call vertex ai fine tuned model"
+            entryPoint: "bq_vertex_remote"
+            runtime: "python311"
+            serviceAccountEmail: ${google_service_account.looker_llm_service_account.email}
+            sourceArchiveUrl: ${google_storage_bucket_object.functions_bq_remote_udf.self_link}
+            httpsTrigger:
+              securityLevel: "SECURE_OPTIONAL"
+            environmentVariables:                
+                PROJECT_ID : "${var.project_id}"
+                LOCATION : "${var.deployment_region}"
+                TUNED_MODEL_URL : $${outputModel["output:model_resource_name"]}
+    - create_remote_function:
+        call: googleapis.bigquery.v2.jobs.query
+        args:
+            projectId: ${var.project_id}
+            body:
+                query: |
+                    CREATE OR REPLACE FUNCTION 
+                    `${var.project_id}`.llm_${random_string.random.result}.bq_vertex_remote(prompt STRING) RETURNS STRING
+                    REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result}` 
+                    OPTIONS (endpoint = '$${create_function.functions_bq_remote_udf.https_trigger_url}')
+    - grant_permission_to_all:
+        call: googleapis.cloudfunctions.v1.projects.locations.functions.setIamPolicy
+        args:
+          resource: "projects/${var.project_id}/locations/${var.deployment_region}/functions/bq_vertex_remote"
+          body:
+            policy:
+              bindings:
+                - members: ${format("serviceAccount:%s", google_service_account.looker_llm_service_account.email)}
+                  role: "roles/cloudfunctions.invoker"
 EOF
 
-  depends_on = [google_project_service.workflows]
+  depends_on = [time_sleep.wait_after_apis_activate, google_bigquery_dataset.dataset, data.google_project.project]
 }
+
+# Generate the File to upload go GCS for Cloud Function
+data "archive_file" "default" {
+  type        = "zip"
+  output_path = "/tmp/function-source.zip"
+  source_dir  = "../cloud-function-remote/src"
+}
+
+# Bucket with source code for Cloud Function
+resource "google_storage_bucket_object" "functions_bq_remote_udf" {
+  name   = "bq_remote_function.zip"
+  bucket = google_storage_bucket.bucket-training-model.name
+  source =  data.archive_file.default.output_path
+  depends_on = [ data.archive_file.default ]
+}
+
+resource "google_bigquery_dataset" "dataset" {
+  dataset_id                  = "llm_${random_string.random.result}"
+  friendly_name               = "llm"
+  description                 = "bq llm dataset for remote UDF"
+  location                    = var.bq_region
+}
+
+ ## This creates a cloud resource connection.
+ ## Note: The cloud resource nested object has only one output only field - serviceAccountId.
+ resource "google_bigquery_connection" "connection" {
+    connection_id =  "${var.bq_remote_connection_name}-${random_string.random.result}"
+    project = var.project_id
+    location = var.bq_region
+    cloud_resource {}
+}
+
 
 
 
