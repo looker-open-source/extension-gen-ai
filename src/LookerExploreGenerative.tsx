@@ -190,7 +190,7 @@ export const LookerExploreGenerative: React.FC = () => {
     output: { "model": "bi_engine_demo", "view": "wiki100_m", "fields": [ "wiki100_m.count","wiki100_m.language", "wiki100_m.year"],"filters": {"wiki100_m.language": "en,fr,es"}, "sorts": null,"pivots": ["wiki100_m.year"],"limit": "500"}
 
     Now, generate the output with model: ${modelName} and view: "${viewName}".
-    Make sure to use data from the input_dictionary to select filters, sorts and pivots.     
+    Make sure to use data from the input_dictionary to select filters, sorts and pivots.   
     Input: ${prompt}
     Input_dictionary : ${jsonPayloadLookMLExplore}  
   `

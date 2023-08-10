@@ -34,17 +34,19 @@ module "project-services" {
     "storage-api.googleapis.com",
     "storage.googleapis.com",
     "workflows.googleapis.com",
-    "aiplatform.googleapis.com"
+    "aiplatform.googleapis.com",
+    "compute.googleapis.com"
   ]
 }
 
 resource "time_sleep" "wait_after_apis_activate" {
   depends_on      = [module.project-services]
-  create_duration = "120s"
+  create_duration = "300s"
 }
 
 data "google_organization" "org" {
   domain = var.org_domain
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
 data "google_project" "project" {}
 
@@ -57,6 +59,7 @@ resource "google_organization_policy" "cloudfunction_ingress" {
       all = true
     }
   }
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
 # [START storage_create_new_bucket_tf]
 # Create new storage bucket in the US multi-region
@@ -72,7 +75,7 @@ resource "google_storage_bucket" "bucket-training-model" {
   name          = "looker-ai-llm-training-${random_string.random.result}"
   location      = "us"
   uniform_bucket_level_access = true
-  depends_on = [random_string.random]
+  depends_on = [random_string.random, time_sleep.wait_after_apis_activate]
   force_destroy = true
 }
 
@@ -81,56 +84,110 @@ resource "google_storage_bucket_object" "training" {
  source       = "../llm-fine-tuning/finetuning.jsonl"
  content_type = "application/octet-stream"
  bucket       = google_storage_bucket.bucket-training-model.id
- depends_on = [google_storage_bucket.bucket-training-model]
+ depends_on = [google_storage_bucket.bucket-training-model, time_sleep.wait_after_apis_activate]
 }
 
 # [START workflows_serviceaccount_create]
 resource "google_service_account" "looker_llm_service_account" {
   account_id   = "looker-llm-sa"
   display_name = "Looker LLM SA"
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
 # TODO: Remove Editor and apply right permissions
 resource "google_project_iam_member" "iam_permission_looker_bq" {
   project = var.project_id
   role    = "roles/editor"
   member  = format("serviceAccount:%s", google_service_account.looker_llm_service_account.email)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
 resource "google_project_iam_member" "iam_permission_looker_aiplatform" {
   project = var.project_id
   role    = "roles/aiplatform.user"
   member  = format("serviceAccount:%s", google_service_account.looker_llm_service_account.email)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
 
 resource "google_project_iam_member" "iam_service_account_act_as" {
   project = var.project_id
   role    = "roles/iam.serviceAccountUser"
   member  = format("serviceAccount:%s", google_service_account.looker_llm_service_account.email)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
+# IAM permission as Editor
+resource "google_project_iam_member" "iam_looker_service_usage" {  
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageConsumer"
+  member  = format("serviceAccount:%s", google_service_account.looker_llm_service_account.email)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
+}
+
+# IAM permission as Editor
+resource "google_project_iam_member" "iam_looker_bq_consumer" {  
+  project = var.project_id
+  role    = "roles/bigquery.connectionUser"
+  member  = format("serviceAccount:%s", google_service_account.looker_llm_service_account.email)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
+}
+
 
 # [START workflows_serviceaccount_create]
 resource "google_service_account" "workflows_service_account" {
   account_id   = "looker-llm-workflows-sa"
   display_name = "Looker LLM Workflows"
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
+
 
 # IAM permission for BigQuery
 resource "google_project_iam_member" "iam_permission" {
   project = var.project_id
   role    = "roles/bigquery.jobUser"
   member  = format("serviceAccount:%s", google_service_account.workflows_service_account.email)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
 # IAM permission for Cloud Workflows
 resource "google_project_iam_member" "iam_permission_workflow" {  
   project = var.project_id
   role    = "roles/workflows.admin"
   member  = format("serviceAccount:%s", google_service_account.workflows_service_account.email)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
-# IAM permission as Editor
-resource "google_project_iam_member" "iam_permission_editor" {  
+
+# IAM permission for Act As
+resource "google_project_iam_member" "iam_permission_act_wf" {  
+  project = var.project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = format("serviceAccount:%s", google_service_account.workflows_service_account.email)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
+}
+
+
+# IAM permission as ai platform
+resource "google_project_iam_member" "iam_wf_aiplatform" {  
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = format("serviceAccount:%s", google_service_account.workflows_service_account.email)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
+}
+
+# TODO: Remove Editor and apply right permissions
+resource "google_project_iam_member" "iam_permission_workflows_editor" {
   project = var.project_id
   role    = "roles/editor"
   member  = format("serviceAccount:%s", google_service_account.workflows_service_account.email)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
+
+resource "google_project_iam_member" "iam_permission_default_workflows_editor" {
+  project = var.project_id
+  role    = "roles/editor"
+  member  = format("serviceAccount:%s-compute@developer.gserviceaccount.com", data.google_project.project.number)
+  depends_on = [ time_sleep.wait_after_apis_activate ]
+}
+
+
+
+
 
 # Cloud Workflows to Fine tune the LLM Model for Looker LLM Application
 resource "google_workflows_workflow" "workflow_fine_tuning" {
@@ -148,6 +205,23 @@ resource "google_workflows_workflow" "workflow_fine_tuning" {
 main:
     params: [input]
     steps:
+    # This process is needed according to: https://cloud.google.com/vertex-ai/docs/generative-ai/models/tune-models#troubleshooting
+    - createEmptyVertexDatasets:
+        call: http.post
+        args:
+            url: "https://${var.training_region}-aiplatform.googleapis.com/ui/projects/${var.project_id}/locations/${var.training_region}/datasets"
+            auth:
+                type: OAuth2
+            body: {
+                    "display_name": "test-name1",
+                    "metadata_schema_uri": "gs://google-cloud-aiplatform/schema/dataset/metadata/image_1.0.0.yaml",
+                    "saved_queries": [{"display_name": "saved_query_name", "problem_type": "IMAGE_CLASSIFICATION_MULTI_LABEL"}]
+                }
+    - wait5minutes:
+        call: sys.sleep #Wait for API to complete
+        args: 
+            seconds: 300
+        next: runFineTunningModel
     - runFineTunningModel:
         call: http.post        
         args:
@@ -246,7 +320,7 @@ main:
             entryPoint: "bq_vertex_remote"
             runtime: "python311"
             serviceAccountEmail: ${google_service_account.looker_llm_service_account.email}
-            sourceArchiveUrl: ${google_storage_bucket_object.functions_bq_remote_udf.self_link}
+            sourceArchiveUrl: "gs://${google_storage_bucket.bucket-training-model.name}/bq_remote_function.zip}"
             httpsTrigger:
               securityLevel: "SECURE_OPTIONAL"
             environmentVariables:                
@@ -289,7 +363,7 @@ resource "google_storage_bucket_object" "functions_bq_remote_udf" {
   name   = "bq_remote_function.zip"
   bucket = google_storage_bucket.bucket-training-model.name
   source =  data.archive_file.default.output_path
-  depends_on = [ data.archive_file.default ]
+  depends_on = [ data.archive_file.default , time_sleep.wait_after_apis_activate]
 }
 
 resource "google_bigquery_dataset" "dataset" {
@@ -297,6 +371,7 @@ resource "google_bigquery_dataset" "dataset" {
   friendly_name               = "llm"
   description                 = "bq llm dataset for remote UDF"
   location                    = var.bq_region
+  depends_on = [ time_sleep.wait_after_apis_activate ]
 }
 
  ## This creates a cloud resource connection.
@@ -306,6 +381,7 @@ resource "google_bigquery_dataset" "dataset" {
     project = var.project_id
     location = var.bq_region
     cloud_resource {}
+    depends_on = [ time_sleep.wait_after_apis_activate ]
 }
 
 
