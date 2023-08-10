@@ -6,7 +6,23 @@
 # unless you input your own search term; for example, {"searchTerm": "asia"}.
 main:
     params: [input]        
-    steps:                    
+    steps:
+    - createEmptyVertexDataset:
+        call: http.post
+        args:
+            url: "https://europe-west4-aiplatform.googleapis.com/ui/projects/$PROJECT_ID/locations/europe-west4/datasets"
+            auth:
+                type: OAuth2
+            body: {
+                    "display_name": "test-name1",
+                    "metadata_schema_uri": "gs://google-cloud-aiplatform/schema/dataset/metadata/image_1.0.0.yaml",
+                    "saved_queries": [{"display_name": "saved_query_name", "problem_type": "IMAGE_CLASSIFICATION_MULTI_LABEL"}]
+                }
+    - wait5minutes:
+        call: sys.sleep #Wait for API to complete
+        args: 
+            minutes: 5
+        next: runFineTunningModel
     - runFineTunningModel:
         call: http.post        
         args:

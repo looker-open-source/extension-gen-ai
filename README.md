@@ -10,6 +10,7 @@
   - [4. Developing the Looker Extension Environment](#4-developing-the-looker-extension-environment)
   - [5. Deploying the Looker Extension](#5-deploying-the-looker-extension)
   - [5. Setting Up Vertex and LLM Backends](#5-setting-up-vertex-and-llm-backends)
+    - [5.1 Enable Cloud Resource Manager API](#51-enable-cloud-resource-manager-api)
     - [5.1 Deploy the infrastructure using Terraform](#51-deploy-the-infrastructure-using-terraform)
     - [5.2 Execute the Workflow](#52-execute-the-workflow)
     - [5.3 Test the environment with a Simple Query](#53-test-the-environment-with-a-simple-query)
@@ -148,6 +149,10 @@ All these dependencies will be deployed through Terraform in conjunction with Cl
 
 Follow the steps below:
 
+### 5.1 Enable Cloud Resource Manager API
+```
+  gcloud services enable cloudresourcemanager.googleapis.com
+```
 
 ### 5.1 Deploy the infrastructure using Terraform
 
