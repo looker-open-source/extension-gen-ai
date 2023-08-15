@@ -1,11 +1,5 @@
 project_name: "looker-genai"
 
-# # Use local_dependency: To enable referencing of another project
-# # on this instance with include: statements
-#
-# local_dependency: {
-#   project: "name_of_other_project"
-# }
 application: looker-genai {
   label: "looker-genai"
   url: "https://localhost:8080/bundle.js"
