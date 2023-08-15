@@ -145,11 +145,6 @@ export const LookerExploreGenerative: React.FC = () => {
     setCurrentComboExplores(allComboExplores);
   }
 
-  // const setupExplore = (explore: LookerEmbedExplore) => {
-  //   console.log("Finished Setup Explore Step");
-  //   setLoadingLLM(false);
-  // }
-
   const extensionContext = useContext<ExtensionContextData>(ExtensionContext);
 
 
@@ -196,13 +191,9 @@ export const LookerExploreGenerative: React.FC = () => {
         const viewName = exploreResult.value.name!;
         if (!prompt) {
           throw new Error('missing user prompt, unable to create query');
-        }
-
-        console.log("3. Will Generate Prompt");
-        const generatedPrompt = generativeExploreService.generatePrompt(my_fields, currentModelName, viewName, prompt);
-
-        console.log("4. Send to BigQuery");
-        const { modelName, queryId, view } = await generativeExploreService.sendPromptToBigQuery(generatedPrompt);
+        }                
+        console.log("3. Generate Prompts and Send to BigQuery");
+        const { modelName, queryId, view } = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName);
         // Update the Explore with New QueryId
         LookerEmbedSDK.init(hostUrl!);
         console.log("explore not null: " + currentExploreId);
