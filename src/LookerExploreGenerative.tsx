@@ -26,12 +26,14 @@ import {
 import { Box, Heading } from '@looker/components'
 import { EmbedContainer } from './EmbedContainer'
 import { LookerEmbedSDK} from '@looker/embed-sdk'
+import { GenerativeExploreService } from './services/GenerativeExploreService'
 
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
  */
 export const LookerExploreGenerative: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
+  const generativeExploreService = new GenerativeExploreService(core40SDK);
   const [message, setMessage] = useState('')
   const [loadingLookerModels, setLoadingLookerModels] = useState<boolean>(false)
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
@@ -44,7 +46,6 @@ export const LookerExploreGenerative: React.FC = () => {
   const [prompt, setPrompt] = useState<string>()
   const [currentExploreId, setCurrentExploreId] = useState<string>()
   const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
-  
   const [hostUrl, setHostUrl] = useState<string>()
 
   useEffect(() => {
@@ -134,133 +135,9 @@ export const LookerExploreGenerative: React.FC = () => {
     setPrompt(e.currentTarget.value)
   }
 
-  const generatePrompt = (jsonPayloadLookMLExplore: string, modelName: string, viewName: string) => {
-
-    const generatedPrompt = `
-Write a simple JSON body for Looker LLM application.
-Make sure to use the following 3 rules:
-1. The JSON has a structure of model (string), view(string), fields(array of strings), filters(array of strings), sorts(array of strings), pivots(array of strings), limit(int).
-2. All the fields, sorts, pivots need to be in the dictionary provided for the input.
-3. Use syntax compatible with Looker matching filters with data types.
-
-Here are some generic examples that uses a example_input_dictionary with model: "bi_engine_demo" and view: "wiki100_m", so you can learn how does it works:
-example_input_dictionary : [{"label":"Wiki100 M Day","field":"wiki100_m.day","description":""},{"label":"Wiki100 M Language","field":"wiki100_m.language","description":""},{"label":"Wiki100 M Month","field":"wiki100_m.month","description":""},{"label":"Wiki100 M Title","field":"wiki100_m.title","description":""},{"label":"Wiki100 M Views","field":"wiki100_m.views","description":""},{"label":"Wiki100 M Wikimedia Project","field":"wiki100_m.wikimedia_project","description":""},{"label":"Wiki100 M Year","field":"wiki100_m.year","description":""},{"label":"Wiki100 M Count","field":"wiki100_m.count","description":""}]
-
-input: What are the top 10 languages?
-output: {"model": "bi_engine_demo", "view": "wiki100_m", "fields": ["wiki100_m.count", "wiki100_m.language"], "filters": null, "sorts": ["wiki100_m.count desc"], "pivots": null, "limit": "10"}
-
-input: count per language in year 2023
-output: { "model": "bi_engine_demo", "view": "wiki100_m", "fields": [ "wiki100_m.count","wiki100_m.language","wiki100_m.year"],"filters": { "wiki100_m.year": "2023"}, "sorts": [],"pivots": null,"limit": "500"}
-
-input: count per language pivot per year order by year desc
-output: { "model": "bi_engine_demo", "view": "wiki100_m", "fields": [ "wiki100_m.count","wiki100_m.language","wiki100_m.year"],"filters": null, "sorts": ["wiki100_m.year desc],"pivots": ["wiki100_m.year"],"limit": "500"}
-
-input:  What is the count per language, year, considering the folowing languages: en,pt,es?
-output: { "model": "bi_engine_demo", "view": "wiki100_m", "fields": [ "wiki100_m.count","wiki100_m.language", "wiki100_m.year"],"filters": {"wiki100_m.language": "en,fr,es"}, "sorts": null,"pivots": ["wiki100_m.year"],"limit": "500"}
-
-Now, generate the output with model: ${modelName} and view: "${viewName}".
-Make sure to use data from the input_dictionary to select filters, sorts and pivots.
-input_dictionary : ${jsonPayloadLookMLExplore}
-Input: ${prompt}
-`
-    return generatedPrompt;
-  }
- 
   function transformArrayToString(array: string[]): string {
     return array.join('\\n');
   }
-
-  
-  const sendPromptToBigQuery = (promptToSend: string, modelName: string, viewName: string) =>
-  {
-    const arraySplitted = promptToSend.split('\n');
-    const singleLineString = transformArrayToString(arraySplitted);
-
-    console.log("Sending Prompt to BigQuery LLM");
-    // query to run
-    const query_to_run = `SELECT llm.bq_vertex_remote('`+ singleLineString + `') AS llm_result`;
-    console.log("Query to Run: " + query_to_run);
-    
-    const sql_query_create_param: ISqlQueryCreate = {
-      connection_name:"dataml-latam-argolis",
-      sql: query_to_run         
-    }
-
-    // Create SQL Query to Run
-    core40SDK.create_sql_query(sql_query_create_param).then(
-      results => {
-        // @ts-ignore
-        const slug =  results.value.slug;
-        console.log("Create BQML Query with slug: "  + slug);
-        if(slug != null)
-        {
-          // Run SQL Query with Prompt
-          core40SDK.run_sql_query(slug, "txt").then(
-            results =>
-            {        
-              // @ts-ignore
-              const results_string = results.value;
-              var json_dict;
-              try {
-                var cleanString = results_string.replace('r', '');                            
-                cleanString = cleanString.replace(/\"\"/g, '\"');
-                cleanString = cleanString.slice(cleanString.indexOf('"')+1, cleanString.lastIndexOf('"'));
-                json_dict = JSON.parse(cleanString);
-              }
-              catch(error){
-                json_dict = {
-                    "model": modelName,
-                    "view": viewName,
-                    "fields": [],
-                    "filters": null,
-                    "sorts": null,
-                }
-              }                            
-                    
-              
-              console.log(json_dict);
-              // Create a Query
-              core40SDK.create_query(json_dict).then(
-                results =>
-                {
-                  // If want to clean old results
-                  // if(true){
-                  //   handleClear();
-                  // } 
-                  setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);
-                  // @ts-ignore
-                  const view = results.value.view;
-                  // @ts-ignore
-                  const query_id = results.value.client_id;
-                  console.log("Query Id:" + query_id);     
-                  // @ts-ignore
-                  const modelName = results.value.model;             
-                  // // Update the Explore with New QueryId                  
-                  LookerEmbedSDK.init(hostUrl!);
-                  // if(currentExploreId!= null){
-                  console.log("explore not null: " + currentExploreId);
-                  LookerEmbedSDK.createExploreWithUrl(hostUrl+ "/embed/explore/"+ modelName + "/"  + view + "?qid=" + query_id)  
-                  .appendTo(exploreDivElement!)                              
-                  .build()        
-                  .connect()
-                  .then()
-                  .catch((error: Error) => {
-                    console.error('Connection error', error)
-                    setLoadingLLM(false);
-                  });     
-                  // TODO: Ideally find the event after the Explore is added to the Div to Remove the Loading LLM dialog
-                  setLoadingLLM(false);
-                }
-              );              
-            }
-          )          
-        }
-      }
-    )
-  }
-
-
-
 
 
   // resets combo explore with all models and explores
@@ -283,7 +160,7 @@ Input: ${prompt}
   }, [])
 
   // Method that triggers sending the message to the workflow
-  const handleSend = () => 
+  const handleSend = () =>
   {
     setLoadingLLM(true);
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
@@ -291,7 +168,7 @@ Input: ${prompt}
     if(currentModelName!=null && currentExploreName!=null)
     {
       core40SDK.lookml_model_explore(currentModelName, currentExploreName, "id, name, description, fields, label").then
-      (exploreResult => {
+      (async exploreResult => {
         console.log("2. Received Data from Looker");
         // @ts-ignore
         const fields:ILookmlModelExploreFieldset = exploreResult.value.fields;
@@ -315,15 +192,32 @@ Input: ${prompt}
             my_fields.push(field_def);
           }          
         }
-        const jsonPayloadLookMLExplore = JSON.stringify(my_fields);
         // @ts-ignore
         const viewName = exploreResult.value.name!;
+        if (!prompt) {
+          throw new Error('missing user prompt, unable to create query');
+        }
+
         console.log("3. Will Generate Prompt");
-        const generatedPrompt = generatePrompt(jsonPayloadLookMLExplore, currentModelName, viewName);
+        const generatedPrompt = generativeExploreService.generatePrompt(my_fields, currentModelName, viewName, prompt);
 
         console.log("4. Send to BigQuery");
-        sendPromptToBigQuery(generatedPrompt, currentModelName, viewName);              
-      }) 
+        const { modelName, queryId, view } = await generativeExploreService.sendPromptToBigQuery(generatedPrompt);
+        // Update the Explore with New QueryId
+        LookerEmbedSDK.init(hostUrl!);
+        console.log("explore not null: " + currentExploreId);
+        LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?qid=${queryId}`)
+          .appendTo(exploreDivElement!)
+          .build()
+          .connect()
+          .then()
+          .catch((error: Error) => {
+            console.error('Connection error', error)
+            setLoadingLLM(false);
+          });
+        // TODO: Ideally find the event after the Explore is added to the Div to Remove the Loading LLM dialog
+        setLoadingLLM(false);
+      })
     }
     else
     {
