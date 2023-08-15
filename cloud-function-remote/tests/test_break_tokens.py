@@ -19,8 +19,33 @@ vertexai.init(project=PROJECT_ID, location=LOCATION)
 # See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions#json_encodings
 
 with open('base_prompt.txt') as f: base_prompt = f.read()
-with open('prompt.txt') as f: prompt = f.read()
+with open('prompt.txt') as f: prompt3 = f.read()
 with open('prompt2.txt') as f: prompt2 = f.read()
+with open('prompt3.txt') as f: prompt = f.read()
+with open('fulldict.json') as f: full_dict_txt = f.read()
+
+full_dict = json.loads(full_dict_txt)
+
+def run_prompt2():
+  tuned_model = TextGenerationModel.get_tuned_model(TUNED_MODEL_URL)    
+  genai_return = tuned_model.predict()
+
+
+
+
+def run_prompt():
+  tuned_model = TextGenerationModel.from_pretrained("text-bison@001")
+  final_prompt = prompt.replace("{input_dictionary}",json.dumps(full_dict[101:120]))
+  print(final_prompt)
+  genai_return = tuned_model.predict(
+            prompt=final_prompt,
+            temperature= 0,
+            max_output_tokens= 1024,
+            top_p= 0,
+            top_k= 1
+            )
+  print(genai_return)
+
 
 @functions_framework.http
 def bq_vertex_remote(request):
@@ -103,8 +128,14 @@ def test_logic():
   tuned_model = TextGenerationModel.get_tuned_model(TUNED_MODEL_URL)
   for chunk_fields in prompt_chunks:
     serialized_chunk_fields = json.dumps(chunk_fields)
-    current_prompt = f"{base_prompt} Input: Qual as vendas por categoria por mes? \\n input_dictionary: {serialized_chunk_fields}".encode("unicode_escape").decode("utf-8")
+    new_base = base_prompt.replace('\\n', "\n")
+    current_prompt = f"\n    {new_base}\n    Input: What is the billing reference document number xvlbr count?\n    input_dictionary: {serialized_chunk_fields}\n"
+        
     print("PROMPT=", current_prompt)
+#     current_prompt = '''
+# \n    Return ONLY a simple JSON body for Looker LLM application.\n    Make sure to use the following 3 rules:\n    1. The JSON has a structure of model (string), view(string), fields(array of strings), filters(array of strings), sorts(array of strings), pivots(array of strings), limit(int).\n    2. All the fields, sorts, pivots need to be in the dictionary provided for the input.    \n    3. Use syntax compatible with Looker matching filters with data types.\n\n    Here are some generic examples that uses a example_input_dictionary with model: "bi_engine_demo" and view: "wiki100_m", so you can learn how does it works:\n    example_input_dictionary : [{"label":"Wiki100 M Day","field":"wiki100_m.day","description":""},{"label":"Wiki100 M Language","field":"wiki100_m.language","description":""},{"label":"Wiki100 M Month","field":"wiki100_m.month","description":""},{"label":"Wiki100 M Title","field":"wiki100_m.title","description":""},{"label":"Wiki100 M Views","field":"wiki100_m.views","description":""},{"label":"Wiki100 M Wikimedia Project","field":"wiki100_m.wikimedia_project","description":""},{"label":"Wiki100 M Year","field":"wiki100_m.year","description":""},{"label":"Wiki100 M Count","field":"wiki100_m.count","description":""}]\n    \n    input: What are the top 10 languages?\n    output: {"model": "bi_engine_demo", "view": "wiki100_m", "fields": ["wiki100_m.count", "wiki100_m.language"], "filters": null, "sorts": ["wiki100_m.count desc"], "pivots": null, "limit": "10"}\n\n    input: count per language in year 2023\n    output: { "model": "bi_engine_demo", "view": "wiki100_m", "fields": [ "wiki100_m.count","wiki100_m.language","wiki100_m.year"],"filters": { "wiki100_m.year": "2023"}, "sorts": [],"pivots": null,"limit": "500"}\n\n    input: count per language pivot per year order by year desc\n    output: { "model": "bi_engine_demo", "view": "wiki100_m", "fields": [ "wiki100_m.count","wiki100_m.language","wiki100_m.year"],"filters": null, "sorts": ["wiki100_m.year desc],"pivots": ["wiki100_m.year"],"limit": "500"}\n\n    input:  What is the count per language, year, considering the folowing languages: en,pt,es?\n    output: { "model": "bi_engine_demo", "view": "wiki100_m", "fields": [ "wiki100_m.count","wiki100_m.language", "wiki100_m.year"],"filters": {"wiki100_m.language": "en,fr,es"}, "sorts": null,"pivots": ["wiki100_m.year"],"limit": "500"}\n\n    Now, generate the output with model: thelook and view: "products".\n    Make sure to use data from the input_dictionary to select filters, sorts and pivots.     \n    input_dictionary : [{"label":"Products Brand","field":"products.brand","description":""},{"label":"Products Category","field":"products.category","description":""},{"label":"Products Department","field":"products.department","description":""},{"label":"Products ID","field":"products.id","description":""},{"label":"Products Item Name","field":"products.item_name","description":""},{"label":"Products Rank","field":"products.rank","description":""},{"label":"Products Retail Price","field":"products.retail_price","description":""},{"label":"Products SKU","field":"products.sku","description":""},{"label":"Products Count","field":"products.count","description":""}]    \n    Input: give me the price of all products\n    \n  
+# '''
+#     print("CURRENT PROMPT = ", current_prompt)
     genai_return = tuned_model.predict(
         prompt=current_prompt,
         temperature= 0.2,
@@ -112,15 +143,17 @@ def test_logic():
         top_p= 0.8,
         top_k= 40
     )
-    print("RETURN=", genai_return)
+    print("Teste de retorno")
+    print(genai_return)
     break
 
 
   
-  
-test_logic()
 
-def another_function():
-  print(len(prompt))
+run_prompt()
+# test_logic()
+
+# def another_function():
+#   print(len(prompt))
 
 # another_function()

@@ -7,6 +7,9 @@
 main:
     params: [input]        
     steps:
+    - initializeVariables:
+        assign:
+             - pipelineRetry: 0
     - createEmptyVertexDataset:
         call: http.post
         args:
@@ -51,6 +54,7 @@ main:
             - pipelineFullResourceName: ${fineTuningResult.body.name}
             - pipelineResourceNameMatch: ${text.find_all_regex(pipelineFullResourceName, "pipelineJobs/.*")}
             - pipelineResourceName: ${pipelineResourceNameMatch[0].match}
+            - pipelineRetry: ${pipelineRetry+1}
     - logResourceName:
         call: sys.log
         args:
@@ -75,7 +79,9 @@ main:
         switch:
             - condition: ${pipelineStatus == "PIPELINE_STATE_SUCCEEDED"}
               next: extractCurrentTaskDetails
-            - condition: ${pipelineStatus == "PIPELINE_STATE_FAILED" or pipelineStatus == "PIPELINE_STATE_CANCELLING"}
+            - condition: ${(pipelineStatus == "PIPELINE_STATE_FAILED" or pipelineStatus == "PIPELINE_STATE_CANCELLING") and pipelineRetry < 5} 
+              next: runFineTunningModel
+            - condition: ${(pipelineStatus == "PIPELINE_STATE_FAILED" or pipelineStatus == "PIPELINE_STATE_CANCELLING") and pipelineRetry >= 5} 
               next: returnErrorPipelineStatus
         next: sleepPooling
     - returnErrorPipelineStatus:

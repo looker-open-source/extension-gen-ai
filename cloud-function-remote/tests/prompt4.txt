@@ -1,0 +1,1 @@
+LookerLLM Context:\n {input_dictionary}. \n Please extract the exact field names that are inside the LookerLLM Context that can help answer the following question. If there are no fields return JSON {"fields": []}. Question: "Which is the billing fkart and billing actual billed quantity fkimg?". The output format should be JSON {"fields": [field1, field2, ...]}.
