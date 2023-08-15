@@ -205,6 +205,9 @@ resource "google_workflows_workflow" "workflow_fine_tuning" {
 main:
     params: [input]
     steps:
+    - initializeVariables:
+        assign:
+            - pipelineRetry: 0
     # This process is needed according to: https://cloud.google.com/vertex-ai/docs/generative-ai/models/tune-models#troubleshooting
     - createEmptyVertexDatasets:
         call: http.post
@@ -275,7 +278,9 @@ main:
         switch:
             - condition: $${pipelineStatus == "PIPELINE_STATE_SUCCEEDED"}
               next: extractCurrentTaskDetails
-            - condition: $${pipelineStatus == "PIPELINE_STATE_FAILED" or pipelineStatus == "PIPELINE_STATE_CANCELLING"}
+            - condition: $${(pipelineStatus == "PIPELINE_STATE_FAILED" or pipelineStatus == "PIPELINE_STATE_CANCELLING") and pipelineRetry < 5} 
+              next: runFineTunningModel
+            - condition: $${(pipelineStatus == "PIPELINE_STATE_FAILED" or pipelineStatus == "PIPELINE_STATE_CANCELLING") and pipelineRetry >= 5} 
               next: returnErrorPipelineStatus
         next: sleepPooling
     - returnErrorPipelineStatus:
@@ -320,7 +325,7 @@ main:
             entryPoint: "bq_vertex_remote"
             runtime: "python311"
             serviceAccountEmail: ${google_service_account.looker_llm_service_account.email}
-            sourceArchiveUrl: "gs://${google_storage_bucket.bucket-training-model.name}/bq_remote_function.zip}"
+            sourceArchiveUrl: "gs://${google_storage_bucket.bucket-training-model.name}/bq_remote_function.zip"
             httpsTrigger:
               securityLevel: "SECURE_OPTIONAL"
             environmentVariables:                

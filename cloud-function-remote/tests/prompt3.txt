@@ -1,0 +1,1 @@
+Extract the exact field from the JSON input_dictionary that are needed to answer the following question.\n If there are no fields return an empty json array.\n  input_dictionary : {input_dictionary}\n Question: "Which is the billing fkart and billing actual billed quantity fkimg?"
