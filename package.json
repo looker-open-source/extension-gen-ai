@@ -4,7 +4,7 @@
   "description": "Bootstrapped Looker Extension with React and Typescript",
   "main": "dist/bundle.js",
   "author": "Ricardo Geh",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "scripts": {
     "analyze": "export ANALYZE_MODE=static && yarn build",
     "build": "export BABEL_ENV=build && webpack --config webpack.prod.js",
@@ -14,10 +14,10 @@
   },
   "dependencies": {
     "@looker/components": "^4.0.4",
-    "@looker/icons": "^1.5.21",
     "@looker/embed-sdk": "^1.8.0",
     "@looker/extension-sdk": "^22.20.0",
     "@looker/extension-sdk-react": "^22.20.0",
+    "@looker/icons": "^1.5.21",
     "@looker/sdk": "^22.20.0",
     "@looker/sdk-rtl": "^21.4.0",
     "@styled-icons/material": "10.34.0",
@@ -54,6 +54,7 @@
     "babel-loader": "^8.2.3",
     "babel-loader-exclude-node-modules-except": "^1.2.1",
     "babel-preset-nano-react-app": "^0.1.0",
+    "dotenv-webpack": "^8.0.1",
     "minimist": "^1.2.5",
     "nodemon": "^2.0.14",
     "npm-run-all": "^4.1.5",
