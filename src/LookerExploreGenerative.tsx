@@ -26,7 +26,7 @@ import {
 import { Box, Heading } from '@looker/components'
 import { EmbedContainer } from './EmbedContainer'
 import { LookerEmbedSDK} from '@looker/embed-sdk'
-import { GenerativeExploreService } from './services/GenerativeExploreService'
+import { GenerativeExploreService, FieldMetadata } from './services/GenerativeExploreService'
 
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
@@ -170,18 +170,18 @@ export const LookerExploreGenerative: React.FC = () => {
         const f_dimensions:ILookmlModelExploreField[]  =  fields.dimensions!;
         const f_measures:ILookmlModelExploreField[]  =  fields.measures!;
         const f_dim_measures = f_dimensions.concat(f_measures);
-        var my_fields = [];
+        var my_fields:Array<FieldMetadata> = [];
         if(f_dim_measures!=null)
         {
           for(var field of f_dim_measures)
           {
-            var field_def = {
+            var field_def:FieldMetadata = {
               // "field_type": "Dimension", this is not needed
               // "view_name": dimension.view_label,
-              "label" : field.label,  
-              "field": field.name,
+              label : field.label!,
+              name: field.name!,
               // "type": dimension.type,
-              "description": field.description,
+              description: field.description!
               // "sql": dimension.sql,
             };
             my_fields.push(field_def);

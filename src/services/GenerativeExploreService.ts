@@ -1,7 +1,14 @@
 import { ILookmlModelExploreField, ISqlQueryCreate, IWriteQuery, Looker40SDK, user } from "@looker/sdk";
 import { UtilsHelper } from "../utils/Helper";
 import { LookerSQLService } from "./LookerSQLService";
+import { clean } from "semver";
 
+export interface FieldMetadata{    
+    label: string;
+    name: string;
+    description: string;
+    // type: string;    
+}
 
 export class GenerativeExploreService {
     private sql: LookerSQLService;
@@ -11,9 +18,9 @@ export class GenerativeExploreService {
     }
 
     //    Method that breaks the exploreFields into chunks based on the max number of tokens
-    private breakFieldsPerToken(modelFields: ILookmlModelExploreField[]): Array<ILookmlModelExploreField[]>{
-        const FIXED_BREAK_PER_QUANTITY=50;
-        const generatedPromptsArray = new Array<ILookmlModelExploreField[]>;
+    private breakFieldsPerToken(modelFields: FieldMetadata[]): Array<FieldMetadata[]>{
+        const FIXED_BREAK_PER_QUANTITY=200;
+        const generatedPromptsArray = new Array<FieldMetadata[]>;
         var totalLength = modelFields.length;
         // divide by n elements
         var maxInteractions = totalLength/FIXED_BREAK_PER_QUANTITY;        
@@ -24,9 +31,9 @@ export class GenerativeExploreService {
     }
 
     private generatePromptFields(
-        modelFields: ILookmlModelExploreField[],
+        modelFields: FieldMetadata[],
         userInput: string):Array<string> {        
-        const generatedPromptsArray:Array<ILookmlModelExploreField[]> = this.breakFieldsPerToken(modelFields);
+        const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
         const shardedPrompts:Array<string> = [];
         for(const fieldGroup of generatedPromptsArray){
             const serializedModelFields = JSON.stringify(fieldGroup);
@@ -62,8 +69,34 @@ Q: What are the total sales per month?
         return generatedPrompt;
     }
 
+    private removeInexistentFields(
+        modelFields: FieldMetadata[],
+        llmFields: Array<string>
+    ): Array<string>
+    {
+        const cleanLLMFields: Array<string> = [];
+        for(const modelField of modelFields )
+        {            
+            if(modelField.name!= null)
+            {
+                for(const llmField of llmFields)
+                {            
+                    if(llmField == modelField.name)
+                    {
+                        console.log("LLMField equals modelField.name")
+                        cleanLLMFields.push(llmField);
+                        break;
+                    }
+                }
+            }
+        }
+        console.log("Input1 eram: " + llmFields.length + " Output: " + cleanLLMFields.length);
+        return cleanLLMFields;
+    }
+
+
     private async findFieldsFromLLM( 
-        modelFields: ILookmlModelExploreField[],
+        modelFields: FieldMetadata[],
         userInput: string): Promise<Array<string>>
     {
         // First generate prompt for Fields
@@ -103,15 +136,32 @@ Q: What are the total sales per month?
         }>(queryToRunFields);
 
         var arrayLLMFields:Array<string> = [];
-        results.forEach((result) =>{
+        for(var result of results)
+        {
             try {
-                var llmResultLine = JSON.parse(result.r);                
-                arrayLLMFields = arrayLLMFields.concat(llmResultLine.fields);
+                if(result!=null && result.r != null && result.r.length > 0)
+                {
+                    var llmResultLine = JSON.parse(result.r);                
+                    arrayLLMFields = arrayLLMFields.concat(llmResultLine.fields);
+                }
+                else{
+                    console.log("Not found any fields");
+                }                                
             } catch (err) {
+                console.log(result);
                 throw new Error('LLM result does not contain a valid JSON');
             }
-        });
-        // TODO: Verify if the fields exists in Model
+        }
+
+        //Remove fields that does not exists
+        arrayLLMFields = this.removeInexistentFields(modelFields, arrayLLMFields);
+
+        // Recheck with the LLM with the selected fields and modelFields if they are good to go or will eliminate some fields
+        if(arrayLLMFields.length > 2)
+        {
+            // TODO: recheck with LLM if the fields makes sense;
+        }
+
         return arrayLLMFields;
     }
 
@@ -164,7 +214,7 @@ Q: What are the total sales per month?
     
 
     public async generatePromptSendToBigQuery(
-        modelFields: ILookmlModelExploreField[],
+        modelFields: FieldMetadata[],
         userInput: string,
         inputModelName: string,
         inputViewName: string): Promise<{
@@ -177,10 +227,10 @@ Q: What are the total sales per month?
         // TODO: generate prompts for Filters
         // TODO: generate prompts for Sorts based on fields (simpler)        
         const arrayFields = await this.findFieldsFromLLM(modelFields, userInput);
+        console.log("ArrayFields: " + arrayFields);
         // TODO: generate prompt for limits (easy)
         const limitFromLLM = await this.findLimitsFromLLM(userInput);
-
-        debugger;
+        console.log("limitFromLLM: " + limitFromLLM);
 
         let llmQuery: IWriteQuery;
         try {
@@ -192,6 +242,7 @@ Q: What are the total sales per month?
 
             };
         } catch (err) {
+            console.log("LLM does not contain valid JSON: ");
             throw new Error('LLM result does not contain a valid JSON');
         }
         const llmQueryResult = await this.sql.createQuery(llmQuery)
