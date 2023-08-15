@@ -3,11 +3,13 @@ import functions_framework
 import logging
 from flask import jsonify
 from vertexai.preview.language_models import TextGenerationModel
+import os
+import json
+ 
 
-
-PROJECT_ID = "PROJECT_ID"  # @param {type:"string"}
-LOCATION = "us-central1"  # @param {type:"string"}
-TUNED_MODEL_URL = "projects/94990521171/locations/us-central1/models/7522623261755047936"
+PROJECT_ID = os.environ.get("PROJECT_ID", "PROJECT_ID1") # @param {type:"string"}
+LOCATION = os.environ.get("LOCATION", "us-central1")  # @param {type:"string"}
+TUNED_MODEL_URL = os.environ.get("TUNED_MODEL_URL", "projects/94990521171/locations/us-central1/models/7522623261755047936")
 
 vertexai.init(project=PROJECT_ID, location=LOCATION)
 
@@ -25,7 +27,11 @@ def bq_vertex_remote(request):
     for call in calls:
       if call is not None and len(call) == 1:
         prompt = call[0]
-        logging.info("Prompt: " + prompt)        
+        logging.info("Prompt: " + prompt)
+        # Get everything after the string "input_dictionary"
+        dictionary_string = prompt[len("input_dictionary"):]
+        
+        # Pega Json, quebra em chunks e reprocessa; 
         if(isinstance(prompt, str)):
           genai_return = tuned_model.predict(
             prompt=prompt,
@@ -43,9 +49,4 @@ def bq_vertex_remote(request):
     replies = [str(x) for x in return_value]
     return jsonify( { "replies" :  replies } )
   except Exception as e:
-    return jsonify( { "errorMessage": str(e) } ), 400  
-
-          
-            
-          
-
+    return jsonify( { "errorMessage": str(e) } ), 400

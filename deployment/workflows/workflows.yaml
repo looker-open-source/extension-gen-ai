@@ -1,0 +1,149 @@
+# This is a sample workflow to test or replace with your source code.
+#
+# This workflow passes the region where the workflow is deployed
+# to the Wikipedia API and returns a list of related Wikipedia articles.
+# A region is retrieved from the GOOGLE_CLOUD_LOCATION system variable
+# unless you input your own search term; for example, {"searchTerm": "asia"}.
+main:
+    params: [input]        
+    steps:
+    - createEmptyVertexDataset:
+        call: http.post
+        args:
+            url: "https://europe-west4-aiplatform.googleapis.com/ui/projects/$PROJECT_ID/locations/europe-west4/datasets"
+            auth:
+                type: OAuth2
+            body: {
+                    "display_name": "test-name1",
+                    "metadata_schema_uri": "gs://google-cloud-aiplatform/schema/dataset/metadata/image_1.0.0.yaml",
+                    "saved_queries": [{"display_name": "saved_query_name", "problem_type": "IMAGE_CLASSIFICATION_MULTI_LABEL"}]
+                }
+    - wait5minutes:
+        call: sys.sleep #Wait for API to complete
+        args: 
+            minutes: 5
+        next: runFineTunningModel
+    - runFineTunningModel:
+        call: http.post        
+        args:
+            url: "https://europe-west4-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/europe-west4/pipelineJobs"
+            auth:
+                type: OAuth2
+            body: {
+                    "displayName": "llm-looker-finetuning",
+                    "runtimeConfig": {
+                        "gcsOutputDirectory": "GCS_BUCKET_NAME/output",
+                        "parameterValues": {
+                        "project": "PROJECT_ID",
+                        "model_display_name": "looker-llm",
+                        "dataset_uri": "GCS_BUCKET_NAME/finetuning.jsonl",
+                        "location": "us-central1",
+                        "large_model_reference": "text-bison@001",
+                        "train_steps": 100,
+                        "learning_rate_multiplier": 0.002
+                        }
+                    },
+                    "templateUri": "https://us-kfp.pkg.dev/ml-pipeline/large-language-model-pipelines/tune-large-model/v2.0.0"
+                }
+        result: fineTuningResult
+    - extractPipelineResourceName:
+        assign:
+            - pipelineFullResourceName: ${fineTuningResult.body.name}
+            - pipelineResourceNameMatch: ${text.find_all_regex(pipelineFullResourceName, "pipelineJobs/.*")}
+            - pipelineResourceName: ${pipelineResourceNameMatch[0].match}
+    - logResourceName:
+        call: sys.log
+        args:
+            text: ${pipelineResourceName}
+            severity: INFO
+    - checkStatus:
+        call: http.get        
+        args:
+            url: ${"https://europe-west4-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/europe-west4/" + pipelineResourceName}
+            auth:
+                type: OAuth2 
+        result: checkFineTuningStatus
+    - extractStatus:
+        assign:
+            - pipelineStatus:  ${checkFineTuningStatus.body.state}
+    - logStatus:
+        call: sys.log
+        args:
+            text: ${pipelineStatus}
+            severity: INFO            
+    - assertFinishedTraining:
+        switch:
+            - condition: ${pipelineStatus == "PIPELINE_STATE_SUCCEEDED"}
+              next: extractCurrentTaskDetails
+            - condition: ${pipelineStatus == "PIPELINE_STATE_FAILED" or pipelineStatus == "PIPELINE_STATE_CANCELLING"}
+              next: returnErrorPipelineStatus
+        next: sleepPooling
+    - returnErrorPipelineStatus:
+        return: "Error Pipeline Failed"
+    - sleepPooling:
+        call: sys.sleep #Pooling through Sleep
+        args: 
+            seconds: 20
+        next: checkStatus    
+    - extractCurrentTaskDetails:
+        assign:
+            - taskDetails: ${checkFineTuningStatus.body.jobDetail.taskDetails}
+            - outputModel: ""
+    - checkTaskDetais:
+        for:
+            value: currentTaskDetail
+            in: ${taskDetails}
+            steps:
+                - checkStepName:
+                    switch:
+                        - condition: ${currentTaskDetail.taskName == "deployment-graph"}
+                          next: setTaskDetail
+                    next: continue
+                - setTaskDetail:
+                    assign:
+                        - taskDetail:  ${currentTaskDetail}
+                        - outputModel: ${currentTaskDetail.execution.metadata}
+                    next: break
+
+    - printTaskDetail:
+        call: sys.log
+        args:
+            text: ${outputModel["output:model_resource_name"]}
+            severity: INFO
+    - create_function:
+        call: googleapis.cloudfunctions.v1.projects.locations.functions.create
+        args:
+        location: ${"projects/" + project + "/locations/" + location}
+        body:
+            name: ${"projects/" + project + "/locations/" + location + "/functions/" + name}
+            description: "cloud function to be remote udf function for bigquery to call vertex ai fine tuned model"
+            entryPoint: "bq_vertex_remote"
+            runtime: "python311"
+            serviceAccountEmail: ${service_account}
+            sourceArchiveUrl: ${sourceArchiveUrl}
+            httpsTrigger:
+            securityLevel: "SECURE_OPTIONAL"
+            environmentVariables:                
+                PROJECT_ID : "${var.project_id}"
+                LOCATION : "us-central1"
+                TUNED_MODEL_URL : ${outputModel["output:model_resource_name"]}
+    - create_remote_function:
+        call: googleapis.bigquery.v2.jobs.query
+        args:
+            projectId: ${project_id}
+            body:
+                query: |
+                    CREATE OR REPLACE FUNCTION 
+                    `${var.project_id}`.llm_${random_string.random.result}.bq_vertex_remote(prompt STRING) RETURNS STRING
+                    REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result}` 
+                    OPTIONS (endpoint = '${create_function.functions_bq_remote_udf.https_trigger_url}')
+    - grant_permission_to_all:
+        call: googleapis.cloudfunctions.v1.projects.locations.functions.setIamPolicy
+        args:
+          resource: ${"projects/" + project + "/locations/" + location + "/functions/" + name}
+          body:
+            policy:
+              bindings:
+                - members: ${service_account}
+                  role: "roles/cloudfunctions.invoker"
+
