@@ -1,18 +1,6 @@
 // Copyright 2023 Google LLC
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     https://www.apache.org/licenses/LICENSE-2.0
-
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-import React, { useContext, useEffect, useState , FormEvent, useCallback, ReactElement} from 'react'
+import React, { useContext, useEffect, useState , FormEvent, useCallback } from 'react'
 import { 
   Button, 
   ComponentsProvider,
@@ -24,29 +12,19 @@ import {
   FieldSelect, 
   ComboboxOptionObject,
   ComboboxCallback,
-  MaybeComboboxOptionObject,
-  CodeBlock
+  MaybeComboboxOptionObject
   } from '@looker/components'
-import { Dialog, DialogLayout, ButtonTransparent  } from '@looker/components'
-import { ExtensionContext , ExtensionContextData} from '@looker/extension-sdk-react'
+import { Dialog, DialogLayout } from '@looker/components'
+import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
 import { 
-  type ILook,
-  IRequestAllLookmlModels,
   IDashboardBase,
-  ILookmlModel,
   ISqlQueryCreate,
-  ILookmlModelExploreFieldset,
-  ILookmlModelExploreField,
   IRequestRunQuery,
   IDashboardElement
 } from '@looker/sdk'
-import { Switch, Route, useHistory, useRouteMatch } from 'react-router-dom'
-import { MessageBar, Box, Heading } from '@looker/components'
-import { ISDKSuccessResponse } from '@looker/sdk-rtl'
+import { Box, Heading } from '@looker/components'
 import { EmbedContainer } from './EmbedContainer'
-import { LookerEmbedExplore , LookerEmbedSDK} from '@looker/embed-sdk'
-import { forEach, split } from 'lodash'
-import { ignoredYellowBox } from 'console'
+import { LookerEmbedSDK} from '@looker/embed-sdk'
 
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
@@ -75,19 +53,6 @@ export const LookerDashboardGenerative: React.FC = () => {
 
   const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
   const defaultPromptValue = "Can you summarize the following datasets in 10 bullet points?";
-
-  useEffect(() => {
-    const getMe = async () => {
-      try {
-        const me = await core40SDK.ok(core40SDK.me())
-        setMessage(`Hello, ${me.display_name}`)
-      } catch (error) {
-        console.error(error)
-        setMessage('An error occurred while getting information about me!')
-      }
-    }
-    getMe()
-  }, [])
 
   useEffect(() => {
     loadDashboards()
@@ -206,8 +171,8 @@ export const LookerDashboardGenerative: React.FC = () => {
     `;
     // console.log("Query to Run: " + query_to_run);
     const sql_query_create_param: ISqlQueryCreate = {
-      connection_name: "@{CONNECTION_NAME}",
-      sql: query_to_run         
+      connection_name:"dataml-latam-argolis",
+      sql: query_to_run
     }
 
     // Create SQL Query to Run
