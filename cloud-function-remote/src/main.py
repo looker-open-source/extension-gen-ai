@@ -35,7 +35,7 @@ def bq_vertex_remote(request):
         prompt_format = call[0]
         input_dictionary = call[1]
         question = call[2]
-                
+
         # Logic to split the fields
         # Insert into BigQuery in a temporary table
         # Execute BQML_GENERATE_TEXT for all the table fields
@@ -65,9 +65,6 @@ def bq_vertex_remote(request):
     return jsonify( { "replies" :  replies } )
   except Exception as e:
     return jsonify( { "errorMessage": str(e) } ), 400
-
-
-
 
 
 def generate_prompt_chunks(prompt):  
