@@ -2,12 +2,21 @@ import { ILookmlModelExploreField, ISqlQueryCreate, IWriteQuery, Looker40SDK, us
 import { UtilsHelper } from "../utils/Helper";
 import { LookerSQLService } from "./LookerSQLService";
 import { clean } from "semver";
+import { Field } from "@looker/components";
+import { Prompt } from "react-router-dom";
 
 export interface FieldMetadata{    
     label: string;
     name: string;
     description: string;
     // type: string;    
+}
+
+enum PromptType {
+    FIELDS,
+    FILTERS,
+    SORTS,
+    LIMITS    
 }
 
 export class GenerativeExploreService {
@@ -30,30 +39,39 @@ export class GenerativeExploreService {
         return generatedPromptsArray;
     }
 
-    private generatePromptFields(
-        modelFields: FieldMetadata[],
-        userInput: string):Array<string> {        
-        const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
-        const shardedPrompts:Array<string> = [];
-        for(const fieldGroup of generatedPromptsArray){
-            const serializedModelFields = JSON.stringify(fieldGroup);
-            const generatedPrompt = `
+    private getPromptTemplatePerType(
+        serializedModelFields:string,
+        userInput:string,
+        promptType: PromptType
+        ):string
+    {
+        switch(promptType){
+            case PromptType.FIELDS:
+                return `
 LookerLLM Context: ${serializedModelFields}
 Extract only the exact field names that are inside the LookerLLM Context that can help answer the following question.
 Question: ${userInput} 
-
 If the Question have an quantitative adjective like: "top", "bottom", "most", "least", include a "count" field or another measure that is on the LookerLLM Context.
-The output format should be JSON {"fields": [field1, field2, ...]}
+The output format should be a valid JSON with the format: {"fields": [field1, field2, ...]}
 If there are no fields return JSON {"fields": []}.
-
-`
-            shardedPrompts.push(generatedPrompt);
-        }        
-        return shardedPrompts;
-    }
-
-    private generatePromptForLimits(userInput: string):string {
-        const generatedPrompt = `
+`;
+            case PromptType.FILTERS:
+                return `
+LookerLLM Context: ${serializedModelFields}
+Extract only the exact field names that filters a specific value inside the Question Below. Use only fields from the LookerLLM Context.
+The output format is in JSON format like {"filters": {"order_items.created_month": "last month", "order_items.count": "> 15", "order_items.sales_amount": "< 300"}
+Question: ${userInput} 
+If there are no filters to return, return JSON {"filters": {}}.
+Examples:
+Q: 
+{}
+Q:
+{}
+Q:
+{}
+`;             
+            case PromptType.LIMITS:
+                return `
 Based on the Question: ${userInput}
 Extract the amount of records that the question wants.
 The limit should be an integer from 1 to 500.
@@ -65,8 +83,35 @@ Q: What are the top 50 products with the largest sales amount?
 50
 Q: What are the total sales per month?
 500
-`
-        return generatedPrompt;
+`;
+            default:
+                return "Unkown";
+        }
+
+    }
+
+    private generatePrompt(
+        modelFields: FieldMetadata[],
+        userInput: string,
+        promptType: PromptType):Array<string> {        
+
+        const shardedPrompts:Array<string> = [];     
+
+        // Prompt for Limits only needs the userInput
+        if(promptType == PromptType.LIMITS)
+        {
+            shardedPrompts.push(this.getPromptTemplatePerType("", userInput, promptType));
+        }
+        else
+        {
+            const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
+            for(const fieldGroup of generatedPromptsArray){
+                const serializedModelFields = JSON.stringify(fieldGroup);
+                const generatedPrompt = this.getPromptTemplatePerType(serializedModelFields, userInput, promptType);
+                shardedPrompts.push(generatedPrompt);
+            }        
+        }
+        return shardedPrompts;
     }
 
     private removeInexistentFields(
@@ -94,13 +139,90 @@ Q: What are the total sales per month?
         return cleanLLMFields;
     }
 
+    private buildBigQueryLLMQuery(selectPrompt:string)
+    {
+        return `SELECT ml_generate_text_llm_result as r, ml_generate_text_status
+        FROM
+        ML.GENERATE_TEXT(
+            MODEL llm.llm_model,
+            (
+            ${selectPrompt}
+            ),
+            STRUCT(
+            0 AS temperature,
+            1024 AS max_output_tokens,
+            0 AS top_p,
+            TRUE AS flatten_json_output,
+            1 AS top_k));
+        `;
+    }
+
+    private async findFiltersFromLLM(
+        modelFields: FieldMetadata[],
+        userInput: string): Promise<Array<string>>    
+    {
+         // First generate prompt for Fields
+         const fieldsPrompts:Array<string> = this.generatePrompt(modelFields, userInput, PromptType.FILTERS);
+         let arraySelect: Array<string> = [];
+         fieldsPrompts.forEach((promptField) =>{
+             const singleLineString = UtilsHelper.escapeBreakLine(promptField);
+             const subselect = `SELECT '` + singleLineString + `' AS prompt`                        
+             arraySelect.push(subselect);
+         });        
+         // Join all the selects with union all
+         const queryFields = arraySelect.join(" UNION ALL ");
+ 
+         if(queryFields == null || queryFields.length == 0)
+         {
+             throw new Error('Could not generate field arrays on Prompt'); 
+         }
+         // query to run
+         const queryToRunFields = this.buildBigQueryLLMQuery(queryFields);        
+         console.log("Query to Run: " + queryToRunFields);
+         const results = await this.sql.execute<{
+             r: string
+         }>(queryToRunFields);
+ 
+         var arrayLLMFields:Array<string> = [];
+         for(var result of results)
+         {
+             try {
+                 if(result!=null && result.r != null && result.r.length > 0)
+                 {
+                     var llmResultLine = JSON.parse(result.r);                
+                     arrayLLMFields = arrayLLMFields.concat(llmResultLine.fields);
+                 }
+                 else{
+                     console.log("Not found any fields");
+                 }                                
+             } catch (err) {
+                 console.log("Invalid JSON parse: " + result);
+                //  Ignoring this return and work with the others
+                //  throw new Error('LLM result does not contain a valid JSON');
+             }
+         }
+         //Remove fields that does not exists
+         arrayLLMFields = this.removeInexistentFields(modelFields, arrayLLMFields);
+ 
+         // Recheck with the LLM with the selected fields and modelFields if they are good to go or will eliminate some fields
+         if(arrayLLMFields.length > 2)
+         {
+             // TODO: recheck with LLM if the fields makes sense;
+         }
+         return arrayLLMFields;
+
+        
+    }
+
+
 
     private async findFieldsFromLLM( 
         modelFields: FieldMetadata[],
         userInput: string): Promise<Array<string>>
     {
-        // First generate prompt for Fields
-        const fieldsPrompts:Array<string> = this.generatePromptFields(modelFields, userInput);
+        // Generate the Base Prompt
+        const fieldsPrompts:Array<string> = this.generatePrompt(modelFields, userInput, PromptType.FIELDS);
+
         let arraySelect: Array<string> = [];
         fieldsPrompts.forEach((promptField) =>{
             const singleLineString = UtilsHelper.escapeBreakLine(promptField);
@@ -115,21 +237,7 @@ Q: What are the total sales per month?
             throw new Error('Could not generate field arrays on Prompt'); 
         }
         // query to run
-        const queryToRunFields = `SELECT ml_generate_text_llm_result as r, ml_generate_text_status
-        FROM
-        ML.GENERATE_TEXT(
-            MODEL llm.llm_model,
-            (
-            ${queryFields}
-            ),
-            STRUCT(
-            0 AS temperature,
-            1024 AS max_output_tokens,
-            0 AS top_p,
-            TRUE AS flatten_json_output,
-            1 AS top_k));
-        `;
-        
+        const queryToRunFields = this.buildBigQueryLLMQuery(queryFields);        
         console.log("Query to Run: " + queryToRunFields);
         const results = await this.sql.execute<{
             r: string
@@ -152,7 +260,6 @@ Q: What are the total sales per month?
                 throw new Error('LLM result does not contain a valid JSON');
             }
         }
-
         //Remove fields that does not exists
         arrayLLMFields = this.removeInexistentFields(modelFields, arrayLLMFields);
 
@@ -161,32 +268,20 @@ Q: What are the total sales per month?
         {
             // TODO: recheck with LLM if the fields makes sense;
         }
-
         return arrayLLMFields;
     }
 
+   
     private async findLimitsFromLLM( 
         userInput: string): Promise<string>
     {
-        const promptLimit = this.generatePromptForLimits(userInput);
+        // Generate Prompt returns an array, gets the first for the LIMIT
+        const promptLimit = this.generatePrompt([], userInput, PromptType.LIMITS)[0];
+
         const singleLineString = UtilsHelper.escapeBreakLine(promptLimit);
         const subselect = `SELECT '` + singleLineString + `' AS prompt`
         // query to run
-        const queryToRunFields = `SELECT ml_generate_text_llm_result as r, ml_generate_text_status
-        FROM
-        ML.GENERATE_TEXT(
-            MODEL llm.llm_model,
-            (
-            ${subselect}
-            ),
-            STRUCT(
-            0 AS temperature,
-            1024 AS max_output_tokens,
-            0 AS top_p,
-            TRUE AS flatten_json_output,
-            1 AS top_k));
-        `;
-
+        const queryToRunFields =  this.buildBigQueryLLMQuery(subselect);        
         const results = await this.sql.execute<{
             r: string
         }>(queryToRunFields);
