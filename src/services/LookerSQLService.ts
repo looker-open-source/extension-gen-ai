@@ -4,7 +4,6 @@ export class LookerSQLService {
     private lookerSDK: Looker40SDK;
     private readonly connectionName = "PROJECT_ID"; // TODO remove hard coded variable
 
-
     public constructor(lookerSDK: Looker40SDK) {
        this.lookerSDK = lookerSDK;
     }

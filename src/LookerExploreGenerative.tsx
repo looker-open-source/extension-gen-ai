@@ -111,7 +111,7 @@ export const LookerExploreGenerative: React.FC = () => {
 
   // Method that clears the explores under the chat
   const handleClear = () => {    
-    // Removes the first child
+    // Removes the first child    )
     exploreDivElement?.removeChild(exploreDivElement.firstChild!);
   }
 
@@ -134,7 +134,7 @@ export const LookerExploreGenerative: React.FC = () => {
   const handleChange = (e: FormEvent<HTMLTextAreaElement>) => {
     setPrompt(e.currentTarget.value)
   }
-
+  
   function transformArrayToString(array: string[]): string {
     return array.join('\\n');
   }
@@ -157,6 +157,7 @@ export const LookerExploreGenerative: React.FC = () => {
   // Method that triggers sending the message to the workflow
   const handleSend = () =>
   {
+    handleClearAll();
     setLoadingLLM(true);
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
     console.log("1. Get the Metadata from Looker from the selected Explorer");    
@@ -187,13 +188,16 @@ export const LookerExploreGenerative: React.FC = () => {
             my_fields.push(field_def);
           }          
         }
-        // @ts-ignore
-        const viewName = exploreResult.value.name!;
+        if(!exploreResult.ok)
+        {
+          throw new Error("Missing value from explore result");
+        }
+        const viewName = exploreResult.value.name;
         if (!prompt) {
           throw new Error('missing user prompt, unable to create query');
         }                
         console.log("3. Generate Prompts and Send to BigQuery");
-        const { modelName, queryId, view } = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName);
+        const { modelName, queryId, view } = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!);
         // Update the Explore with New QueryId
         LookerEmbedSDK.init(hostUrl!);
         console.log("explore not null: " + currentExploreId);
@@ -260,15 +264,14 @@ export const LookerExploreGenerative: React.FC = () => {
           />
           <Space>
             <Button onClick={handleSend}>Send</Button>
-            <Button onClick={handleClear}>Remove from Top Explore</Button>            
-            <Button onClick={handleClearBottom}>Remove from Bottom Explore</Button>            
+            <Button onClick={handleClearAll}>Remove from Top Explore</Button>                      
           </Space>
           <FieldTextArea            
             width="100%"
             label="Type your question"  
             value={prompt}
             onChange={handleChange}
-          />  
+          />        
           <Dialog isOpen={loadingLLM}>
             <DialogLayout header="Loading LLM Data to Explore...">
               <Spinner size={80}>
