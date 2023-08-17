@@ -31,12 +31,6 @@ export const LookerDashboardGenerative: React.FC = () => {
   const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
   const [currentDashElementCount, setCurrentDashElementCount] = useState<number>()
   const [currentDashData, setCurrentDashData] = useState<{[key: string]: {}}>({})
-
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 49238cc56b10303a1a2071c4517c0d1b66e120c7
   const [hostUrl, setHostUrl] = useState<string>()
 
   const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
