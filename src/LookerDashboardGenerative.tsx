@@ -1,36 +1,22 @@
 // Copyright 2023 Google LLC
 
-import React, { useContext, useEffect, useState , FormEvent, useCallback } from 'react'
-import { 
-  Button, 
-  ComponentsProvider,
-  FieldTextArea,
-  Space,
-  Span,
-  SpaceVertical,
-  Spinner,
-  FieldSelect, 
-  ComboboxOptionObject,
-  ComboboxCallback,
-  MaybeComboboxOptionObject
-  } from '@looker/components'
-import { Dialog, DialogLayout } from '@looker/components'
-import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
-import { 
+import { Box, Button, ComboboxCallback, ComboboxOptionObject, ComponentsProvider, Dialog, DialogLayout, FieldSelect, FieldTextArea, Heading, MaybeComboboxOptionObject, Space, SpaceVertical, Span, Spinner } from '@looker/components'
+import { LookerEmbedSDK } from '@looker/embed-sdk'
+import { ExtensionContext, ExtensionContextData } from '@looker/extension-sdk-react'
+import {
   IDashboardBase,
-  ISqlQueryCreate,
-  IRequestRunQuery,
-  IDashboardElement
+  ISqlQueryCreate
 } from '@looker/sdk'
-import { Box, Heading } from '@looker/components'
+import React, { FormEvent, useCallback, useContext, useEffect, useState } from 'react'
 import { EmbedContainer } from './EmbedContainer'
-import { LookerEmbedSDK} from '@looker/embed-sdk'
+import { GenerativeDashboardService } from './services/GenerativeDashboardService'
 
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
  */
 export const LookerDashboardGenerative: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
+  const generativeDashboardService = new GenerativeDashboardService(core40SDK);
   const [message, setMessage] = useState('')
   const [loadingCombobox, setLoadingCombobox] = useState<boolean>(false)
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
@@ -48,7 +34,7 @@ export const LookerDashboardGenerative: React.FC = () => {
   const [currentDashData, setCurrentDashData] = useState<{[key: string]: {}}>({})
 
 
-  
+
   const [hostUrl, setHostUrl] = useState<string>()
 
   const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
@@ -61,17 +47,17 @@ export const LookerDashboardGenerative: React.FC = () => {
 
   function generateComboDashboards(listDashs: IDashboardBase[]) {
     var allValues:ComboboxOptionObject[] = [];
-    listDashs.forEach(dash => {      
+    listDashs.forEach(dash => {
       if( dash!=null)
-      {          
+      {
         const exp = {
           label: dash.title + " - " + dash.id,
-          value: dash.title + "." + dash.id  
+          value: dash.title + "." + dash.id
         };
         // @ts-ignore
         allValues.push(exp);
-      }        
-    });  
+      }
+    });
     // set Initial Combo Explore and All
     setAllCombo(allValues);
     setCurrentCombo(allValues);
@@ -81,10 +67,10 @@ export const LookerDashboardGenerative: React.FC = () => {
   const loadDashboards = async () => {
     setLoadingCombobox(true);
     setErrorMessage(undefined);
-    try {      
+    try {
       const result = await core40SDK.ok(core40SDK.all_dashboards())
       setLookerDashboards(result);
-      generateComboDashboards(result);      
+      generateComboDashboards(result);
       setLoadingCombobox(false);
     } catch (error) {
       setLoadingCombobox(false)
@@ -95,9 +81,9 @@ export const LookerDashboardGenerative: React.FC = () => {
   const selectCombo = ((selectedValue: string) => {
     const splittedArray = selectedValue.split(".");
     if(splittedArray.length > 0 && splittedArray[0]!=null && splittedArray[1]!=null){
-      setCurrentDashName(splittedArray[0]);    
-      setCurrentDashId(splittedArray[1]);              
-    } 
+      setCurrentDashName(splittedArray[0]);
+      setCurrentDashId(splittedArray[1]);
+    }
     else{
       console.log("Error selecting combobox, modelName and exploreName are null or not divided by .");
     }
@@ -107,23 +93,23 @@ export const LookerDashboardGenerative: React.FC = () => {
     {
       for(var i = 0; i < exploreDivElement.children.length; i++)
       {
-        exploreDivElement?.removeChild(exploreDivElement.lastChild!);  
+        exploreDivElement?.removeChild(exploreDivElement.lastChild!);
       }
     }
 
     setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);
-    // @ts-ignore            
+    // @ts-ignore
     LookerEmbedSDK.init(hostUrl!);
     LookerEmbedSDK.createDashboardWithId(splittedArray[1])
-    .appendTo(exploreDivElement!)                              
-    .build()        
+    .appendTo(exploreDivElement!)
+    .build()
     .connect()
     .then()
     .catch((error: Error) => {
       console.error('Connection error', error)
-    });     
+    });
   });
-  
+
   const onFilterComboBox = ((filteredTerm: string) => {
     console.log("Filtering");
     setCurrentCombo(allCombo?.filter(explore => explore.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
@@ -134,74 +120,14 @@ export const LookerDashboardGenerative: React.FC = () => {
   }
 
   // Method that clears the explores under the chat
-  const handleClear = () => {    
+  const handleClear = () => {
     // Removes the first child
     setLlmInsights("");
   }
- 
+
 
   const handleChange = (e: FormEvent<HTMLTextAreaElement>) => {
     setPrompt(e.currentTarget.value)
-  }
-
-  
-  const sendPromptToBigQuery = (contextData: {[key: string]: {}}, question: string ) =>
-  {
-    // Fix some characters that breaks BigQuery Query
-    var ctx = JSON.stringify(contextData);    
-    ctx = ctx.replace(/\'/g, '\\\'');
-
-    console.log("Sending Prompt to BigQuery LLM");
-    const singleLineString = `Act as an experienced Business Data Analyst with PHD and answer the question having into context the following Data: ${ctx} Question: ${question}`;
-
-    // query to run
-    const query_to_run = `SELECT ml_generate_text_llm_result as r, ml_generate_text_status
-    FROM
-      ML.GENERATE_TEXT(
-        MODEL llm.llm_model,
-        (
-          SELECT '`+ singleLineString + `' AS prompt
-        ),
-        STRUCT(
-          0.1 AS temperature,
-          1024 AS max_output_tokens,
-          0.1 AS top_p,
-          TRUE AS flatten_json_output,
-          10 AS top_k));
-    `;
-    // console.log("Query to Run: " + query_to_run);
-    const sql_query_create_param: ISqlQueryCreate = {
-      connection_name:"dataml-latam-argolis",
-      sql: query_to_run
-    }
-
-    // Create SQL Query to Run
-    core40SDK.create_sql_query(sql_query_create_param).then(
-      results => {
-        // @ts-ignore
-        const slug =  results.value.slug;
-        console.log("Create BQML Query with slug: "  + slug);
-        if(slug != null)
-        {
-          // Run SQL Query with Prompt
-          core40SDK.run_sql_query(slug, "json").then(
-            results =>
-            {        
-              if(results.ok)
-              {
-                var first_result = results.value[0];
-                // @ts-ignore                                               
-                first_result.r!= null?setLlmInsights(first_result.r):setLlmInsights(first_result.ml_generate_text_status);                
-              }              
-              else{
-                setLlmInsights("Error: " + results.error);
-              }   
-              setLoadingLLM(false);                        
-            }
-          )          
-        }
-      }
-    )
   }
 
   // resets combo explore with all models and explores
@@ -212,149 +138,100 @@ export const LookerDashboardGenerative: React.FC = () => {
   const extensionContext = useContext<ExtensionContextData>(ExtensionContext);
 
   const embedCtrRef = useCallback((el) => {
-    setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);    
+    setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);
     // set the explore div element outside
-    setExploreDivElement(el);           
+    setExploreDivElement(el);
   }, [])
 
   // Method that triggers sending the message to the workflow
-  const handleSend = () => 
+  const handleSend = async () =>
   {
-    setLoadingLLM(true);
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
-    console.log("1. Get the Data From all the Dashboards");        
-    if(currentDashName!=null && currentDashId!=null)
+    console.log("1. Get the Data From all the Dashboards");
+    if(!currentDashName || !currentDashId)
     {
-      core40SDK.dashboard(currentDashId).then
-      (dash =>{
-        if(dash.ok)
-        {
-          var allDashboardElements:IDashboardElement[] = dash.value.dashboard_elements!;
-          var currentCount = allDashboardElements.length;
-          console.log("Count of Element Dashboards: " + currentCount);
-          var currentJsonData:{[key: string]: {}} = {};
-          if(currentCount == 0)
-          {
-            setLoadingLLM(false);
-            setLlmInsights("Dashboard Loaded Empty");
-          }          
-
-          for(var dashboardElement of dash.value.dashboard_elements!)
-          {
-            var queryId = dashboardElement.query_id;
-            if(queryId == null)
-            {
-              // Different Dashboard Versions
-              queryId = dashboardElement.result_maker?.query_id;
-            }
-            if(queryId!= null)
-            {
-              // @ts-ignore          
-              console.log("QueryId:" + queryId);
-              var req: IRequestRunQuery = {
-                query_id: queryId,
-                result_format: "json"
-              } 
-              console.log("Request: "+ req);
-              core40SDK.run_query(req).then(
-                result => {
-                  if(result.ok)
-                  {                
-                    currentJsonData[currentCount] = result.value.slice(0,50);                                  
-                  }
-                  else
-                  {
-                    console.log("Error Getting Data from Dashboard Element " + queryId);
-                  }   
-                  if(currentCount > 0)
-                  {
-                    currentCount-=1;
-                  }
-                  if(currentCount == 0)
-                  {
-                    console.log("finished loading elements");                
-                    sendPromptToBigQuery(currentJsonData, prompt!);
-                  }                                                      
-                }
-              );   
-            }
-            else
-            {
-              console.log("Could not find queryId for dashboardElement");                
-              currentCount-=1;
-            }
-          }
-        }
-      });
+      console.error('unable to find current dashboard id');
+      return;
     }
-    else
+    if(!prompt)
     {
+      console.error('missing prompt');
+      return;
+    }
+    setLoadingLLM(true);
+    try {
+      const dashboardElementsData = await generativeDashboardService.getElementsById(currentDashId);
+      const promptResult = await generativeDashboardService.sendPrompt(dashboardElementsData, prompt)
+      // update interface with results
+      setLlmInsights(promptResult)
+    } catch (error: Error) {
+      setLlmInsights(`Unexpected error: ${error.message}`);
+    } finally {
       setLoadingLLM(false);
-    }    
+    }
   }
 
-  
-  return (    
+  return (
     <ComponentsProvider>
       <Space around>
         <Span fontSize="xxxxxlarge">
           {message}
-        </Span>        
+        </Span>
       </Space>
       <Space around>
-        <Heading fontWeight="semiBold">Looker AI Insights on Dashboards</Heading>                        
-      </Space>      
-      <Box display="flex" m="large">        
+        <Heading fontWeight="semiBold">Looker AI Insights on Dashboards</Heading>
+      </Space>
+      <Box display="flex" m="large">
           <SpaceVertical>
           <Span fontSize="x-large">
-          Quick Start:                                    
-          </Span>  
+          Quick Start:
+          </Span>
           <Span fontSize="medium">
           1. Select the Dashboard by selecting or typing - <b>example: eCommerce Logistics Demo - 26</b>
           </Span>
           <Span fontSize="medium">
           2. Input a question that you want to ask the dashboard - <b>example: How is the status of the business? Give me some insights!</b>
-          </Span>          
+          </Span>
           <Span fontSize="medium">
           Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b>
           </Span>
 
           <FieldSelect
-            onOpen={resetComboExplore}                        
+            onOpen={resetComboExplore}
             isFilterable
             onFilter={onFilterComboBox}
             isLoading={loadingCombobox}
             label="All Dashboards"
-            onChange={selectCombo}            
+            onChange={selectCombo}
             options={currentCombo}
             width={500}
           />
           <Space>
             <Button onClick={handleSend}>Send</Button>
-            <Button onClick={handleClear}>Clear Insights</Button>            
+            <Button onClick={handleClear}>Clear Insights</Button>
           </Space>
-          <FieldTextArea            
+          <FieldTextArea
             width="100%"
-            label="Type your question"  
+            label="Type your question"
             value={prompt}
             onChange={handleChange}
             defaultValue={defaultPromptValue}
-          />  
+          />
           <Dialog isOpen={loadingLLM}>
             <DialogLayout header="Loading LLM Data to Explore...">
               <Spinner size={80}>
               </Spinner>
-            </DialogLayout>            
-            </Dialog>  
+            </DialogLayout>
+            </Dialog>
 
-          <FieldTextArea            
+          <FieldTextArea
             width="100%"
-            label="LLM Insights"  
+            label="LLM Insights"
             value={llmInsights}
-          /> 
-          <EmbedContainer ref={embedCtrRef}>          
-          </EmbedContainer>                   
-        </SpaceVertical>                                   
+          />
+          <EmbedContainer ref={embedCtrRef}>
+          </EmbedContainer>
+        </SpaceVertical>
       </Box>
 
     </ComponentsProvider>
