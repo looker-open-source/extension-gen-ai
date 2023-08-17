@@ -29,7 +29,6 @@ export const LookerDashboardGenerative: React.FC = () => {
   const [prompt, setPrompt] = useState<string>()
   const [llmInsights, setLlmInsights] = useState<string>()
   const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
-
   const [currentDashElementCount, setCurrentDashElementCount] = useState<number>()
   const [currentDashData, setCurrentDashData] = useState<{[key: string]: {}}>({})
 
@@ -46,21 +45,14 @@ export const LookerDashboardGenerative: React.FC = () => {
   }, [])
 
   function generateComboDashboards(listDashs: IDashboardBase[]) {
-    var allValues:ComboboxOptionObject[] = [];
-    listDashs.forEach(dash => {
-      if( dash!=null)
-      {
-        const exp = {
-          label: dash.title + " - " + dash.id,
-          value: dash.title + "." + dash.id
-        };
-        // @ts-ignore
-        allValues.push(exp);
-      }
-    });
+    const comboObjects: ComboboxOptionObject[] = listDashs
+      .map(({ title, id }) => ({
+          label: [title, id].join(' - '),
+          value: [title, id].join('.')
+      }));
     // set Initial Combo Explore and All
-    setAllCombo(allValues);
-    setCurrentCombo(allValues);
+    setAllCombo(comboObjects);
+    setCurrentCombo(comboObjects);
     setPrompt(defaultPromptValue);
   }
 
@@ -68,7 +60,7 @@ export const LookerDashboardGenerative: React.FC = () => {
     setLoadingCombobox(true);
     setErrorMessage(undefined);
     try {
-      const result = await core40SDK.ok(core40SDK.all_dashboards())
+      const result = await generativeDashboardService.listAll();
       setLookerDashboards(result);
       generateComboDashboards(result);
       setLoadingCombobox(false);
