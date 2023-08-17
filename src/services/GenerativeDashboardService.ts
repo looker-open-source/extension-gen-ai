@@ -1,4 +1,4 @@
-import { IDashboard, IDashboardElement, Looker40SDK } from "@looker/sdk";
+import { IDashboard, IDashboardBase, IDashboardElement, Looker40SDK } from "@looker/sdk";
 import { UtilsHelper } from "../utils/Helper";
 import { LookerDashboardService } from "./LookerDashboardService";
 import { LookerSQLService } from "./LookerSQLService";
@@ -10,6 +10,14 @@ export class GenerativeDashboardService {
     public constructor(lookerSDK: Looker40SDK) {
         this.sql = new LookerSQLService(lookerSDK);
         this.dashboardService = new LookerDashboardService(lookerSDK, this.sql);
+    }
+
+    /**
+     * Lists all available dashboards
+     * @returns
+     */
+    public async listAll(): Promise<IDashboardBase[]> {
+        return await this.dashboardService.listAll();
     }
 
     /**

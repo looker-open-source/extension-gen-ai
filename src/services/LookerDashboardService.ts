@@ -1,4 +1,4 @@
-import { IDashboard, IDashboardElement, Looker40SDK } from "@looker/sdk";
+import { IDashboard, IDashboardBase, IDashboardElement, Looker40SDK } from "@looker/sdk";
 import { LookerSQLService } from "./LookerSQLService";
 
 export class LookerDashboardService {
@@ -8,6 +8,18 @@ export class LookerDashboardService {
     public constructor(lookerSDK: Looker40SDK, lookerSQL: LookerSQLService) {
         this.lookerSDK = lookerSDK;
         this.lookerSQL = lookerSQL;
+    }
+
+    /**
+     * Lists all available dashboards using LookerSDK
+     * @returns
+     */
+    public async listAll(): Promise<IDashboardBase[]> {
+        const dashboardsResult = await this.lookerSDK.all_dashboards();
+        if (!dashboardsResult.ok) {
+            throw new Error('unable to fetch all dashboards');
+        }
+        return dashboardsResult.value;
     }
 
     /**
