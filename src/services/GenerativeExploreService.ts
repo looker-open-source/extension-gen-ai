@@ -5,6 +5,7 @@ import { IDictionary } from "@looker/sdk-rtl";
 import { clean, validRange } from "semver";
 import { Field } from "@looker/components";
 import { Prompt } from "react-router-dom";
+import { PromptService, PromptTypeEnum } from "./PromptService"
 
 export interface FieldMetadata{    
     label: string;
@@ -13,19 +14,14 @@ export interface FieldMetadata{
     // type: string;    
 }
 
-enum PromptType {
-    FIELDS_FILTERS_PIVOTS_SORTS,
-    FILTERS,
-    SORTS,
-    PIVOTS,
-    LIMITS    
-}
 
 export class GenerativeExploreService {
     private sql: LookerSQLService;
+    private promptService: PromptService;
 
-    public constructor(lookerSDK: Looker40SDK) {
+    public constructor(lookerSDK: Looker40SDK, promptService: PromptService) {
         this.sql = new LookerSQLService(lookerSDK);
+        this.promptService = promptService;
     }
 
     //    Method that breaks the exploreFields into chunks based on the max number of tokens
@@ -40,106 +36,26 @@ export class GenerativeExploreService {
         }
         return generatedPromptsArray;
     }
-
-    private getPromptTemplatePerType(
-        serializedModelFields:string,
-        userInput:string,        
-        promptType: PromptType,
-        userFilter?: string
-        ):string
-    {
-        switch(promptType){
-            case PromptType.FIELDS_FILTERS_PIVOTS_SORTS:
-                return `Context: ${serializedModelFields}
-Question: ${userInput}
-
-Extract the exact fields, filters, pivots, explicit_pivots from the Context in a JSON format that can help answer the Question.The fields are in the format "table.field".
-explicit_pivots are the fields that are mentioned explicitly after the word "pivot" or "pivoting" keyword inside the Question.            
-Whenever the question contains a count or total, include a count inside the fields.
-
-{
-    "fields": [],
-    "filters": {},
-    "pivots": [],
-    "explicit_pivots": [],
-    "sorts": []
-}
-
-Examples:            
-Q: "What are the top 10 total sales price per brand. With brands: Levi\\'s, Calvin Klein, Columbia"
-{"fields":["products.brand","order_items.total_sale_price"],"filters":{"products.brand":"Levi\\'s, Calvin Klein, Columbia"}}
-
-Q: "What are the top sales price, category, cost pivot per day and filter only orders with more than 15 items"
-{"fields":["order_items.total_sale_price", "products.category", "inventory_items.cost"], "pivots": ["orders.created_date"], "filters": {"order_items.count": "> 15"}}
-
-Q: "How many orders were created in the past 7 days"
-{"fields": ["orders.count"], "filters": {"sales_order.created_date": "7 days"}}
-
-Q: "What are the states that had the most orders, filter state: California, Nevada, Washinton, Oregon"
-{"fields": ["orders.count"], "filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}}
-`;
-            case PromptType.FILTERS:
-                return `
-LookerLLM Context: ${serializedModelFields}
-Examples:
-Q: orders in the last month
-{"filters": {"order_items.created_month": "last month"}}
-Q: Orders have more than 45 items.
-{"filters": {"order_items.count": "> 15"}}
-Q: Orders Created in the past 7 days
-{"filters": {"sales_order.created_date": "7 days"}}
-Q: states: California, Nevada, Washinton and Oregon.
-{"filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}}
-Q: e-mail adress is not null
-{"filters": {"user.email_address": "-NULL"}}
-
-Following the examples above.
-Extract only the exact field names that filters a specific value inside the Filter Expression.
-Analyze the value being expressed to check if it matches one of the fields and give the full expression.
-Use only fields from the LookerLLM Context that makes sense to be filtered on. 
-If there is a mention with dates, find an appropriate field that will contain a date to filter.
-If there are no filters to return, return JSON {"filters": {}}.
-The output format is in JSON format {"filters": {"order_items.created_month": "last month", "order_items.count": "> 15", "order_items.sales_amount": "< 300"}
-
-Q: ${userInput} 
-`;             
-            case PromptType.LIMITS:
-                return `
-Based on the Question: ${userInput}
-Extract the amount of records that the question wants.
-The limit should be an integer from 1 to 500.
-If nothing can be inferred from the question, use the default value: 500.
-Examples:
-Q: What are the top 10 languages?
-10
-Q: What are the top 50 products with the largest sales amount?
-50
-Q: What are the total sales per month?
-500
-`;
-            default:
-                return "Unkown";
-        }
-    }
+    
 
     private generatePrompt(
         modelFields: FieldMetadata[],
         userInput: string,
-        promptType: PromptType):Array<string> {        
+        promptType: PromptTypeEnum):Array<string> {        
 
         const shardedPrompts:Array<string> = [];        
         userInput = UtilsHelper.escapeSpecialCharacter(userInput);
         // Prompt for Limits only needs the userInput
-        if(promptType == PromptType.LIMITS)
+        if(promptType == PromptTypeEnum.LIMITS)
         {
-            shardedPrompts.push(this.getPromptTemplatePerType("", userInput, promptType));
+            shardedPrompts.push(this.promptService.fillPromptVariables(promptType, { userInput }));            
         }
         else
         {
             const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
             for(const fieldGroup of generatedPromptsArray){
                 const serializedModelFields = JSON.stringify(fieldGroup);
-                const generatedPrompt = this.getPromptTemplatePerType(serializedModelFields, userInput, promptType);
+                const generatedPrompt = this.promptService.fillPromptVariables(promptType, {serializedModelFields, userInput});
                 shardedPrompts.push(generatedPrompt);
             }        
         }
@@ -206,8 +122,7 @@ Q: What are the total sales per month?
         console.log("Input Dict eram: " + llmFilters.length + " Output: " + cleanLLMFields.length);
         return cleanLLMFields;
     }
-
-
+    
     private buildBigQueryLLMQuery(selectPrompt:string)
     {
         return `SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
@@ -262,7 +177,7 @@ Q: What are the total sales per month?
         }>
     {
         // Generate the Base Prompt
-        const fieldsPrompts:Array<string> = this.generatePrompt(modelFields, userInput, PromptType.FIELDS_FILTERS_PIVOTS_SORTS);
+        const fieldsPrompts:Array<string> = this.generatePrompt(modelFields, userInput, PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS);
         const results = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
         var arrayLLMFields:Array<string> = [];
         var filtersToUse:IDictionary<string> = {};
@@ -348,7 +263,7 @@ Q: What are the total sales per month?
         userInput: string): Promise<string>
     {
         // Generate Prompt returns an array, gets the first for the LIMIT
-        const promptLimit = this.generatePrompt([], userInput, PromptType.LIMITS);
+        const promptLimit = this.generatePrompt([], userInput, PromptTypeEnum.LIMITS);
         const results  = await this.retrieveLookerParametersFromLLM(promptLimit);                
         const limitResult = UtilsHelper.firstElement(results).r;
         // validate the result

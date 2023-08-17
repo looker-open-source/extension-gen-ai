@@ -2,13 +2,27 @@ import { ISqlQueryCreate, IWriteQuery, Looker40SDK } from "@looker/sdk";
 
 export class LookerSQLService {
     private lookerSDK: Looker40SDK;
-    private readonly connectionName = "PROJECT_ID"; // TODO remove hard coded variable
+    private connectionName: string = "";
 
     public constructor(lookerSDK: Looker40SDK) {
-       this.lookerSDK = lookerSDK;
+       this.lookerSDK = lookerSDK;       
     }
 
     public async execute<T>(query: string): Promise<Array<T>> {
+
+        if(this.connectionName == "")
+        {
+            // TODO: try to get dynamically the looker-genai modelName
+            let response = await this.lookerSDK.ok(this.lookerSDK.lookml_model('looker-genai'));
+            if(response.allowed_db_connection_names!=null && response.allowed_db_connection_names.length > 0)
+            {
+                this.connectionName = response.allowed_db_connection_names[0];
+            }
+            else
+            {
+                throw new Error("Problem getting the Dynamic DB connection to Run Queries");
+            }
+        }        
         const queryCreate: ISqlQueryCreate = {
             connection_name: this.connectionName,
             sql: query,
