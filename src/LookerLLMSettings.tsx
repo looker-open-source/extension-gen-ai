@@ -8,6 +8,7 @@ import {
   Span,
   SpaceVertical,  
   FieldCheckbox,
+  MixedBoolean,
 } from '@looker/components'
 import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
 import { Box, Heading } from '@looker/components'
@@ -19,17 +20,32 @@ import { PromptService, PromptTypeEnum } from './services/PromptService'
 export const LookerLLMSettings: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
   const [message, setMessage] = useState('')
-  const [singleExploreMode, setSingleExploreMode] = useState<boolean>(true);
-  const [usingNativeBQML, setUsingNativeBQML] = useState<boolean>(true);
+  const [singleExploreMode, setSingleExploreMode] = useState(true as MixedBoolean);
+  const [usingNativeBQML, setUsingNativeBQML] = useState(true as MixedBoolean)
   const [customPrompt, setCustomPrompt] = useState<string>();
-  
-  
-  
+  const [bananaState, setBananaState] = useState(true as MixedBoolean);
+
+  const storageNativeBQML = "usingNativeBQML";
+  const storageSingleExplore = "singleExplore";
+  const storageCustomPrompt = "customPrompt";
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    const promptService = new PromptService();
-    console.log("Use effect Initial");
+    // Every time it reloads
+    const promptService = new PromptService(JSON.parse(window.sessionStorage.getItem(storageCustomPrompt)!));
+    console.log("Use effect Initial");    
     setCustomPrompt(promptService.getPromptTemplateByType(PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));
+    const cStorageNativeBQML = window.sessionStorage.getItem(storageNativeBQML) === "true";
+    const cStorageSingleExplore = window.sessionStorage.getItem(storageSingleExplore) === "true";
+    if(cStorageNativeBQML!= null)
+    {      
+      setUsingNativeBQML(cStorageNativeBQML);
+    }
+    if(cStorageSingleExplore!=null)
+    {
+      setSingleExploreMode(cStorageSingleExplore);    
+    }
+
   }, [])
   
   const extensionContext = useContext<ExtensionContextData>(ExtensionContext);
@@ -39,9 +55,7 @@ export const LookerLLMSettings: React.FC = () => {
     const tempCustomPrompt: { [key in PromptTypeEnum]?: string } = {
       [PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: e.currentTarget.value
     }
-    window.sessionStorage.setItem("customPrompt", JSON.stringify(tempCustomPrompt));
-    console.log("Use effect Initial");
-   
+    window.sessionStorage.setItem(storageCustomPrompt, JSON.stringify(tempCustomPrompt));       
   }
 
   return (    
@@ -65,18 +79,18 @@ export const LookerLLMSettings: React.FC = () => {
           <FieldCheckbox
             label="Single Explore Mode"
             checked={singleExploreMode}
-            onChange={() => {
-              window.sessionStorage.singleExplore = !singleExploreMode;
-              setSingleExploreMode(!singleExploreMode)
+            onChange={() => {          
+              window.sessionStorage.setItem(storageSingleExplore, singleExploreMode?"false": "true");
+              setSingleExploreMode(!singleExploreMode);
             }
               }
           />
           <FieldCheckbox
             label="Yes - Use Native BQML Method, and No: use Fine tuned model"
-            checked={usingNativeBQML}
-            onChange={() => {
-              window.sessionStorage.useNativeBQML = !usingNativeBQML;
-              setUsingNativeBQML(!usingNativeBQML)
+            checked={usingNativeBQML}            
+            onChange={() => {             
+              window.sessionStorage.setItem(storageNativeBQML, usingNativeBQML?"false": "true");
+              setUsingNativeBQML(!usingNativeBQML);              
             }}
           />          
           <FieldTextArea            

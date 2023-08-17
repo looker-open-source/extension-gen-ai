@@ -157,7 +157,10 @@ export const LookerExploreGenerative: React.FC = () => {
   // Method that triggers sending the message to the workflow
   const handleSend = () =>
   {
-    handleClearAll();
+    if(window.sessionStorage.getItem("singleExplore")== null || window.sessionStorage.getItem("singleExplore") == "true")
+    {      
+      handleClearAll();  
+    }
     setLoadingLLM(true);
     console.log("Debug CustomPrompt" +  window.sessionStorage.getItem("customPrompt"));
     const promptService = new PromptService(JSON.parse(window.sessionStorage.getItem("customPrompt")!));
