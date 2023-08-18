@@ -197,10 +197,10 @@ export class GenerativeExploreService {
             try {                
                 if(result!=null && result.r != null && result.r.length > 0)
                 {
-                    var llmResultLine = JSON.parse(result.r);
-                    if(llmResultLine.fieldNames != null && llmResultLine.fieldNames.length > 0)
+                    var llmResultLine = JSON.parse(result.r);                    
+                    if(llmResultLine.field_names != null && llmResultLine.field_names.length > 0)
                     {
-                        arrayLLMFields = arrayLLMFields.concat(llmResultLine.fieldNames);
+                        arrayLLMFields = arrayLLMFields.concat(llmResultLine.field_names);
                     }
                     if(llmResultLine.filters !=null)
                     {
