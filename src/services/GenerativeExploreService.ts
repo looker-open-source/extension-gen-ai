@@ -1,12 +1,10 @@
-import { ILookmlModelExploreField, ISqlQueryCreate, IWriteQuery, Looker40SDK, run_url_encoded_query, user} from "@looker/sdk";
+import { Looker40SDK } from "@looker/sdk";
+import { IDictionary } from "@looker/sdk-rtl";
+import LookerExploreDataModel, { ILookerExploreDataModel } from "../models/LookerExploreData";
 import { UtilsHelper } from "../utils/Helper";
 import { LookerSQLService } from "./LookerSQLService";
-import { IDictionary } from "@looker/sdk-rtl";
-import { clean, validRange } from "semver";
-import { Field } from "@looker/components";
-import { Prompt } from "react-router-dom";
 
-export interface FieldMetadata{    
+export interface FieldMetadata{
     label: string;
     name: string;
     description: string;
@@ -18,7 +16,7 @@ enum PromptType {
     FILTERS,
     SORTS,
     PIVOTS,
-    LIMITS    
+    LIMITS
 }
 
 export class GenerativeExploreService {
@@ -34,8 +32,8 @@ export class GenerativeExploreService {
         const generatedPromptsArray = new Array<FieldMetadata[]>;
         var totalLength = modelFields.length;
         // divide by n elements
-        var maxInteractions = totalLength/FIXED_BREAK_PER_QUANTITY;        
-        for(let i=0; i < maxInteractions; i++){            
+        var maxInteractions = totalLength/FIXED_BREAK_PER_QUANTITY;
+        for(let i=0; i < maxInteractions; i++){
             generatedPromptsArray.push(modelFields.slice(i*FIXED_BREAK_PER_QUANTITY, (i+1)*FIXED_BREAK_PER_QUANTITY));
         }
         return generatedPromptsArray;
@@ -43,7 +41,7 @@ export class GenerativeExploreService {
 
     private getPromptTemplatePerType(
         serializedModelFields:string,
-        userInput:string,        
+        userInput:string,
         promptType: PromptType,
         userFilter?: string
         ):string
@@ -54,7 +52,7 @@ export class GenerativeExploreService {
 Question: ${userInput}
 
 Extract the exact fields, filters, pivots, explicit_pivots from the Context in a JSON format that can help answer the Question.The fields are in the format "table.field".
-explicit_pivots are the fields that are mentioned explicitly after the word "pivot" or "pivoting" keyword inside the Question.            
+explicit_pivots are the fields that are mentioned explicitly after the word "pivot" or "pivoting" keyword inside the Question.
 Whenever the question contains a count or total, include a count inside the fields.
 
 {
@@ -65,7 +63,7 @@ Whenever the question contains a count or total, include a count inside the fiel
     "sorts": []
 }
 
-Examples:            
+Examples:
 Q: "What are the top 10 total sales price per brand. With brands: Levi\\'s, Calvin Klein, Columbia"
 {"fields":["products.brand","order_items.total_sale_price"],"filters":{"products.brand":"Levi\\'s, Calvin Klein, Columbia"}}
 
@@ -96,13 +94,13 @@ Q: e-mail adress is not null
 Following the examples above.
 Extract only the exact field names that filters a specific value inside the Filter Expression.
 Analyze the value being expressed to check if it matches one of the fields and give the full expression.
-Use only fields from the LookerLLM Context that makes sense to be filtered on. 
+Use only fields from the LookerLLM Context that makes sense to be filtered on.
 If there is a mention with dates, find an appropriate field that will contain a date to filter.
 If there are no filters to return, return JSON {"filters": {}}.
 The output format is in JSON format {"filters": {"order_items.created_month": "last month", "order_items.count": "> 15", "order_items.sales_amount": "< 300"}
 
-Q: ${userInput} 
-`;             
+Q: ${userInput}
+`;
             case PromptType.LIMITS:
                 return `
 Based on the Question: ${userInput}
@@ -125,9 +123,9 @@ Q: What are the total sales per month?
     private generatePrompt(
         modelFields: FieldMetadata[],
         userInput: string,
-        promptType: PromptType):Array<string> {        
+        promptType: PromptType):Array<string> {
 
-        const shardedPrompts:Array<string> = [];        
+        const shardedPrompts:Array<string> = [];
         userInput = UtilsHelper.escapeSpecialCharacter(userInput);
         // Prompt for Limits only needs the userInput
         if(promptType == PromptType.LIMITS)
@@ -141,7 +139,7 @@ Q: What are the total sales per month?
                 const serializedModelFields = JSON.stringify(fieldGroup);
                 const generatedPrompt = this.getPromptTemplatePerType(serializedModelFields, userInput, promptType);
                 shardedPrompts.push(generatedPrompt);
-            }        
+            }
         }
         return shardedPrompts;
     }
@@ -153,11 +151,11 @@ Q: What are the total sales per month?
     {
         const cleanLLMFields: Array<string> = [];
         for(const modelField of modelFields )
-        {            
+        {
             if(modelField.name!= null)
             {
                 for(const llmField of llmFields)
-                {            
+                {
                     if(llmField == modelField.name)
                     {
                         console.log("LLMField equals modelField.name")
@@ -186,18 +184,18 @@ Q: What are the total sales per month?
     {
         const cleanLLMFields: IDictionary<string> = {};
         for(const modelField of modelFields )
-        {            
+        {
             if(modelField.name!= null && llmFilters!=null)
             {
                 for(const key of Object.keys(llmFilters))
-                {            
+                {
                     if(key == modelField.name)
                     {
                         // Validate Filter Values
                         if(this.validateFilterFormatValue(llmFilters[key]) != "")
                         {
-                            cleanLLMFields[key] = llmFilters[key];                        
-                        }                        
+                            cleanLLMFields[key] = llmFilters[key];
+                        }
                         break;
                     }
                 }
@@ -226,112 +224,77 @@ Q: What are the total sales per month?
         `;
     }
 
-    
+
     private async retrieveLookerParametersFromLLM(promptArray:Array<string>)
     {
         const arraySelect: Array<string> = [];
         promptArray.forEach((promptField) =>{
              const singleLineString = UtilsHelper.escapeBreakLine(promptField);
-             const subselect = `SELECT '` + singleLineString + `' AS prompt`;                        
+             const subselect = `SELECT '` + singleLineString + `' AS prompt`;
              arraySelect.push(subselect);
-        });        
+        });
          // Join all the selects with union all
         const queryContents = arraySelect.join(" UNION ALL ");
- 
+
         if(queryContents == null || queryContents.length == 0)
         {
-            throw new Error('Could not generate field arrays on Prompt'); 
+            throw new Error('Could not generate field arrays on Prompt');
         }
          // query to run
-         const queryToRun = this.buildBigQueryLLMQuery(queryContents);       
+         const queryToRun = this.buildBigQueryLLMQuery(queryContents);
          console.log("Query to Run: " + queryToRun);
-         const results = await this.sql.execute<{   
+         const results = await this.sql.execute<{
              r: string
              status: string
          }>(queryToRun);
          return results;
     }
 
-    private async getExplorePayloadFromLLM( 
+    private async getExplorePayloadFromLLM(
         modelFields: FieldMetadata[],
-        userInput: string): Promise<{
-            fields: Array<string>,
-            filters: IDictionary<string>,
-            sorts: Array<string>,
-            pivots: Array<string>
-        }>
+        userInput: string): Promise<LookerExploreDataModel>
     {
         // Generate the Base Prompt
-        const fieldsPrompts:Array<string> = this.generatePrompt(modelFields, userInput, PromptType.FIELDS_FILTERS_PIVOTS_SORTS);
-        const results = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
-        var arrayLLMFields:Array<string> = [];
-        var filtersToUse:IDictionary<string> = {};
-        var arrayPivots:Array<string> = [];
-        var arraySorts:Array<string> = [];
-
+        const fieldsPrompts: Array<string> = this.generatePrompt(modelFields, userInput, PromptType.FIELDS_FILTERS_PIVOTS_SORTS);
+        const llmChunkedResults = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
+        const allowedFieldNames: string[] = modelFields.map(field => field.name);
+        const mergedResults = new LookerExploreDataModel({
+            fields: [],
+            filters: {},
+            pivots: [],
+            sorts: [],
+            limit: '10',
+        }, allowedFieldNames);
         // Read from multiple shards
-        for(var result of results)
+        for(const chunkResult of llmChunkedResults)
         {
-            try {                
-                if(result!=null && result.r != null && result.r.length > 0)
-                {
-                    var llmResultLine = JSON.parse(result.r);
-                    if(llmResultLine.fields != null && llmResultLine.fields.length > 0)
-                    {
-                        arrayLLMFields = arrayLLMFields.concat(llmResultLine.fields);
-                    }
-                    if(llmResultLine.filters !=null)
-                    {
-                        const filters = llmResultLine.filters;
-                        for (const key in filters)
-                        {
-                           filtersToUse[key] = filters[key];
-                        }
-                    }
-                    // Explicit pivot or pivotting with user input
-                    if(llmResultLine.pivots != null)
-                    {
-                        // bring the pivots also to the fields
-                        arrayLLMFields = arrayLLMFields.concat(llmResultLine.pivots);
-                        if(this.validateInputForPivots(userInput))
-                        {
-                            arrayPivots = arrayPivots.concat(llmResultLine.pivots);
-                        }                        
-                    }                
-                    if(llmResultLine.sorts != null)
-                    {
-                        arrayLLMFields.concat(llmResultLine.pivots);
-                    }                
-                    if(llmResultLine.sorts != null)
-                    {
-                        arraySorts = arraySorts.concat(llmResultLine.sorts);
-                    }                   
-                }
-                else{
+            try {
+                if (!chunkResult || !chunkResult.r || chunkResult.r.length === 0) {
                     console.log("Not found any JSON results from LLM");
-                }                                
-            } catch (err) {
-                console.log(result);
+                    continue;
+                }
+                const llmChunkResult = JSON.parse(chunkResult.r);
+                const exploreDataChunk = new LookerExploreDataModel(llmChunkResult, allowedFieldNames);
+                mergedResults.merge(exploreDataChunk);
+            } catch (error: Error) {
+                console.error(error.message, chunkResult);
                 throw new Error('LLM result does not contain a valid JSON');
             }
         }
-        //Remove fields that does not exists
-        arrayLLMFields = this.validateLLMFields(modelFields, arrayLLMFields);        
-        filtersToUse = this.validateLLMFilters(modelFields, filtersToUse);
-        arrayPivots = this.validateLLMFields(modelFields, arrayPivots);
-        arraySorts = this.validateLLMFields(modelFields, arraySorts);
-
-        // Recheck with the LLM with the selected fields and modelFields if they are good to go or will eliminate some fields
-        if(arrayLLMFields.length > 2)
+        // remove pivots if not mentioned
+        if(!this.validateInputForPivots(userInput))
         {
-            // TODO: recheck with LLM if the fields makes sense;
+            mergedResults.pivots = [];
         }
-        return {
-            fields: arrayLLMFields,
-            filters: filtersToUse,
-            pivots: arrayPivots,
-            sorts: arraySorts
-        };        
+        // call LLM to ask for Limits
+        const limitFromLLM = await this.findLimitsFromLLM(userInput);
+        // replace limit
+        if (limitFromLLM) {
+            mergedResults.limit = limitFromLLM;
+        }
+        mergedResults.validate(allowedFieldNames);
+        // TODO: recheck with LLM if the fields makes sense;
+        return mergedResults;
     }
 
     private validateInputForPivots(userInput: string):boolean {
@@ -343,16 +306,15 @@ Q: What are the total sales per month?
         return false;
     }
 
-   
-    private async findLimitsFromLLM( 
+
+    private async findLimitsFromLLM(
         userInput: string): Promise<string>
     {
         // Generate Prompt returns an array, gets the first for the LIMIT
         const promptLimit = this.generatePrompt([], userInput, PromptType.LIMITS);
-        const results  = await this.retrieveLookerParametersFromLLM(promptLimit);                
+        const results  = await this.retrieveLookerParametersFromLLM(promptLimit);
         const limitResult = UtilsHelper.firstElement(results).r;
         // validate the result
-        const limitNumber = 500;
         try {
             var limitInt = parseInt(limitResult);
             if(limitInt > 0 && limitInt <= 500)
@@ -373,48 +335,34 @@ Q: What are the total sales per month?
 
     public async generatePromptSendToBigQuery(
         modelFields: FieldMetadata[],
-        userInput: string,        
-        inputModelName: string,
-        inputViewName: string): Promise<{
-        queryId: string,
+        userInput: string,
         modelName: string,
-        view: string,
-    }> {
-
+        viewName: string): Promise<{
+            queryId: string,
+            modelName: string,
+            view: string,
+        }> {
         // Call LLM to find the fields
-        const payloadFromLLM = await this.getExplorePayloadFromLLM(modelFields, userInput);        
-        // call LLM to ask for Limits
-        const limitFromLLM = await this.findLimitsFromLLM(userInput);
-
-        let llmQuery: IWriteQuery;
+        const exploreData = await this.getExplorePayloadFromLLM(modelFields, userInput);
         try {
-            llmQuery = {
-                model: inputModelName,
-                view: inputViewName,
-                fields: payloadFromLLM.fields,
-                filters: payloadFromLLM.filters,
-                pivots: payloadFromLLM.pivots,
-                sorts: payloadFromLLM.sorts,
-                limit: limitFromLLM
-            };
-            console.log("llmQuery: " + JSON.stringify(llmQuery));
+            const llmQueryResult = await this.sql.createQuery({
+                model: modelName,
+                view: viewName,
+                ...exploreData,
+            })
+            const queryId = llmQueryResult.value.client_id;
+            if (!queryId) {
+                throw new Error('unable to retrieve query id from created query')
+            }
+            console.log("llmQuery: " + JSON.stringify(exploreData, null, 2));
+            return {
+                queryId,
+                modelName,
+                view: viewName,
+            }
         } catch (err) {
             console.log("LLM does not contain valid JSON: ");
             throw new Error('LLM result does not contain a valid JSON');
         }
-        const llmQueryResult = await this.sql.createQuery(llmQuery)
-        const queryId = llmQueryResult.value.client_id;
-        if (!queryId) {
-            throw new Error('unable to retrieve query id from created query')
-        }
-        const modelName = llmQueryResult.value.model;
-        const view = llmQueryResult.value.view;
-        return {
-            queryId,
-            modelName,
-            view,
-        }
     }
-
-   
 }
