@@ -38,24 +38,31 @@ export class GenerativeExploreService {
     private generatePrompt(
         modelFields: FieldMetadata[],
         userInput: string,
-        promptType: PromptTypeEnum):Array<string> {
-
+        promptTypeEnum: PromptTypeEnum,
+        potentialFields?:string):Array<string> {        
         const shardedPrompts:Array<string> = [];
         userInput = UtilsHelper.escapeSpecialCharacter(userInput);
         // Prompt for Limits only needs the userInput
-        if(promptType == PromptTypeEnum.LIMITS)
+        switch(promptTypeEnum)
         {
-            shardedPrompts.push(this.promptService.fillPromptVariables(promptType, { userInput }));
-        }
-        else
-        {
-            const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
-            for(const fieldGroup of generatedPromptsArray){
-                const serializedModelFields = JSON.stringify(fieldGroup);
-                const generatedPrompt = this.promptService.fillPromptVariables(promptType, {serializedModelFields, userInput});
-                shardedPrompts.push(generatedPrompt);
-            }
-        }
+            case PromptTypeEnum.LIMITS:
+                shardedPrompts.push(this.promptService.fillPromptVariables(promptTypeEnum, { userInput }));
+                break;
+            case PromptTypeEnum.PIVOTS:
+                if(potentialFields!=null)
+                {
+                    shardedPrompts.push(this.promptService.fillPromptVariables(promptTypeEnum, { userInput, potentialFields}));
+                }                
+                break;
+            default:
+                const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
+                for(const fieldGroup of generatedPromptsArray){
+                    const serializedModelFields = JSON.stringify(fieldGroup);
+                    const generatedPrompt = this.promptService.fillPromptVariables(promptTypeEnum, {serializedModelFields, userInput});
+                    shardedPrompts.push(generatedPrompt);
+                }
+                break;        
+        }        
         return shardedPrompts;
     }
 
@@ -89,13 +96,6 @@ export class GenerativeExploreService {
          // Join all the selects with union all
         const queryContents = arraySelect.join(" UNION ALL ");
 
-        const bla: {
-            fields: LookerExploreDataModel['fields'],
-            filters: LookerExploreDataModel['filters'],
-        } = {
-          fields: [],
-        };
-        bla.fields.push('a');
         if(queryContents == null || queryContents.length == 0)
         {
             throw new Error('Could not generate field arrays on Prompt');
@@ -115,7 +115,7 @@ export class GenerativeExploreService {
         userInput: string): Promise<LookerExploreDataModel>
     {
         // Generate the Base Prompt
-        const fieldsPrompts: Array<string> = this.generatePrompt(modelFields, userInput, PromptType.FIELDS_FILTERS_PIVOTS_SORTS);
+        const fieldsPrompts: Array<string> = this.generatePrompt(modelFields, userInput, PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS);
         const llmChunkedResults = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
         const allowedFieldNames: string[] = modelFields.map(field => field.name);
         const mergedResults = new LookerExploreDataModel({
@@ -148,6 +148,11 @@ export class GenerativeExploreService {
         }
         // call LLM to ask for Limits
         const limitFromLLM = await this.findLimitsFromLLM(userInput);
+        const pivotsFromLLM = await this.findPivotsFromLLM(userInput, mergedResults.fields);
+        if (pivotsFromLLM) {
+            mergedResults.pivots = pivotsFromLLM;
+        }
+
         // replace limit
         if (limitFromLLM) {
             mergedResults.limit = limitFromLLM;
@@ -192,6 +197,27 @@ export class GenerativeExploreService {
             return "500";
         }
     }
+    private async findPivotsFromLLM( 
+        userInput: string,
+        potentialFields: Array<string>
+        ): Promise<Array<string>>
+    {           
+        try
+        {        
+            var arraySorts:Array<string> = [];
+            const potentialFieldsString = JSON.stringify(potentialFields);
+            // Generate Prompt returns an array, gets the first for the LIMIT
+            const promptLimit = this.generatePrompt([], userInput, PromptTypeEnum.LIMITS, potentialFieldsString);
+            const results  = await this.retrieveLookerParametersFromLLM(promptLimit);                
+            return arraySorts;
+        }
+        catch (err) {
+            throw new Error("Limit not returning correct due to prompt, going to default");
+            // return arraySorts;
+        }
+    }
+
+
 
     public async generatePromptSendToBigQuery(
         modelFields: FieldMetadata[],
