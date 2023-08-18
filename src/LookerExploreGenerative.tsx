@@ -27,13 +27,13 @@ import { Box, Heading } from '@looker/components'
 import { EmbedContainer } from './EmbedContainer'
 import { LookerEmbedSDK} from '@looker/embed-sdk'
 import { GenerativeExploreService, FieldMetadata } from './services/GenerativeExploreService'
+import { PromptService } from './services/PromptService'
 
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
  */
 export const LookerExploreGenerative: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
-  const generativeExploreService = new GenerativeExploreService(core40SDK);
   const [message, setMessage] = useState('')
   const [loadingLookerModels, setLoadingLookerModels] = useState<boolean>(false)
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
@@ -157,8 +157,15 @@ export const LookerExploreGenerative: React.FC = () => {
   // Method that triggers sending the message to the workflow
   const handleSend = () =>
   {
-    handleClearAll();
+    if(window.sessionStorage.getItem("singleExplore")== null || window.sessionStorage.getItem("singleExplore") == "true")
+    {      
+      handleClearAll();  
+    }
     setLoadingLLM(true);
+    console.log("Debug CustomPrompt" +  window.sessionStorage.getItem("customPrompt"));
+    const promptService = new PromptService(JSON.parse(window.sessionStorage.getItem("customPrompt")!));
+    const generativeExploreService = new GenerativeExploreService(core40SDK, promptService);
+
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
     console.log("1. Get the Metadata from Looker from the selected Explorer");    
     if(currentModelName!=null && currentExploreName!=null)
@@ -249,7 +256,7 @@ export const LookerExploreGenerative: React.FC = () => {
           4. Every question will append the explore below, if you want to clear it use the Remove From Top or Bottom
           </Span>
           <Span fontSize="medium">
-          Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b>
+          Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b> or <b>gimenes@google.com</b>
           </Span>
 
           <FieldSelect
