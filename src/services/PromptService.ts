@@ -1,3 +1,5 @@
+import { UtilsHelper } from "../utils/Helper";
+
 export enum PromptTypeEnum {
     FIELDS_FILTERS_PIVOTS_SORTS,
     PIVOTS,
@@ -21,8 +23,8 @@ If the Question contains a "top", "bottom", add a "count" inside the fields.
 }
 
 Examples:
-Q: "What are the top 10 total sales price per brand. With brands: Levi\'s, Calvin Klein, Columbia"
-{"field_names":["products.brand","order_items.total_sale_price"],"filters":{"products.brand":"Levi\'s, Calvin Klein, Columbia"}}
+Q: "What are the top 10 total sales price per brand. With brands: Levi's, Calvin Klein, Columbia"
+{"field_names":["products.brand","order_items.total_sale_price"],"filters":{"products.brand":"Levi's, Calvin Klein, Columbia"}}
 
 Q: "What are the top sales price, category, cost pivot per day and filter only orders with more than 15 items"
 {"field_names":["order_items.total_sale_price", "products.category", "inventory_items.cost", "orders.created_date"], "filters": {"order_items.count": "> 15"}, "sorts": ["order_items.total_sales_price"]}
@@ -84,8 +86,9 @@ Q: What are the total sales per month?
     public fillPromptVariables(promptType: PromptTypeEnum, promptVariableContext: { [key: string]: string}): string {
         let replacedPrompt = this.PromptTypeMapper[promptType];
         Object.keys(promptVariableContext).forEach((key) => {
-            replacedPrompt = replacedPrompt.replace(`{{${key}}}`, promptVariableContext[key]);
+            replacedPrompt = replacedPrompt.replace(`{{${key}}}`, promptVariableContext[key]);            
         })
+        replacedPrompt = UtilsHelper.escapeSpecialCharacter(replacedPrompt);            
         return replacedPrompt;
     }
 

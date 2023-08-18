@@ -45,7 +45,6 @@ export class GenerativeExploreService {
         potentialFields?:string):Array<string> {        
 
         const shardedPrompts:Array<string> = [];        
-        userInput = UtilsHelper.escapeSpecialCharacter(userInput);
         // Prompt for Limits only needs the userInput
         switch(promptType)
         {
@@ -154,7 +153,7 @@ export class GenerativeExploreService {
     {
         const arraySelect: Array<string> = [];
         promptArray.forEach((promptField) =>{
-             const singleLineString = UtilsHelper.escapeBreakLine(promptField);
+             const singleLineString = UtilsHelper.escapeBreakLine(promptField);             
              const subselect = `SELECT '` + singleLineString + `' AS prompt`;                        
              arraySelect.push(subselect);
         });        
@@ -199,9 +198,9 @@ export class GenerativeExploreService {
                 if(result!=null && result.r != null && result.r.length > 0)
                 {
                     var llmResultLine = JSON.parse(result.r);
-                    if(llmResultLine.fieldsName != null && llmResultLine.fieldsName.length > 0)
+                    if(llmResultLine.fieldNames != null && llmResultLine.fieldNames.length > 0)
                     {
-                        arrayLLMFields = arrayLLMFields.concat(llmResultLine.fieldsName);
+                        arrayLLMFields = arrayLLMFields.concat(llmResultLine.fieldNames);
                     }
                     if(llmResultLine.filters !=null)
                     {
@@ -281,20 +280,28 @@ export class GenerativeExploreService {
         userInput: string,
         potentialFields: Array<string>
         ): Promise<Array<string>>
-    {           
+    {       
+        let arrayPivots:Array<string> = [];    
         try
-        {        
-            var arraySorts:Array<string> = [];
+        {            
             const potentialFieldsString = JSON.stringify(potentialFields);
             // Generate Prompt returns an array, gets the first for the LIMIT
-            const promptLimit = this.generatePrompt([], userInput, PromptTypeEnum.LIMITS, potentialFieldsString);
-            const results  = await this.retrieveLookerParametersFromLLM(promptLimit);                
-            const limitResult = UtilsHelper.firstElement(results).r;
-            return arraySorts;
+            const promptPivots = this.generatePrompt([], userInput, PromptTypeEnum.PIVOTS, potentialFieldsString);
+            const results  = await this.retrieveLookerParametersFromLLM(promptPivots);                
+            const pivotResult = UtilsHelper.firstElement(results).r;
+            // TODO: Validate result from schema joi
+            var llmResultLine = JSON.parse(pivotResult);
+            if(llmResultLine.pivots != null && llmResultLine.pivots.length > 0)
+            {
+                arrayPivots = arrayPivots.concat(llmResultLine.pivots);
+            }
+            // Validate results
+            arrayPivots.concat(pivotResult);  
+            return arrayPivots;
         }
         catch (err) {
-            throw new Error("Limit not returning correct due to prompt, going to default");
-            // return arraySorts;
+            return arrayPivots;
+            // throw new Error("Pivot not returning fields, going to default");
         }
     }
 
