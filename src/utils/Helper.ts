@@ -1,3 +1,7 @@
+export interface IDictionary<T> {
+    [key: string]: T;
+}
+
 export class UtilsHelper {
     public static escapeBreakLine(originalString: string): string {
         return originalString
