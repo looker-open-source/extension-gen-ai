@@ -4,7 +4,7 @@ import { BaseSchema, Schemafy } from "./Schema";
 
 
 export interface ILookerExploreDataModel {
-    fields: string[],
+    field_names: string[],
     filters: { [key: string]: string },
     pivots: string[],
     sorts: string[],
@@ -20,13 +20,13 @@ class LookerExploreDataModel extends BaseSchema {
     }
 
     public merge(exploreData: LookerExploreDataModel) {
-        const { fields, pivots, sorts, filters, limit } = exploreData;
-        if (fields) {
-            this.fields = this.fields.concat(fields);
+        const { field_names, pivots, sorts, filters, limit } = exploreData;
+        if (field_names) {
+            this.field_names = this.field_names.concat(field_names);
         }
         if (pivots) {
             // bring the pivots also to the fields
-            this.fields = this.fields.concat(pivots);
+            this.field_names = this.field_names.concat(pivots);
             this.pivots = this.pivots.concat(pivots);
         }
         if (sorts) {
@@ -52,8 +52,8 @@ class LookerExploreDataModel extends BaseSchema {
     }
 
     private removeDuplicates() {
-        if (this.fields) {
-            this.fields = UtilsHelper.removeDuplicates(this.fields);
+        if (this.field_names) {
+            this.field_names = UtilsHelper.removeDuplicates(this.field_names);
         }
         if (this.pivots) {
             this.pivots = UtilsHelper.removeDuplicates(this.pivots);
@@ -65,7 +65,7 @@ class LookerExploreDataModel extends BaseSchema {
 
     private generateSchema(allowedFields: string[]): Schemafy<ILookerExploreDataModel> {
         const schema: Schemafy<ILookerExploreDataModel> = {
-            fields: Joi.array().required().unique().items(Joi.string().valid(...allowedFields)),
+            field_names: Joi.array().required().unique().items(Joi.string().valid(...allowedFields)),
             filters: Joi.object().required().pattern(Joi.string(), Joi.string()),
             pivots: Joi.array().required().items(Joi.string()),
             sorts: Joi.array().required().items(Joi.string()),
