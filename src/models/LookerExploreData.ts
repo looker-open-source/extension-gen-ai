@@ -7,7 +7,6 @@ export interface ILookerExploreDataModel {
     fields: string[],
     filters: { [key: string]: string },
     pivots: string[],
-    explicit_pivots?: string[],
     sorts: string[],
     limit?: string,
 }
@@ -69,7 +68,6 @@ class LookerExploreDataModel extends BaseSchema {
             fields: Joi.array().required().unique().items(Joi.string().valid(...allowedFields)),
             filters: Joi.object().required().pattern(Joi.string(), Joi.string()),
             pivots: Joi.array().required().items(Joi.string()),
-            explicit_pivots: Joi.array().items(Joi.string()),
             sorts: Joi.array().required().items(Joi.string()),
             limit: Joi.string(),
         };
