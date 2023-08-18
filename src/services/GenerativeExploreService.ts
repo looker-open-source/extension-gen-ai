@@ -41,24 +41,32 @@ export class GenerativeExploreService {
     private generatePrompt(
         modelFields: FieldMetadata[],
         userInput: string,
-        promptType: PromptTypeEnum):Array<string> {        
+        promptType: PromptTypeEnum,
+        potentialFields?:string):Array<string> {        
 
         const shardedPrompts:Array<string> = [];        
         userInput = UtilsHelper.escapeSpecialCharacter(userInput);
         // Prompt for Limits only needs the userInput
-        if(promptType == PromptTypeEnum.LIMITS)
+        switch(promptType)
         {
-            shardedPrompts.push(this.promptService.fillPromptVariables(promptType, { userInput }));            
-        }
-        else
-        {
-            const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
-            for(const fieldGroup of generatedPromptsArray){
-                const serializedModelFields = JSON.stringify(fieldGroup);
-                const generatedPrompt = this.promptService.fillPromptVariables(promptType, {serializedModelFields, userInput});
-                shardedPrompts.push(generatedPrompt);
-            }        
-        }
+            case PromptTypeEnum.LIMITS:
+                shardedPrompts.push(this.promptService.fillPromptVariables(promptType, { userInput }));  
+                break;
+            case PromptTypeEnum.PIVOTS:
+                if(potentialFields!=null)
+                {
+                    shardedPrompts.push(this.promptService.fillPromptVariables(promptType, { userInput, potentialFields}));    
+                }                
+                break;
+            default:
+                const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
+                for(const fieldGroup of generatedPromptsArray){
+                    const serializedModelFields = JSON.stringify(fieldGroup);
+                    const generatedPrompt = this.promptService.fillPromptVariables(promptType, {serializedModelFields, userInput});
+                    shardedPrompts.push(generatedPrompt);
+                }
+                break;        
+        }        
         return shardedPrompts;
     }
 
@@ -172,8 +180,7 @@ export class GenerativeExploreService {
         userInput: string): Promise<{
             fields: Array<string>,
             filters: IDictionary<string>,
-            sorts: Array<string>,
-            pivots: Array<string>
+            sorts: Array<string>
         }>
     {
         // Generate the Base Prompt
@@ -181,8 +188,9 @@ export class GenerativeExploreService {
         const results = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
         var arrayLLMFields:Array<string> = [];
         var filtersToUse:IDictionary<string> = {};
-        var arrayPivots:Array<string> = [];
         var arraySorts:Array<string> = [];
+
+        console.log("Raw LLM Results: " + JSON.stringify(results));
 
         // Read from multiple shards
         for(var result of results)
@@ -191,9 +199,9 @@ export class GenerativeExploreService {
                 if(result!=null && result.r != null && result.r.length > 0)
                 {
                     var llmResultLine = JSON.parse(result.r);
-                    if(llmResultLine.fields != null && llmResultLine.fields.length > 0)
+                    if(llmResultLine.fieldsName != null && llmResultLine.fieldsName.length > 0)
                     {
-                        arrayLLMFields = arrayLLMFields.concat(llmResultLine.fields);
+                        arrayLLMFields = arrayLLMFields.concat(llmResultLine.fieldsName);
                     }
                     if(llmResultLine.filters !=null)
                     {
@@ -202,21 +210,7 @@ export class GenerativeExploreService {
                         {
                            filtersToUse[key] = filters[key];
                         }
-                    }
-                    // Explicit pivot or pivotting with user input
-                    if(llmResultLine.pivots != null)
-                    {
-                        // bring the pivots also to the fields
-                        arrayLLMFields = arrayLLMFields.concat(llmResultLine.pivots);
-                        if(this.validateInputForPivots(userInput))
-                        {
-                            arrayPivots = arrayPivots.concat(llmResultLine.pivots);
-                        }                        
-                    }                
-                    if(llmResultLine.sorts != null)
-                    {
-                        arrayLLMFields.concat(llmResultLine.pivots);
-                    }                
+                    }                                                         
                     if(llmResultLine.sorts != null)
                     {
                         arraySorts = arraySorts.concat(llmResultLine.sorts);
@@ -233,7 +227,6 @@ export class GenerativeExploreService {
         //Remove fields that does not exists
         arrayLLMFields = this.validateLLMFields(modelFields, arrayLLMFields);        
         filtersToUse = this.validateLLMFilters(modelFields, filtersToUse);
-        arrayPivots = this.validateLLMFields(modelFields, arrayPivots);
         arraySorts = this.validateLLMFields(modelFields, arraySorts);
 
         // Recheck with the LLM with the selected fields and modelFields if they are good to go or will eliminate some fields
@@ -243,8 +236,7 @@ export class GenerativeExploreService {
         }
         return {
             fields: arrayLLMFields,
-            filters: filtersToUse,
-            pivots: arrayPivots,
+            filters: filtersToUse,            
             sorts: arraySorts
         };        
     }
@@ -285,6 +277,28 @@ export class GenerativeExploreService {
             return "500";
         }
     }
+    private async findPivotsFromLLM( 
+        userInput: string,
+        potentialFields: Array<string>
+        ): Promise<Array<string>>
+    {           
+        try
+        {        
+            var arraySorts:Array<string> = [];
+            const potentialFieldsString = JSON.stringify(potentialFields);
+            // Generate Prompt returns an array, gets the first for the LIMIT
+            const promptLimit = this.generatePrompt([], userInput, PromptTypeEnum.LIMITS, potentialFieldsString);
+            const results  = await this.retrieveLookerParametersFromLLM(promptLimit);                
+            const limitResult = UtilsHelper.firstElement(results).r;
+            return arraySorts;
+        }
+        catch (err) {
+            throw new Error("Limit not returning correct due to prompt, going to default");
+            // return arraySorts;
+        }
+    }
+
+
 
     public async generatePromptSendToBigQuery(
         modelFields: FieldMetadata[],
@@ -298,8 +312,9 @@ export class GenerativeExploreService {
 
         // Call LLM to find the fields
         const payloadFromLLM = await this.getExplorePayloadFromLLM(modelFields, userInput);        
-        // call LLM to ask for Limits
+        // call LLM to ask for Limits        
         const limitFromLLM = await this.findLimitsFromLLM(userInput);
+        const pivotsFromLLM = await this.findPivotsFromLLM(userInput, payloadFromLLM.fields);
 
         let llmQuery: IWriteQuery;
         try {
@@ -308,8 +323,8 @@ export class GenerativeExploreService {
                 view: inputViewName,
                 fields: payloadFromLLM.fields,
                 filters: payloadFromLLM.filters,
-                pivots: payloadFromLLM.pivots,
                 sorts: payloadFromLLM.sorts,
+                pivots: pivotsFromLLM,                
                 limit: limitFromLLM
             };
             console.log("llmQuery: " + JSON.stringify(llmQuery));
@@ -327,7 +342,7 @@ export class GenerativeExploreService {
         return {
             queryId,
             modelName,
-            view,
+            view            
         }
     }
 
