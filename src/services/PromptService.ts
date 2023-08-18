@@ -15,6 +15,7 @@ Question: {{userInput}}
 
 Extract the exact field names, filters and sorts from the ContextAI in a JSON format that can help answer the Question.The fields are in the format "table.field".
 If the Question contains a "top", "bottom", add a "count" inside the fields.
+If you can 
 
 {
 "field_names": [],
@@ -39,20 +40,24 @@ Q: "What are the top 10 languages?"
 {"field_names": ["wiki100_m.language","wiki100_m.count"], "filters":[], "sorts": []}      
 `,
 [PromptTypeEnum.PIVOTS]: `
-Potential Fields: {{PotentialFields}}
+List of Fields: {{potentialFields}}
 Question: {{userInput}}
 
-Analyze the Question above, if it contains the word "pivot" or "pivotting", choose the fields from the Potential Fields provided above that matches this intention.
-Return the output as JSON {"pivots": [field1, field2]}
+Analyze the Question above, if it contains the word "pivot" or "pivotting", pick the appropriate fields exclusively from the List of Fields provided.
+Return the output a valid JSON {"pivots": [field1, field2]}
 
 Examples:
-Pontential Fields: [products.brand, products.category, inventory_items.cost, order_items.total_sale_price, orders.created_date]
-Question: "What are the top sales price, category, brand, cost pivot per day"
-Output: {"pivots": ["orders.created_date"]}}
+List of Fields: [products.brand, products.category, inventory_items.cost, order_items.total_sale_price, orders.created_date]
+Question: "What are the top sales price, category, brand, cost and created day. pivot per created day"
+Output: {"pivots": ["orders.created_date"]}
 
-Pontential Fields: [products.brand, inventory_items.cost, order_items.total_sale_price, orders.created_date]
+List of Fields: [products.brand, inventory_items.cost, order_items.total_sale_price, orders.created_date]
 Question: "What are the top sales price per brand and per cost pivotting per day"
-Output: {"pivots": ["orders.created_date"]}}
+Output: {"pivots": ["orders.created_date"]}
+
+List of Fields: [ wiki100_m.day, wiki100_m.language, wiki100_m.count]
+Question: "What are the top 15 count, language and day. Pivot per day"
+Output: {"pivots": ["wiki100_m.day"]}
 `,
 
         [PromptTypeEnum.LIMITS]: `
