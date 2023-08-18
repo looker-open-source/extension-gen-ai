@@ -8,14 +8,14 @@ export type PromptTypeMapperType = { [key in PromptTypeEnum]: string };
 
 export class PromptService {
     private PromptTypeMapper: PromptTypeMapperType = {
-        [PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: `Context: {{serializedModelFields}}
+        [PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: `ContextAI: {{serializedModelFields}}
 Question: {{userInput}}
 
-Extract the exact fields names, filters and sorts from the Context in a JSON format that can help answer the Question.The fields are in the format "table.field".
+Extract the exact field names, filters and sorts from the ContextAI in a JSON format that can help answer the Question.The fields are in the format "table.field".
 If the Question contains a "top", "bottom", add a "count" inside the fields.
 
 {
-"fieldNames": [],
+"field_names": [],
 "filters": {},
 "sorts": []
 }
@@ -25,22 +25,22 @@ Q: "What are the top 10 total sales price per brand. With brands: Levi\'s, Calvi
 {"field_names":["products.brand","order_items.total_sale_price"],"filters":{"products.brand":"Levi\'s, Calvin Klein, Columbia"}}
 
 Q: "What are the top sales price, category, cost pivot per day and filter only orders with more than 15 items"
-{"field_names":["order_items.total_sale_price", "products.category", "inventory_items.cost"], "pivots": ["orders.created_date"], "filters": {"order_items.count": "> 15"}}
+{"field_names":["order_items.total_sale_price", "products.category", "inventory_items.cost", "orders.created_date"], "filters": {"order_items.count": "> 15"}, "sorts": ["order_items.total_sales_price"]}
 
 Q: "How many orders were created in the past 7 days"
-{"field_names": ["orders.count"], "filters": {"sales_order.created_date": "7 days"}}
+{"field_names": ["orders.count"], "filters": {"sales_order.created_date": "7 days"}, "sorts": []}
 
 Q: "What are the states that had the most orders, filter state: California, Nevada, Washinton, Oregon"
-{"field_names": ["orders.count"], "filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}}
+{"field_names": ["orders.count"], "filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}, "sorts": []}
 
 Q: "What are the top 10 languages?"
-{"field_names": ["wiki100_m.language","wiki100_m.count"], "filters":[]}      
+{"field_names": ["wiki100_m.language","wiki100_m.count"], "filters":[], "sorts": []}      
 `,
 [PromptTypeEnum.PIVOTS]: `
-Potential Fields: {{PontentialFields}}
+Potential Fields: {{PotentialFields}}
 Question: {{userInput}}
 
-Analyze the Question above, if it contains the word "pivot" or "pivotting", find the best fields that matches this intention.
+Analyze the Question above, if it contains the word "pivot" or "pivotting", choose the fields from the Potential Fields provided above that matches this intention.
 Return the output as JSON {"pivots": [field1, field2]}
 
 Examples:
