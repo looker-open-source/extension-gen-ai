@@ -44,20 +44,20 @@ List of Fields: {{potentialFields}}
 Question: {{userInput}}
 
 Analyze the Question above, if it contains the word "pivot" or "pivotting", pick the appropriate fields exclusively from the List of Fields provided.
-Return the output a valid JSON {"pivots": [field1, field2]}
+Return a valid JSON in this format: {"pivots": [field1, field2]}
 
 Examples:
 List of Fields: [products.brand, products.category, inventory_items.cost, order_items.total_sale_price, orders.created_date]
 Question: "What are the top sales price, category, brand, cost and created day. pivot per created day"
-Output: {"pivots": ["orders.created_date"]}
+{"pivots": ["orders.created_date"]}
 
 List of Fields: [products.brand, inventory_items.cost, order_items.total_sale_price, orders.created_date]
 Question: "What are the top sales price per brand and per cost pivotting per day"
-Output: {"pivots": ["orders.created_date"]}
+{"pivots": ["orders.created_date"]}
 
 List of Fields: [ wiki100_m.day, wiki100_m.language, wiki100_m.count]
 Question: "What are the top 15 count, language and day. Pivot per day"
-Output: {"pivots": ["wiki100_m.day"]}
+{"pivots": ["wiki100_m.day"]}
 `,
 
         [PromptTypeEnum.LIMITS]: `
