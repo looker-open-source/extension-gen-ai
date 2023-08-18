@@ -1,19 +1,16 @@
-import { ILookmlModelExploreField, ISqlQueryCreate, IWriteQuery, Looker40SDK, run_url_encoded_query, user} from "@looker/sdk";
+import { Looker40SDK } from "@looker/sdk";
+import { IDictionary } from "@looker/sdk-rtl";
+import LookerExploreDataModel from "../models/LookerExploreData";
 import { UtilsHelper } from "../utils/Helper";
 import { LookerSQLService } from "./LookerSQLService";
-import { IDictionary } from "@looker/sdk-rtl";
-import { clean, validRange } from "semver";
-import { Field } from "@looker/components";
-import { Prompt } from "react-router-dom";
-import { PromptService, PromptTypeEnum } from "./PromptService"
+import { PromptService, PromptTypeEnum } from "./PromptService";
 
-export interface FieldMetadata{    
+export interface FieldMetadata{
     label: string;
     name: string;
     description: string;
-    // type: string;    
+    // type: string;
 }
-
 
 export class GenerativeExploreService {
     private sql: LookerSQLService;
@@ -30,38 +27,38 @@ export class GenerativeExploreService {
         const generatedPromptsArray = new Array<FieldMetadata[]>;
         var totalLength = modelFields.length;
         // divide by n elements
-        var maxInteractions = totalLength/FIXED_BREAK_PER_QUANTITY;        
-        for(let i=0; i < maxInteractions; i++){            
+        var maxInteractions = totalLength/FIXED_BREAK_PER_QUANTITY;
+        for(let i=0; i < maxInteractions; i++){
             generatedPromptsArray.push(modelFields.slice(i*FIXED_BREAK_PER_QUANTITY, (i+1)*FIXED_BREAK_PER_QUANTITY));
         }
         return generatedPromptsArray;
     }
-    
+
 
     private generatePrompt(
         modelFields: FieldMetadata[],
         userInput: string,
-        promptType: PromptTypeEnum,
+        promptTypeEnum: PromptTypeEnum,
         potentialFields?:string):Array<string> {        
 
         const shardedPrompts:Array<string> = [];        
         // Prompt for Limits only needs the userInput
-        switch(promptType)
+        switch(promptTypeEnum)
         {
             case PromptTypeEnum.LIMITS:
-                shardedPrompts.push(this.promptService.fillPromptVariables(promptType, { userInput }));  
+                shardedPrompts.push(this.promptService.fillPromptVariables(promptTypeEnum, { userInput }));
                 break;
             case PromptTypeEnum.PIVOTS:
                 if(potentialFields!=null)
                 {
-                    shardedPrompts.push(this.promptService.fillPromptVariables(promptType, { userInput, potentialFields}));    
+                    shardedPrompts.push(this.promptService.fillPromptVariables(promptTypeEnum, { userInput, potentialFields}));
                 }                
                 break;
             default:
                 const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
                 for(const fieldGroup of generatedPromptsArray){
                     const serializedModelFields = JSON.stringify(fieldGroup);
-                    const generatedPrompt = this.promptService.fillPromptVariables(promptType, {serializedModelFields, userInput});
+                    const generatedPrompt = this.promptService.fillPromptVariables(promptTypeEnum, {serializedModelFields, userInput});
                     shardedPrompts.push(generatedPrompt);
                 }
                 break;        
@@ -69,67 +66,6 @@ export class GenerativeExploreService {
         return shardedPrompts;
     }
 
-    private validateLLMFields(
-        modelFields: FieldMetadata[],
-        llmFields: Array<string>
-    ): Array<string>
-    {
-        const cleanLLMFields: Array<string> = [];
-        for(const modelField of modelFields )
-        {            
-            if(modelField.name!= null)
-            {
-                for(const llmField of llmFields)
-                {            
-                    if(llmField == modelField.name)
-                    {
-                        console.log("LLMField equals modelField.name")
-                        cleanLLMFields.push(llmField);
-                        break;
-                    }
-                }
-            }
-        }
-        console.log("Input1 eram: " + JSON.stringify(llmFields) + " Output: " + JSON.stringify(cleanLLMFields));
-        return cleanLLMFields;
-    }
-
-    private validateFilterFormatValue(filterValue: string):string
-    {
-        var cleanFilterValue = filterValue.replace("_", " ");
-        cleanFilterValue = cleanFilterValue.replace("-", " ");
-        // validate and replace other invalid patterns
-        return cleanFilterValue;
-    }
-
-    private validateLLMFilters(
-        modelFields: FieldMetadata[],
-        llmFilters: IDictionary<string>
-    ): IDictionary<string>
-    {
-        const cleanLLMFields: IDictionary<string> = {};
-        for(const modelField of modelFields )
-        {            
-            if(modelField.name!= null && llmFilters!=null)
-            {
-                for(const key of Object.keys(llmFilters))
-                {            
-                    if(key == modelField.name)
-                    {
-                        // Validate Filter Values
-                        if(this.validateFilterFormatValue(llmFilters[key]) != "")
-                        {
-                            cleanLLMFields[key] = llmFilters[key];                        
-                        }                        
-                        break;
-                    }
-                }
-            }
-        }
-        console.log("Input Dict eram: " + llmFilters.length + " Output: " + cleanLLMFields.length);
-        return cleanLLMFields;
-    }
-    
     private buildBigQueryLLMQuery(selectPrompt:string)
     {
         return `SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
@@ -148,96 +84,82 @@ export class GenerativeExploreService {
         `;
     }
 
-    
+
     private async retrieveLookerParametersFromLLM(promptArray:Array<string>)
     {
         const arraySelect: Array<string> = [];
         promptArray.forEach((promptField) =>{
-             const singleLineString = UtilsHelper.escapeBreakLine(promptField);             
+             const singleLineString = UtilsHelper.escapeBreakLine(promptField);
              const subselect = `SELECT '` + singleLineString + `' AS prompt`;                        
              arraySelect.push(subselect);
-        });        
+        });
          // Join all the selects with union all
         const queryContents = arraySelect.join(" UNION ALL ");
- 
+
         if(queryContents == null || queryContents.length == 0)
         {
-            throw new Error('Could not generate field arrays on Prompt'); 
+            throw new Error('Could not generate field arrays on Prompt');
         }
          // query to run
-         const queryToRun = this.buildBigQueryLLMQuery(queryContents);       
+         const queryToRun = this.buildBigQueryLLMQuery(queryContents);
          console.log("Query to Run: " + queryToRun);
-         const results = await this.sql.execute<{   
+         const results = await this.sql.execute<{
              r: string
              status: string
          }>(queryToRun);
          return results;
     }
 
-    private async getExplorePayloadFromLLM( 
+    private async getExplorePayloadFromLLM(
         modelFields: FieldMetadata[],
-        userInput: string): Promise<{
-            fields: Array<string>,
-            filters: IDictionary<string>,
-            sorts: Array<string>
-        }>
+        userInput: string): Promise<LookerExploreDataModel>
     {
         // Generate the Base Prompt
-        const fieldsPrompts:Array<string> = this.generatePrompt(modelFields, userInput, PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS);
-        const results = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
-        var arrayLLMFields:Array<string> = [];
-        var filtersToUse:IDictionary<string> = {};
-        var arraySorts:Array<string> = [];
-
-        console.log("Raw LLM Results: " + JSON.stringify(results));
-
+        const fieldsPrompts: Array<string> = this.generatePrompt(modelFields, userInput, PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS);
+        const llmChunkedResults = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
+        const allowedFieldNames: string[] = modelFields.map(field => field.name);
+        const mergedResults = new LookerExploreDataModel({
+            field_names: [],
+            filters: {},
+            pivots: [],
+            sorts: [],
+            limit: '10',
+        }, allowedFieldNames);
         // Read from multiple shards
-        for(var result of results)
+        for(const chunkResult of llmChunkedResults)
         {
-            try {                
-                if(result!=null && result.r != null && result.r.length > 0)
-                {
-                    var llmResultLine = JSON.parse(result.r);                    
-                    if(llmResultLine.field_names != null && llmResultLine.field_names.length > 0)
-                    {
-                        arrayLLMFields = arrayLLMFields.concat(llmResultLine.field_names);
-                    }
-                    if(llmResultLine.filters !=null)
-                    {
-                        const filters = llmResultLine.filters;
-                        for (const key in filters)
-                        {
-                           filtersToUse[key] = filters[key];
-                        }
-                    }                                                         
-                    if(llmResultLine.sorts != null)
-                    {
-                        arraySorts = arraySorts.concat(llmResultLine.sorts);
-                    }                   
-                }
-                else{
+            try {
+                if (!chunkResult || !chunkResult.r || chunkResult.r.length === 0) {
                     console.log("Not found any JSON results from LLM");
-                }                                
-            } catch (err) {
-                console.log(result);
+                    continue;
+                }
+                const llmChunkResult = JSON.parse(chunkResult.r);
+                const exploreDataChunk = new LookerExploreDataModel(llmChunkResult, allowedFieldNames);
+                mergedResults.merge(exploreDataChunk);
+            } catch (error: Error) {
+                console.error(error.message, chunkResult);
                 throw new Error('LLM result does not contain a valid JSON');
             }
         }
-        //Remove fields that does not exists
-        arrayLLMFields = this.validateLLMFields(modelFields, arrayLLMFields);        
-        filtersToUse = this.validateLLMFilters(modelFields, filtersToUse);
-        arraySorts = this.validateLLMFields(modelFields, arraySorts);
-
-        // Recheck with the LLM with the selected fields and modelFields if they are good to go or will eliminate some fields
-        if(arrayLLMFields.length > 2)
+        // remove pivots if not mentioned
+        if(!this.validateInputForPivots(userInput))
         {
-            // TODO: recheck with LLM if the fields makes sense;
+            mergedResults.pivots = [];
         }
-        return {
-            fields: arrayLLMFields,
-            filters: filtersToUse,            
-            sorts: arraySorts
-        };        
+        // call LLM to ask for Limits
+        const limitFromLLM = await this.findLimitsFromLLM(userInput);
+        const pivotsFromLLM = await this.findPivotsFromLLM(userInput, mergedResults.field_names);
+        if (pivotsFromLLM) {
+            mergedResults.pivots = pivotsFromLLM;
+        }
+
+        // replace limit
+        if (limitFromLLM) {
+            mergedResults.limit = limitFromLLM;
+        }
+        mergedResults.validate(allowedFieldNames);
+        // TODO: recheck with LLM if the fields makes sense;
+        return mergedResults;
     }
 
     private validateInputForPivots(userInput: string):boolean {
@@ -249,16 +171,15 @@ export class GenerativeExploreService {
         return false;
     }
 
-   
-    private async findLimitsFromLLM( 
+
+    private async findLimitsFromLLM(
         userInput: string): Promise<string>
     {
         // Generate Prompt returns an array, gets the first for the LIMIT
         const promptLimit = this.generatePrompt([], userInput, PromptTypeEnum.LIMITS);
-        const results  = await this.retrieveLookerParametersFromLLM(promptLimit);                
+        const results  = await this.retrieveLookerParametersFromLLM(promptLimit);
         const limitResult = UtilsHelper.firstElement(results).r;
         // validate the result
-        const limitNumber = 500;
         try {
             var limitInt = parseInt(limitResult);
             if(limitInt > 0 && limitInt <= 500)
@@ -309,49 +230,34 @@ export class GenerativeExploreService {
 
     public async generatePromptSendToBigQuery(
         modelFields: FieldMetadata[],
-        userInput: string,        
-        inputModelName: string,
-        inputViewName: string): Promise<{
-        queryId: string,
+        userInput: string,
         modelName: string,
-        view: string,
-    }> {
-
+        viewName: string): Promise<{
+            queryId: string,
+            modelName: string,
+            view: string,
+        }> {
         // Call LLM to find the fields
-        const payloadFromLLM = await this.getExplorePayloadFromLLM(modelFields, userInput);        
-        // call LLM to ask for Limits        
-        const limitFromLLM = await this.findLimitsFromLLM(userInput);
-        const pivotsFromLLM = await this.findPivotsFromLLM(userInput, payloadFromLLM.fields);
-
-        let llmQuery: IWriteQuery;
+        const exploreData = await this.getExplorePayloadFromLLM(modelFields, userInput);
         try {
-            llmQuery = {
-                model: inputModelName,
-                view: inputViewName,
-                fields: payloadFromLLM.fields,
-                filters: payloadFromLLM.filters,
-                sorts: payloadFromLLM.sorts,
-                pivots: pivotsFromLLM,                
-                limit: limitFromLLM
-            };
-            console.log("llmQuery: " + JSON.stringify(llmQuery));
+            const llmQueryResult = await this.sql.createQuery({
+                model: modelName,
+                view: viewName,
+                ...exploreData,
+            })
+            const queryId = llmQueryResult.value.client_id;
+            if (!queryId) {
+                throw new Error('unable to retrieve query id from created query')
+            }
+            console.log("llmQuery: " + JSON.stringify(exploreData, null, 2));
+            return {
+                queryId,
+                modelName,
+                view: viewName,
+            }
         } catch (err) {
             console.log("LLM does not contain valid JSON: ");
             throw new Error('LLM result does not contain a valid JSON');
         }
-        const llmQueryResult = await this.sql.createQuery(llmQuery)
-        const queryId = llmQueryResult.value.client_id;
-        if (!queryId) {
-            throw new Error('unable to retrieve query id from created query')
-        }
-        const modelName = llmQueryResult.value.model;
-        const view = llmQueryResult.value.view;
-        return {
-            queryId,
-            modelName,
-            view            
-        }
     }
-
-   
 }
