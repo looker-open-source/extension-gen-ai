@@ -11,7 +11,7 @@ export class LookerDashboardService {
     }
 
     /**
-     * Lists all available dashboards using LookerSDK
+     * Lists all available dashboards using LookerSDK 
      * @returns
      */
     public async listAll(): Promise<IDashboardBase[]> {

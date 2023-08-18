@@ -1,3 +1,7 @@
+export interface IDictionary<T> {
+    [key: string]: T;
+}
+
 export class UtilsHelper {
     public static escapeBreakLine(originalString: string): string {
         return originalString
@@ -19,5 +23,9 @@ export class UtilsHelper {
     public static firstElement<T>(array: Array<T>): T {
         const [ firstElement ] = array;
         return firstElement;
+    }
+
+    public static removeDuplicates<T>(array: Array<T>): Array<T> {
+        return Array.from(new Set(array));
     }
 }
