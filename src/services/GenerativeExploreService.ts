@@ -40,8 +40,8 @@ export class GenerativeExploreService {
         userInput: string,
         promptTypeEnum: PromptTypeEnum,
         potentialFields?:string):Array<string> {        
-        const shardedPrompts:Array<string> = [];
-        userInput = UtilsHelper.escapeSpecialCharacter(userInput);
+
+        const shardedPrompts:Array<string> = [];        
         // Prompt for Limits only needs the userInput
         switch(promptTypeEnum)
         {
@@ -90,7 +90,7 @@ export class GenerativeExploreService {
         const arraySelect: Array<string> = [];
         promptArray.forEach((promptField) =>{
              const singleLineString = UtilsHelper.escapeBreakLine(promptField);
-             const subselect = `SELECT '` + singleLineString + `' AS prompt`;
+             const subselect = `SELECT '` + singleLineString + `' AS prompt`;                        
              arraySelect.push(subselect);
         });
          // Join all the selects with union all
@@ -119,7 +119,7 @@ export class GenerativeExploreService {
         const llmChunkedResults = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
         const allowedFieldNames: string[] = modelFields.map(field => field.name);
         const mergedResults = new LookerExploreDataModel({
-            fields: [],
+            field_names: [],
             filters: {},
             pivots: [],
             sorts: [],
@@ -148,7 +148,7 @@ export class GenerativeExploreService {
         }
         // call LLM to ask for Limits
         const limitFromLLM = await this.findLimitsFromLLM(userInput);
-        const pivotsFromLLM = await this.findPivotsFromLLM(userInput, mergedResults.fields);
+        const pivotsFromLLM = await this.findPivotsFromLLM(userInput, mergedResults.field_names);
         if (pivotsFromLLM) {
             mergedResults.pivots = pivotsFromLLM;
         }
@@ -201,19 +201,28 @@ export class GenerativeExploreService {
         userInput: string,
         potentialFields: Array<string>
         ): Promise<Array<string>>
-    {           
+    {       
+        let arrayPivots:Array<string> = [];    
         try
-        {        
-            var arraySorts:Array<string> = [];
+        {            
             const potentialFieldsString = JSON.stringify(potentialFields);
             // Generate Prompt returns an array, gets the first for the LIMIT
-            const promptLimit = this.generatePrompt([], userInput, PromptTypeEnum.LIMITS, potentialFieldsString);
-            const results  = await this.retrieveLookerParametersFromLLM(promptLimit);                
-            return arraySorts;
+            const promptPivots = this.generatePrompt([], userInput, PromptTypeEnum.PIVOTS, potentialFieldsString);
+            const results  = await this.retrieveLookerParametersFromLLM(promptPivots);                
+            const pivotResult = UtilsHelper.firstElement(results).r;
+            // TODO: Validate result from schema joi
+            var llmResultLine = JSON.parse(pivotResult);
+            if(llmResultLine.pivots != null && llmResultLine.pivots.length > 0)
+            {
+                arrayPivots = arrayPivots.concat(llmResultLine.pivots);
+            }
+            // Validate results
+            arrayPivots.concat(pivotResult);  
+            return arrayPivots;
         }
         catch (err) {
-            throw new Error("Limit not returning correct due to prompt, going to default");
-            // return arraySorts;
+            return arrayPivots;
+            // throw new Error("Pivot not returning fields, going to default");
         }
     }
 
