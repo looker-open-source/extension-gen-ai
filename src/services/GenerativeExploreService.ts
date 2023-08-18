@@ -59,67 +59,6 @@ export class GenerativeExploreService {
         return shardedPrompts;
     }
 
-    private validateLLMFields(
-        modelFields: FieldMetadata[],
-        llmFields: Array<string>
-    ): Array<string>
-    {
-        const cleanLLMFields: Array<string> = [];
-        for(const modelField of modelFields )
-        {
-            if(modelField.name!= null)
-            {
-                for(const llmField of llmFields)
-                {
-                    if(llmField == modelField.name)
-                    {
-                        console.log("LLMField equals modelField.name")
-                        cleanLLMFields.push(llmField);
-                        break;
-                    }
-                }
-            }
-        }
-        console.log("Input1 eram: " + JSON.stringify(llmFields) + " Output: " + JSON.stringify(cleanLLMFields));
-        return cleanLLMFields;
-    }
-
-    private validateFilterFormatValue(filterValue: string):string
-    {
-        var cleanFilterValue = filterValue.replace("_", " ");
-        cleanFilterValue = cleanFilterValue.replace("-", " ");
-        // validate and replace other invalid patterns
-        return cleanFilterValue;
-    }
-
-    private validateLLMFilters(
-        modelFields: FieldMetadata[],
-        llmFilters: IDictionary<string>
-    ): IDictionary<string>
-    {
-        const cleanLLMFields: IDictionary<string> = {};
-        for(const modelField of modelFields )
-        {
-            if(modelField.name!= null && llmFilters!=null)
-            {
-                for(const key of Object.keys(llmFilters))
-                {
-                    if(key == modelField.name)
-                    {
-                        // Validate Filter Values
-                        if(this.validateFilterFormatValue(llmFilters[key]) != "")
-                        {
-                            cleanLLMFields[key] = llmFilters[key];
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-        console.log("Input Dict eram: " + llmFilters.length + " Output: " + cleanLLMFields.length);
-        return cleanLLMFields;
-    }
-
     private buildBigQueryLLMQuery(selectPrompt:string)
     {
         return `SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
@@ -150,6 +89,13 @@ export class GenerativeExploreService {
          // Join all the selects with union all
         const queryContents = arraySelect.join(" UNION ALL ");
 
+        const bla: {
+            fields: LookerExploreDataModel['fields'],
+            filters: LookerExploreDataModel['filters'],
+        } = {
+          fields: [],
+        };
+        bla.fields.push('a');
         if(queryContents == null || queryContents.length == 0)
         {
             throw new Error('Could not generate field arrays on Prompt');
