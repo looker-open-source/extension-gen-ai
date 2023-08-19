@@ -6,7 +6,7 @@ import { BaseSchema, Schemafy } from "./Schema";
 export interface ILookerExploreDataModel {
     field_names: string[],
     filters: { [key: string]: string },
-    pivots: string[],
+    pivots?: string[],
     sorts: string[],
     limit?: string,
 }
@@ -27,6 +27,10 @@ class LookerExploreDataModel extends BaseSchema {
         if (pivots) {
             // bring the pivots also to the fields
             this.field_names = this.field_names.concat(pivots);
+            if(this.pivots == null)
+            {
+                this.pivots = [];
+            }
             this.pivots = this.pivots.concat(pivots);
         }
         if (sorts) {
@@ -67,7 +71,7 @@ class LookerExploreDataModel extends BaseSchema {
         const schema: Schemafy<ILookerExploreDataModel> = {
             field_names: Joi.array().required().unique().items(Joi.string().valid(...allowedFields)),
             filters: Joi.object().required().pattern(Joi.string(), Joi.string()),
-            pivots: Joi.array().required().items(Joi.string()),
+            pivots: Joi.array().optional().unique().items(Joi.string()),
             sorts: Joi.array().required().items(Joi.string()),
             limit: Joi.string(),
         };
