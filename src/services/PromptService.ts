@@ -18,7 +18,7 @@ If the Question contains a "top", "bottom", add a "count" inside the fields.
 If you can 
 
 {
-"fieldNames": [],
+"field_names": [],
 "filters": {},
 "sorts": []
 }
@@ -28,16 +28,17 @@ Q: "What are the top 10 total sales price per brand. With brands: Levi's, Calvin
 {"field_names":["products.brand","order_items.total_sale_price"],"filters":{"products.brand":"Levi's, Calvin Klein, Columbia"}}
 
 Q: "What are the top sales price, category, cost pivot per day and filter only orders with more than 15 items"
-{"field_names":["order_items.total_sale_price", "products.category", "inventory_items.cost"], "pivots": ["orders.created_date"], "filters": {"order_items.count": "> 15"}}
+{"field_names":["order_items.total_sale_price", "products.category", "inventory_items.cost", "orders.created_date"], "filters": {"order_items.count": "> 15"}, "sorts": ["order_items.total_sales_price"]}
 
 Q: "How many orders were created in the past 7 days"
-{"field_names": ["orders.count"], "filters": {"sales_order.created_date": "7 days"}}
+{"field_names": ["orders.count"], "filters": {"sales_order.created_date": "7 days"}, "sorts": []}
+
 
 Q: "What are the states that had the most orders, filter state: California, Nevada, Washinton, Oregon"
-{"field_names": ["orders.count"], "filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}}
+{"field_names": ["orders.count"], "filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}, "sorts": []}
 
 Q: "What are the top 10 languages?"
-{"field_names": ["wiki100_m.language","wiki100_m.count"], "filters":[]}      
+{"field_names": ["wiki100_m.language","wiki100_m.count"], "filters":[], "sorts": []}
 `,
 [PromptTypeEnum.PIVOTS]: `
 List of Fields: {{potentialFields}}
@@ -52,7 +53,7 @@ Question: "What are the top sales price, category, brand, cost and created day. 
 {"pivots": ["orders.created_date"]}
 
 List of Fields: [products.brand, inventory_items.cost, order_items.total_sale_price, orders.created_date]
-Question: "What are the top sales price per brand and per cost pivotting per day"
+Question: "What are the top sales price per brand and per cost pivotting per date"
 {"pivots": ["orders.created_date"]}
 
 List of Fields: [ wiki100_m.day, wiki100_m.language, wiki100_m.count]
