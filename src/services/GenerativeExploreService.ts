@@ -136,7 +136,8 @@ export class GenerativeExploreService {
                 const llmChunkResult = JSON.parse(chunkResult.r);
                 const exploreDataChunk = new LookerExploreDataModel(llmChunkResult, allowedFieldNames);
                 mergedResults.merge(exploreDataChunk);
-            } catch (error: Error) {
+            } catch (error) {
+                // @ts-ignore
                 console.error(error.message, chunkResult);
                 throw new Error('LLM result does not contain a valid JSON');
             }
@@ -243,7 +244,11 @@ export class GenerativeExploreService {
             const llmQueryResult = await this.sql.createQuery({
                 model: modelName,
                 view: viewName,
-                ...exploreData,
+                fields: exploreData.field_names,
+                filters: exploreData.filters,
+                pivots: exploreData.pivots,
+                sorts: exploreData.sorts,
+                limit: exploreData.limit,
             })
             const queryId = llmQueryResult.value.client_id;
             if (!queryId) {
