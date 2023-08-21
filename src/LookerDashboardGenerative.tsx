@@ -28,9 +28,7 @@ export const LookerDashboardGenerative: React.FC = () => {
   const [currentDashId, setCurrentDashId] = useState<string>()
   const [prompt, setPrompt] = useState<string>()
   const [llmInsights, setLlmInsights] = useState<string>()
-  const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
-  const [currentDashElementCount, setCurrentDashElementCount] = useState<number>()
-  const [currentDashData, setCurrentDashData] = useState<{[key: string]: {}}>({})
+  const [dashboardDivElement, setDashboardDivElement] = useState<HTMLDivElement>()
   const [hostUrl, setHostUrl] = useState<string>()
 
   const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
@@ -78,11 +76,11 @@ export const LookerDashboardGenerative: React.FC = () => {
     }
 
     // Removes the first child
-    if(exploreDivElement!=null && exploreDivElement.children!=null)
+    if(dashboardDivElement!=null && dashboardDivElement.children!=null)
     {
-      for(var i = 0; i < exploreDivElement.children.length; i++)
+      for(var i = 0; i < dashboardDivElement.children.length; i++)
       {
-        exploreDivElement?.removeChild(exploreDivElement.lastChild!);
+        dashboardDivElement?.removeChild(dashboardDivElement.lastChild!);
       }
     }
 
@@ -90,7 +88,7 @@ export const LookerDashboardGenerative: React.FC = () => {
     // @ts-ignore
     LookerEmbedSDK.init(hostUrl!);
     LookerEmbedSDK.createDashboardWithId(splittedArray[1])
-    .appendTo(exploreDivElement!)
+    .appendTo(dashboardDivElement!)
     .build()
     .connect()
     .then()
@@ -129,7 +127,7 @@ export const LookerDashboardGenerative: React.FC = () => {
   const embedCtrRef = useCallback((el) => {
     setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);
     // set the explore div element outside
-    setExploreDivElement(el);
+    setDashboardDivElement(el);
   }, [])
 
   // Method that triggers sending the message to the workflow
@@ -149,12 +147,19 @@ export const LookerDashboardGenerative: React.FC = () => {
     }
     setLoadingLLM(true);
     try {
-      const dashboardElementsData = await generativeDashboardService.getElementsById(currentDashId);
+      const dashboardElementsData = await generativeDashboardService.getDashboardDataById(currentDashId);
       const promptResult = await generativeDashboardService.sendPrompt(dashboardElementsData, prompt)
       // update interface with results
       setLlmInsights(promptResult)
-    } catch (error: Error) {
-      setLlmInsights(`Unexpected error: ${error.message}`);
+    } catch (error) {
+      if(error instanceof Error)
+      {
+        setLlmInsights(`Unexpected error: ${error.message}`);
+      }
+      else
+      {
+        setLlmInsights(`Unexpected error:` + error);
+      }      
     } finally {
       setLoadingLLM(false);
     }
