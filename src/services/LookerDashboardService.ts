@@ -83,7 +83,6 @@ export class LookerDashboardService {
         }        
         let elementData: Array<ElementData> = await this.lookerSQL.executeByQueryId<ElementData>(queryId);
         // change the JSON keys/names and also limit the results based on config settings
-        debugger;
         if(element.result_maker?.vis_config!=null)
         {
             const vis_config = element.result_maker.vis_config;
