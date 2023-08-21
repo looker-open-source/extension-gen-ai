@@ -51,10 +51,13 @@ export class LookerDashboardService {
      * @returns
      */
     public async mapElementData<ElementData>(elements: IDashboardElement[]): Promise<Array<DashboardTile<ElementData>>> {
-        const elementDataPromises = elements.map(async (element) => ({
+        
+        // Filter only visualization elements
+        const filteredElements = elements.filter(element => (element.type=="vis" && element.result_maker!=null));        
+        const elementDataPromises = filteredElements.map(async (element) => ({
          title: element.title,
          description: element.subtitle_text,
-         type: element.type,
+         type: element.result_maker?.vis_config?.type,
          data: await this.getElementData<ElementData>(element)
         }));
         const elementDataList: DashboardTile<ElementData>[] = await Promise.all(elementDataPromises);
@@ -69,16 +72,53 @@ export class LookerDashboardService {
      * @returns
      */
     private async getElementData<ElementData>(element: IDashboardElement): Promise<Array<ElementData>> {
-        let queryId = element.query_id;
-        if (!queryId) {
+        let queryId = element.query_id;        
+        if (queryId == null) {
             if (!element.result_maker?.query_id) {
-                throw new Error('unable to find dashboard element query id');
+                console.log("Element ID" + element.id +  "does not contain query_id");
+                return new Array<ElementData>();
+                // throw new Error('unable to find dashboard element query id');
             }
             queryId = element.result_maker.query_id;
+        }        
+        let elementData: Array<ElementData> = await this.lookerSQL.executeByQueryId<ElementData>(queryId);
+        // change the JSON keys/names and also limit the results based on config settings
+        debugger;
+        if(element.result_maker?.vis_config!=null)
+        {
+            const vis_config = element.result_maker.vis_config;
+            if(vis_config.limit_displayed_rows_values!=null)
+            {
+                // Slice the Dataset based on the Visualization Settings
+                if(vis_config.limit_displayed_rows_values.num_rows!= null)
+                {
+                    const limited_rows = parseInt(vis_config.limit_displayed_rows_values.num_rows);
+                    if (limited_rows!=null) {
+                        // TODO: verify if I have to slice from the first_last
+                        elementData = elementData.slice(0, limited_rows);       
+                        console.log("Sliced to " + limited_rows + " rows");         
+                    }                  
+                    else{
+                        console.log("limiting rows is null");
+                    }
+                }
+                // Create a hashmap object to store the names and ages of students.
+                const map_axis = new Map<string, string>();
+                switch(vis_config.type)
+                {
+                    case "looker_column":
+                        // if(vis_config.show_y_axis_labels)
+                        console.log("Looker Column");
+                        break;
+                    case "looker_pie":
+                        console.log("Looker Pie");
+                        break;
+                    default: 
+                        console.log(vis_config.type);
+                }                
+            }                                      
         }
-        const elementData: Array<ElementData> = await this.lookerSQL.executeByQueryId<ElementData>(queryId);
         return elementData;
     }
-
     
 }

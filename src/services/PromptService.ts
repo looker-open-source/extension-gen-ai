@@ -3,7 +3,8 @@ import { UtilsHelper } from "../utils/Helper";
 export enum PromptTypeEnum {
     FIELDS_FILTERS_PIVOTS_SORTS,
     PIVOTS,
-    LIMITS 
+    LIMITS,
+    DASH_SUMMARIZE,
 }
 
 export type PromptTypeMapperType = { [key in PromptTypeEnum]: string };
@@ -73,6 +74,17 @@ Q: What are the top 50 products with the largest sales amount?
 50
 Q: What are the total sales per month?
 500`,
+
+        [PromptTypeEnum.DASH_SUMMARIZE]:` 
+Dashboard Context: {{dashboardContext}}
+Tile Context: {{tileContext}}
+InputData: {{serializedModelFields}}
+Question: {{userInput}}
+
+Based on the Question, Summarize the InputData in a relevant way to help answer this Question.
+Calculate any necessary metrics such as Average, Min, Max, etc.
+The ouput should be JSON.
+`
     };
     
     public constructor(customPrompts?: Partial<PromptTypeMapperType>) {
