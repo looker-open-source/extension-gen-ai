@@ -101,7 +101,7 @@ export class LookerDashboardService {
                         console.log("limiting rows is null");
                     }
                 }
-                // Create a hashmap object to store the names and ages of students.
+                // TODO: @gimenes Logic to get field names based on show_x_axis_labels, y_axes.series.axisId and y_axes.label, x_axes..
                 const map_axis = new Map<string, string>();
                 switch(vis_config.type)
                 {
