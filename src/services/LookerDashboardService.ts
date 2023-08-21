@@ -1,6 +1,15 @@
 import { IDashboard, IDashboardBase, IDashboardElement, Looker40SDK } from "@looker/sdk";
 import { LookerSQLService } from "./LookerSQLService";
 
+
+export type DashboardTile<ElementData> = {
+    title?: string | null;
+    description?: string | null;
+    type?: string | null;
+    data: Array<ElementData>,
+};
+
+
 export class LookerDashboardService {
     private lookerSDK: Looker40SDK;
     private lookerSQL: LookerSQLService;
@@ -37,15 +46,22 @@ export class LookerDashboardService {
     }
 
     /**
-     * Fetches ElementData of all elements in parallel
+     * Fetches DashboardTile with Data of all elements in parallel
      * @param elements
      * @returns
      */
-    public async mapElementData<ElementData>(elements: IDashboardElement[]): Promise<Array<Array<ElementData>>> {
-        const elementDataPromises = elements.map((element) => this.getElementData<ElementData>(element));
-        const elementDataList: Array<Array<ElementData>> = await Promise.all(elementDataPromises);
+    public async mapElementData<ElementData>(elements: IDashboardElement[]): Promise<Array<DashboardTile<ElementData>>> {
+        const elementDataPromises = elements.map(async (element) => ({
+         title: element.title,
+         description: element.subtitle_text,
+         type: element.type,
+         data: await this.getElementData<ElementData>(element)
+        }));
+        const elementDataList: DashboardTile<ElementData>[] = await Promise.all(elementDataPromises);
         return elementDataList;
     }
+
+        
 
     /**
      * Fetches ElementData for a given IDashboardElement
@@ -63,4 +79,6 @@ export class LookerDashboardService {
         const elementData: Array<ElementData> = await this.lookerSQL.executeByQueryId<ElementData>(queryId);
         return elementData;
     }
+
+    
 }
