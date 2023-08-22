@@ -4,6 +4,7 @@ export enum PromptTypeEnum {
     FIELDS_FILTERS_PIVOTS_SORTS,
     PIVOTS,
     LIMITS,
+    EXPLORE_VALIDATE_MERGED,
     DASH_SUMMARIZE,
 }
 
@@ -15,9 +16,8 @@ export class PromptService {
 Question: {{userInput}}
 
 Extract the exact fields names, filters and sorts from the Context in a JSON format that can help answer the Question.The fields are in the format "table.field".
-If the Question contains a "top", "bottom", add a "count" inside the fields.
-If you can 
-
+If the Question contains a "top", "bottom", insert a "count" inside the fields.
+JSON output format is the following
 {
 "field_names": [],
 "filters": {},
@@ -34,19 +34,19 @@ Q: "What are the top sales price, category, cost pivot per day and filter only o
 Q: "How many orders were created in the past 7 days"
 {"field_names": ["orders.count"], "filters": {"sales_order.created_date": "7 days"}, "sorts": []}
 
+Q: "What are the top 10 languages?"
+{"field_names": ["wiki100_m.language","wiki100_m.count"], "filters":{}, "sorts": []}
 
 Q: "What are the states that had the most orders, filter state: California, Nevada, Washinton, Oregon"
 {"field_names": ["orders.count"], "filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}, "sorts": []}
-
-Q: "What are the top 10 languages?"
-{"field_names": ["wiki100_m.language","wiki100_m.count"], "filters":[], "sorts": []}
 `,
 [PromptTypeEnum.PIVOTS]: `
 List of Fields: {{potentialFields}}
 Question: {{userInput}}
 
 Analyze the Question above, if it contains the word "pivot" or "pivotting", pick the appropriate fields exclusively from the List of Fields provided.
-Return a valid JSON in this format: {"pivots": [field1, field2]}
+Ouput in JSON format:
+{"pivots": [field1, field2]}
 
 Examples:
 List of Fields: [products.brand, products.category, inventory_items.cost, order_items.total_sale_price, orders.created_date]
@@ -74,6 +74,11 @@ Q: What are the top 50 products with the largest sales amount?
 50
 Q: What are the total sales per month?
 500`,
+        [PromptTypeEnum.EXPLORE_VALIDATE_MERGED]:`Context: {{mergedResults}}
+The Context provided contains all the possible fields, filters, pivots and sort.
+Return the JSON with only the fields needed to answer following Question.
+The ouput format is a valid JSON.
+Question: {{userInput}}`,
 
         [PromptTypeEnum.DASH_SUMMARIZE]:` 
 Dashboard Context: {{dashboardContext}}
@@ -88,7 +93,6 @@ The ouput should be JSON.
     };
     
     public constructor(customPrompts?: Partial<PromptTypeMapperType>) {
-        console.log("Constructor of PromptService");    
         customPrompts = customPrompts || {};
         this.PromptTypeMapper = {            
             ...this.PromptTypeMapper,
