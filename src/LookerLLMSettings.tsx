@@ -34,8 +34,7 @@ export const LookerLLMSettings: React.FC = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     // Every time it reloads
-    const promptService = new PromptService(JSON.parse(window.sessionStorage.getItem(storageCustomPrompt)!));
-    console.log("Use effect Initial");    
+    const promptService = new PromptService(JSON.parse(window.sessionStorage.getItem(storageCustomPrompt)!));     
     setCustomPrompt(promptService.getPromptTemplateByType(PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));
     const cStorageNativeBQML = window.sessionStorage.getItem(storageNativeBQML) === "true" || window.sessionStorage.getItem(storageNativeBQML) === null;
     const cStorageLogLevel = window.sessionStorage.getItem(storageLogLevel);
