@@ -1,7 +1,7 @@
 // Copyright 2023 Google LLC
 
 import { Box, Button, ComboboxCallback, ComboboxOptionObject, ComponentsProvider, Dialog, DialogLayout, FieldSelect, FieldTextArea, Heading, MaybeComboboxOptionObject, Space, SpaceVertical, Span, Spinner } from '@looker/components'
-import { LookerEmbedSDK } from '@looker/embed-sdk'
+import { LookerEmbedSDK, LookerEmbedDashboard, DashboardEvent} from '@looker/embed-sdk'
 import { ExtensionContext, ExtensionContextData } from '@looker/extension-sdk-react'
 import {
   IDashboardBase,
@@ -26,6 +26,7 @@ export const LookerDashboardGenerative: React.FC = () => {
   const [currentCombo, setCurrentCombo] = useState<ComboboxOptionObject[]>()
   const [currentDashName, setCurrentDashName] = useState<string>()
   const [currentDashId, setCurrentDashId] = useState<string>()
+  const [currentDashboard, setCurrentDashboard] = useState<LookerEmbedDashboard>();
   const [prompt, setPrompt] = useState<string>()
   const [llmInsights, setLlmInsights] = useState<string>()
   const [dashboardDivElement, setDashboardDivElement] = useState<HTMLDivElement>()
@@ -89,12 +90,28 @@ export const LookerDashboardGenerative: React.FC = () => {
     LookerEmbedSDK.init(hostUrl!);
     LookerEmbedSDK.createDashboardWithId(splittedArray[1])
     .appendTo(dashboardDivElement!)
+    .on('dashboard:run:complete',(event:DashboardEvent) => {
+      // TODO: support content reflected by filters
+      if(event.dashboard.dashboard_filters!=null)
+      {
+        console.log("dashboard:filters:changed");
+        // console.log(event);
+        console.log(JSON.stringify(event, null, 2));
+      }      
+    })
+    .on('dashboard:filters:changed',(event:DashboardEvent) =>
+    {
+      console.log("Filters changed");
+    })
     .build()
     .connect()
-    .then()
+    .then((dash)=> {
+      setCurrentDashboard(dash);
+    })    
     .catch((error: Error) => {
       console.error('Connection error', error)
     });
+
   });
 
   const onFilterComboBox = ((filteredTerm: string) => {
@@ -102,8 +119,8 @@ export const LookerDashboardGenerative: React.FC = () => {
     setCurrentCombo(allCombo?.filter(explore => explore.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
   });
 
-  const selectCurrentExploreName = (exploreName: string) => {
-    setCurrentDashId(exploreName);
+  const selectCurrentDashId = (dashId: string) => {
+    setCurrentDashId(dashId);
   }
 
   // Method that clears the explores under the chat
@@ -173,7 +190,7 @@ export const LookerDashboardGenerative: React.FC = () => {
         </Span>
       </Space>
       <Space around>
-        <Heading fontWeight="semiBold">Looker AI Insights on Dashboards</Heading>
+        <Heading fontWeight="semiBold">Looker AI Insights on Dashboards version: 1.1.0 - updated 08/21/2023</Heading>
       </Space>
       <Box display="flex" m="large">
           <SpaceVertical>
