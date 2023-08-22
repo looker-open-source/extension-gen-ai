@@ -103,12 +103,12 @@ export const LookerExploreGenerative: React.FC = () => {
       setCurrentExploreName(splittedArray[1]);              
     } 
     else{
-      Logger.getInstance().log("Error selecting combobox, modelName and exploreName are null or not divided by .");
+      Logger.getInstance().error("Error selecting combobox, modelName and exploreName are null or not divided by .");
     }   
   });
   
   const onFilterComboBox = ((filteredTerm: string) => {
-    Logger.getInstance().log("Filtering");
+    Logger.getInstance().info("Filtering");
     setCurrentComboExplores(allComboExplores?.filter(explore => explore.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
   });
 
@@ -259,6 +259,13 @@ export const LookerExploreGenerative: React.FC = () => {
           <Span fontSize="medium">
           Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b> or <b>gimenes@google.com</b>
           </Span>
+
+          {/* <FieldSelect            
+            label="Examples to Try"
+            onChange={changeComboExamples}            
+            options={examplesCombos}
+            width={500}
+          />    */}
 
           <FieldSelect
             onOpen={resetComboExplore}                        
