@@ -8,7 +8,7 @@ export class Logger {
         'warn': 4,
         'error': 5
     };
-    private logLevel: number = 1;    
+    private logLevel: number = 5;    
   
     private constructor() {
         
