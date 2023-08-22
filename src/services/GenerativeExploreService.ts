@@ -127,7 +127,7 @@ export class GenerativeExploreService {
         const fieldsPrompts: Array<string> = this.generatePrompt(modelFields, userInput, PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS);
         const llmChunkedResults = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
         const allowedFieldNames: string[] = modelFields.map(field => field.name);
-        const mergedResults = new LookerExploreDataModel({
+        let mergedResults = new LookerExploreDataModel({
             field_names: [],
             filters: {},
             pivots: [],
@@ -168,16 +168,16 @@ export class GenerativeExploreService {
             // send the merged results to a final LLM to validate the merged Results
             const checkMergedFromLLM:LookerExploreDataModel = await this.checkMergedFromLLM(mergedResults, userInput, allowedFieldNames);
             // remove pivots if not mentioned explicitly
-            if(!this.validateInputForPivots(userInput))
-            {
-                checkMergedFromLLM.pivots = [];
-            }                               
-            return checkMergedFromLLM;
+            mergedResults = checkMergedFromLLM;                               
         }
-        else
+        // Validate if word Pivots is present
+        if(!this.validateInputForPivots(userInput))
         {
-            return mergedResults;
+            Logger.getInstance().debug("Removing Pivots");
+            mergedResults.pivots = [];
         }
+        return mergedResults;
+        
        
     }
 
