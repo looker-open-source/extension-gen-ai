@@ -9,8 +9,9 @@ import { LookerExploreGenerative } from './LookerExploreGenerative'
 import { LookerDashboardGenerative } from './LookerDashboardGenerative'
 import { LookerLLMSettings } from './LookerLLMSettings'
 
+// customized chattyTimeout (promises inside extension to 5 min for LLM models)
 export const App = hot(() => (
-  <ExtensionProvider>
+  <ExtensionProvider chattyTimeout={300000}>
     <ComponentsProvider>
       <Tabs2 defaultTabId="explore">
         <Tab2 id="explore" label="Generative Explores">

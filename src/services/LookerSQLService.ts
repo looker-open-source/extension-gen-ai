@@ -1,4 +1,5 @@
 import { IRequestRunQuery, ISqlQueryCreate, IWriteQuery, Looker40SDK } from "@looker/sdk";
+import {ITransportSettings} from "@looker/sdk-rtl";
 
 export class LookerSQLService {
     private lookerSDK: Looker40SDK;
@@ -7,6 +8,11 @@ export class LookerSQLService {
     public constructor(lookerSDK: Looker40SDK) {
        this.lookerSDK = lookerSDK;       
     }
+
+    private static transportTimeoutCustom: Partial<ITransportSettings> = 
+    {
+        timeout: 600000
+    };
 
     /**
      * Executes a Query and fetches results using LookerSDK
@@ -32,7 +38,9 @@ export class LookerSQLService {
             connection_name: this.connectionName,
             sql: query,
         }
-        const result = await this.lookerSDK.create_sql_query(queryCreate);
+        
+       
+        const result = await this.lookerSDK.create_sql_query(queryCreate, LookerSQLService.transportTimeoutCustom);        
         if (!result.ok) {
             throw new Error('unable to create SQL query');
         }
@@ -53,7 +61,7 @@ export class LookerSQLService {
             query_id: queryId,
             result_format: "json"
         };
-        const queryResult = await this.lookerSDK.run_query(runQueryRequest);
+        const queryResult = await this.lookerSDK.run_query(runQueryRequest, LookerSQLService.transportTimeoutCustom);
         if (!queryResult.ok) {
             throw new Error('unable to execute query by id');
         }
@@ -70,7 +78,8 @@ export class LookerSQLService {
      */
     private async runQuerySlug<T>(slug: string): Promise<Array<T>>
     {
-        const result = await this.lookerSDK.run_sql_query(slug, "json");
+        
+        const result = await this.lookerSDK.run_sql_query(slug, "json",undefined,LookerSQLService.transportTimeoutCustom);
         if (!result.ok) {
             throw new Error('unable to run SQL query');
         }
@@ -83,7 +92,7 @@ export class LookerSQLService {
      * @returns
      */
     public async createQuery(query: Partial<IWriteQuery>) {
-        const result = await this.lookerSDK.create_query(query);
+        const result = await this.lookerSDK.create_query(query, undefined , LookerSQLService.transportTimeoutCustom);
         if (!result.ok) {
             throw new Error('invalid create query result')
         }
