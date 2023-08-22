@@ -25,6 +25,15 @@ export class UtilsHelper {
         return firstElement;
     }
 
+    public static cleanResult(originalString: string): string {
+        let fixedString = originalString;
+        fixedString = fixedString.replace("```JSON", "");
+        fixedString = fixedString.replace("```", "");
+        return fixedString;
+    }
+
+
+
     public static removeDuplicates<T>(array: Array<T>): Array<T> {
         return Array.from(new Set(array));
     }
