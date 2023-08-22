@@ -3,6 +3,7 @@ import { UtilsHelper } from "../utils/Helper";
 import { DashboardTile, LookerDashboardService } from "./LookerDashboardService";
 import { LookerSQLService } from "./LookerSQLService";
 import { PromptService, PromptTypeEnum } from "./PromptService";
+import { Logger } from "../utils/Logger"
 
 
 
@@ -19,7 +20,7 @@ export class GenerativeDashboardService {
     // Change this variable if you want to change the ML model from BQML
     static readonly BQML_DATASET: string = "llm.llm_model";
     static readonly MAX_CHAR_PER_PROMPT: number = 8000*3;
-    static readonly MAX_CHAR_PER_TILE: number = 6000*3;
+    static readonly MAX_CHAR_PER_TILE: number = 15000*3;
     static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 2000*3;
 
     /**
@@ -63,7 +64,7 @@ export class GenerativeDashboardService {
         throw new Error('dashboard does not contain any elements');
         }
         // Debug:        
-        // console.log("Dashboard Elements: " + JSON.stringify(elements, null, 2));
+        // Logger.getInstance().debug("Dashboard Elements: " + JSON.stringify(elements, null, 2));
         const elementsData: Array<DashboardTile<ElementData>> = await this.dashboardService.mapElementData<ElementData>(elements);
 
         const { title, description } = dashboard;        
@@ -85,32 +86,34 @@ export class GenerativeDashboardService {
         
         const arrayTilesNotSummarizable: Array<DashboardTile<unknown>> = [];
         const arrayTiles: Array<DashboardTile<unknown>> = [];
-        const arrayPromisesSummarizer: Array<Promise<string>> = [];
+        const arrayPromisesSummarizer: Array<Promise<DashboardTile<unknown>>> = [];
         // Summarize Tiles
         dashboardElementData.elements.map((dashTile) => {
             const tileData = dashTile.data;
-            const tileLength = JSON.stringify(tileData).length;
-            // console.log("Tile Length: " + tileLength + " - Tile Name: "+ dashTile.title! + "- Tile Type: " + dashTile.type);
-            // console.log("Data: " + JSON.stringify(tileData, null, 2));
-            
+            const tileLength = JSON.stringify(tileData).length;            
+            Logger.getInstance().debug("Tile Length: "+ tileLength);
             if( tileLength > GenerativeDashboardService.MAX_CHAR_PER_TILE)
             {                
-                console.log("Limit of Element Data per Tile to be summarizable");
+                Logger.getInstance().trace("Limit of Element Data per Tile to be summarizable");
                 arrayTilesNotSummarizable.push(dashTile);
             }
             else if (tileLength> GenerativeDashboardService.MIN_SUMMARIZE_CHAR_PER_TILE)
             {
                 // Summarize
-                console.log("Summarize this tile");
-                arrayPromisesSummarizer.push()
+                Logger.getInstance().trace("Summarize this tile: " + dashTile.title);
+                arrayPromisesSummarizer.push(
+                    this.summarizeTile(dashTile, question,
+                         dashboardElementData.title, dashboardElementData.description));
             }
             else
             {
-                console.log("Sending as IS");
+                Logger.getInstance().trace("Sending as IS");
                 arrayTiles.push(dashTile);
             }
         });
-                        
+        
+        const arraySummarized = await Promise.all(arrayPromisesSummarizer);
+        arrayTiles.concat(arraySummarized);                                
         const tilesToSend = {
             title: dashboardElementData.title,
             description: dashboardElementData.description,
@@ -134,7 +137,17 @@ export class GenerativeDashboardService {
         const tileContext = tile.title!= null? "Tile Title: " + tile.title: "" +
         tile.description!=null? " Tile Description: " + tile.description: "";
 
-        this.getPromptService().fillPromptVariables(PromptTypeEnum.DASH_SUMMARIZE, { dashBoardContext, userInput, serializedModelFields, tileContext})
+        const promptSumarize = this.getPromptService().fillPromptVariables(PromptTypeEnum.DASH_SUMMARIZE, { dashBoardContext, userInput, serializedModelFields, tileContext});
+        const summaryResult = await this.sendPromptToBigQuery(promptSumarize);
+        try {
+            tile.data = JSON.parse(summaryResult);
+            return tile;
+        }
+        catch (error)
+        {
+            Logger.getInstance().debug(error);
+            throw new Error("unable to summarize: Could not parse JSON from BQ LLM");            
+        }                         
     }
 
 
@@ -161,7 +174,7 @@ export class GenerativeDashboardService {
         }
         // Clean string to send to BigQuery
         serializedElementData = serializedElementData.replace(/\'/g, '\\\'');
-        console.log("Sending Prompt to BigQuery LLM");
+        Logger.getInstance().debug("Sending Prompt to BigQuery LLM");
         const singleLineString = `Act as an experienced Business Data Analyst with PHD and answer the question having into context the following Data: ${serializedElementData} Question: ${question}`;                
         return this.sendPromptToBigQuery(singleLineString);        
 

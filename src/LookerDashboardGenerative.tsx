@@ -1,6 +1,8 @@
 // Copyright 2023 Google LLC
 
-import { Box, Button, ComboboxCallback, ComboboxOptionObject, ComponentsProvider, Dialog, DialogLayout, FieldSelect, FieldTextArea, Heading, MaybeComboboxOptionObject, Space, SpaceVertical, Span, Spinner } from '@looker/components'
+import { Box, Button, ComboboxCallback, ComboboxOptionObject, ComponentsProvider, Dialog,
+   DialogLayout, FieldSelect, FieldTextArea, TextArea, Heading, MaybeComboboxOptionObject,
+    Space, SpaceVertical, Span, Spinner } from '@looker/components'
 import { LookerEmbedSDK, LookerEmbedDashboard, DashboardEvent} from '@looker/embed-sdk'
 import { ExtensionContext, ExtensionContextData } from '@looker/extension-sdk-react'
 import {
@@ -10,6 +12,7 @@ import {
 import React, { FormEvent, useCallback, useContext, useEffect, useState } from 'react'
 import { EmbedContainer } from './EmbedContainer'
 import { GenerativeDashboardService } from './services/GenerativeDashboardService'
+import { Logger } from './utils/Logger'
 
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
@@ -41,7 +44,9 @@ export const LookerDashboardGenerative: React.FC = () => {
   }, [])
 
   function generateComboDashboards(listDashs: IDashboardBase[]) {
-    const comboObjects: ComboboxOptionObject[] = listDashs
+    // sort the dashboards on the combo
+    const listSortedDashs = listDashs.sort((a:IDashboardBase,b:IDashboardBase) => (a.title!=null&&b.title!=null)?a.title.localeCompare(b.title):0);
+    const comboObjects: ComboboxOptionObject[] = listSortedDashs
       .map(({ title, id }) => ({
           label: [title, id].join(' - '),
           value: [title, id].join('.')
@@ -73,7 +78,7 @@ export const LookerDashboardGenerative: React.FC = () => {
       setCurrentDashId(splittedArray[1]);
     }
     else{
-      console.log("Error selecting combobox, modelName and exploreName are null or not divided by .");
+      Logger.getInstance().error("Error selecting combobox, modelName and exploreName are null or not divided by .");
     }
 
     // Removes the first child
@@ -94,14 +99,14 @@ export const LookerDashboardGenerative: React.FC = () => {
       // TODO: support content reflected by filters
       if(event.dashboard.dashboard_filters!=null)
       {
-        console.log("dashboard:filters:changed");
-        // console.log(event);
-        console.log(JSON.stringify(event, null, 2));
+        Logger.getInstance().debug("dashboard:filters:changed");
+        // Logger.getInstance().debug(event);
+        // Logger.getInstance().debug(JSON.stringify(event, null, 2));
       }      
     })
     .on('dashboard:filters:changed',(event:DashboardEvent) =>
     {
-      console.log("Filters changed");
+      Logger.getInstance().debug("Filters changed");
     })
     .build()
     .connect()
@@ -115,7 +120,7 @@ export const LookerDashboardGenerative: React.FC = () => {
   });
 
   const onFilterComboBox = ((filteredTerm: string) => {
-    console.log("Filtering");
+    Logger.getInstance().debug("Filtering");
     setCurrentCombo(allCombo?.filter(explore => explore.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
   });
 
@@ -151,7 +156,7 @@ export const LookerDashboardGenerative: React.FC = () => {
   const handleSend = async () =>
   {
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
-    console.log("1. Get the Data From all the Dashboards");
+    Logger.getInstance().info("1. Get the Data From all the Dashboards");
     if(!currentDashName || !currentDashId)
     {
       console.error('unable to find current dashboard id');
@@ -217,10 +222,6 @@ export const LookerDashboardGenerative: React.FC = () => {
             options={currentCombo}
             width={500}
           />
-          <Space>
-            <Button onClick={handleSend}>Send</Button>
-            <Button onClick={handleClear}>Clear Insights</Button>
-          </Space>
           <FieldTextArea
             width="100%"
             label="Type your question"
@@ -228,6 +229,10 @@ export const LookerDashboardGenerative: React.FC = () => {
             onChange={handleChange}
             defaultValue={defaultPromptValue}
           />
+          <Space>
+            <Button onClick={handleSend}>Send</Button>
+            <Button onClick={handleClear}>Clear Insights</Button>
+          </Space>
           <Dialog isOpen={loadingLLM}>
             <DialogLayout header="Loading LLM Data to Explore...">
               <Spinner size={80}>
@@ -235,9 +240,9 @@ export const LookerDashboardGenerative: React.FC = () => {
             </DialogLayout>
             </Dialog>
 
-          <FieldTextArea
-            width="100%"
-            label="LLM Insights"
+          <TextArea
+            disabled
+            placeholder="Insights from LLM Model"
             value={llmInsights}
           />
           <EmbedContainer ref={embedCtrRef}>

@@ -25,10 +25,10 @@ import {
 } from '@looker/sdk'
 import { Box, Heading } from '@looker/components'
 import { EmbedContainer } from './EmbedContainer'
-import { LookerEmbedSDK} from '@looker/embed-sdk'
+import { ExploreEvent, LookerEmbedSDK} from '@looker/embed-sdk'
 import { GenerativeExploreService, FieldMetadata } from './services/GenerativeExploreService'
 import { PromptService } from './services/PromptService'
-
+import { Logger } from './utils/Logger'
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
  */
@@ -48,14 +48,19 @@ export const LookerExploreGenerative: React.FC = () => {
   const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
   const [hostUrl, setHostUrl] = useState<string>()
 
+  const defaultPromptValue = "What are the top 15 count, language and day. Pivot per day";
+
+
   useEffect(() => {
     loadExplores()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function generateComboExploreFromModels(listModels: ILookmlModel[]) {
+    const sortedModels = listModels.sort((a:ILookmlModel,b:ILookmlModel) => (a.name!=null&&b.name!=null)?a.name.localeCompare(b.name):0)
+
     var allValues:ComboboxOptionObject[] = [];
-    listModels.forEach(model => {
+    sortedModels.forEach(model => {
       model.explores?.forEach(explore => {
         if( model!=null && explore!=null)
         {          
@@ -71,6 +76,7 @@ export const LookerExploreGenerative: React.FC = () => {
     // set Initial Combo Explore and All
     setAllComboExplores(allValues);
     setCurrentComboExplores(allValues);
+    setPrompt(defaultPromptValue);
   }
 
   const loadExplores = async () => {
@@ -80,7 +86,7 @@ export const LookerExploreGenerative: React.FC = () => {
       const req: IRequestAllLookmlModels = {
       }
       const result = await core40SDK.ok(core40SDK.all_lookml_models(req))
-      setLookerModels(result.slice(0,1000));
+      setLookerModels(result);
       generateComboExploreFromModels(result);      
       setLoadingLookerModels(false);
     } catch (error) {
@@ -96,12 +102,12 @@ export const LookerExploreGenerative: React.FC = () => {
       setCurrentExploreName(splittedArray[1]);              
     } 
     else{
-      console.log("Error selecting combobox, modelName and exploreName are null or not divided by .");
+      Logger.getInstance().log("Error selecting combobox, modelName and exploreName are null or not divided by .");
     }   
   });
   
   const onFilterComboBox = ((filteredTerm: string) => {
-    console.log("Filtering");
+    Logger.getInstance().log("Filtering");
     setCurrentComboExplores(allComboExplores?.filter(explore => explore.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
   });
 
@@ -156,23 +162,20 @@ export const LookerExploreGenerative: React.FC = () => {
 
   // Method that triggers sending the message to the workflow
   const handleSend = () =>
-  {
-    if(window.sessionStorage.getItem("singleExplore")== null || window.sessionStorage.getItem("singleExplore") == "true")
-    {      
-      handleClearAll();  
-    }
+  {    
+    handleClearAll();  
     setLoadingLLM(true);
-    console.log("Debug CustomPrompt" +  window.sessionStorage.getItem("customPrompt"));
+    Logger.getInstance().debug("Debug CustomPrompt" +  window.sessionStorage.getItem("customPrompt"));
     const promptService = new PromptService(JSON.parse(window.sessionStorage.getItem("customPrompt")!));
     const generativeExploreService = new GenerativeExploreService(core40SDK, promptService);
 
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
-    console.log("1. Get the Metadata from Looker from the selected Explorer");    
+    Logger.getInstance().info("1. Get the Metadata from Looker from the selected Explorer");    
     if(currentModelName!=null && currentExploreName!=null)
     {
       core40SDK.lookml_model_explore(currentModelName, currentExploreName, "id, name, description, fields, label").then
       (async exploreResult => {
-        console.log("2. Received Data from Looker");
+        Logger.getInstance().info("2. Received Data from Looker");
         // @ts-ignore
         const fields:ILookmlModelExploreFieldset = exploreResult.value.fields;
         const f_dimensions:ILookmlModelExploreField[]  =  fields.dimensions!;
@@ -203,21 +206,20 @@ export const LookerExploreGenerative: React.FC = () => {
         if (!prompt) {
           throw new Error('missing user prompt, unable to create query');
         }                
-        console.log("3. Generate Prompts and Send to BigQuery");
+        Logger.getInstance().info("3. Generate Prompts and Send to BigQuery");
         const { modelName, queryId, view } = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!);
         // Update the Explore with New QueryId
         LookerEmbedSDK.init(hostUrl!);
-        console.log("explore not null: " + currentExploreId);
+        Logger.getInstance().debug("explore not null: " + currentExploreId);
         LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?qid=${queryId}`)
-          .appendTo(exploreDivElement!)
-          .build()
-          .connect()
-          .then()
+          .appendTo(exploreDivElement!)         
+          .build()          
+          .connect()                    
+          .then()          
           .catch((error: Error) => {
-            console.error('Connection error', error)
+            Logger.getInstance().error('Connection error', error);
             setLoadingLLM(false);
           });
-        // TODO: Ideally find the event after the Explore is added to the Div to Remove the Loading LLM dialog
         setLoadingLLM(false);
       })
     }
@@ -251,10 +253,7 @@ export const LookerExploreGenerative: React.FC = () => {
           </Span>
           <Span fontSize="medium">
           3. Wait for the Explore to appear below and add to an dashboard if needed
-          </Span>
-          <Span fontSize="medium">
-          4. Every question will append the explore below, if you want to clear it use the Remove From Top or Bottom
-          </Span>
+          </Span>          
           <Span fontSize="medium">
           Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b> or <b>gimenes@google.com</b>
           </Span>
@@ -268,17 +267,16 @@ export const LookerExploreGenerative: React.FC = () => {
             onChange={selectComboExplore}            
             options={currentComboExplores}
             width={500}
-          />
-          <Space>
-            <Button onClick={handleSend}>Send</Button>
-            <Button onClick={handleClearAll}>Remove from Top Explore</Button>                      
-          </Space>
+          />    
           <FieldTextArea            
             width="100%"
             label="Type your question"  
             value={prompt}
             onChange={handleChange}
-          />        
+          />
+          <Space>
+            <Button onClick={handleSend}>Send</Button>                     
+          </Space>        
           <Dialog isOpen={loadingLLM}>
             <DialogLayout header="Loading LLM Data to Explore...">
               <Spinner size={80}>
