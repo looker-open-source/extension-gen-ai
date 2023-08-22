@@ -1,5 +1,6 @@
 import { IDashboard, IDashboardBase, IDashboardElement, Looker40SDK } from "@looker/sdk";
 import { LookerSQLService } from "./LookerSQLService";
+import { Logger } from "../utils/Logger"
 
 
 export type DashboardTile<ElementData> = {
@@ -54,17 +55,16 @@ export class LookerDashboardService {
         
         // Filter only visualization elements
         const filteredElements = elements.filter(element => (element.type=="vis" && element.result_maker!=null));        
-        const elementDataPromises = filteredElements.map(async (element) => ({
+        const elementDataPromises = filteredElements.map(async (element) => (            
+        {            
          title: element.title,
          description: element.subtitle_text,
-         type: element.result_maker?.vis_config?.type,
+         type: element.result_maker?.vis_config?.type,         
          data: await this.getElementData<ElementData>(element)
         }));
         const elementDataList: DashboardTile<ElementData>[] = await Promise.all(elementDataPromises);
         return elementDataList;
-    }
-
-        
+    }        
 
     /**
      * Fetches ElementData for a given IDashboardElement
@@ -75,7 +75,7 @@ export class LookerDashboardService {
         let queryId = element.query_id;        
         if (queryId == null) {
             if (!element.result_maker?.query_id) {
-                console.log("Element ID" + element.id +  "does not contain query_id");
+                Logger.getInstance().debug("Element ID" + element.id +  "does not contain query_id");
                 return new Array<ElementData>();
                 // throw new Error('unable to find dashboard element query id');
             }
@@ -95,29 +95,60 @@ export class LookerDashboardService {
                     if (limited_rows!=null) {
                         // TODO: verify if I have to slice from the first_last
                         elementData = elementData.slice(0, limited_rows);       
-                        console.log("Sliced to " + limited_rows + " rows");         
+                        Logger.getInstance().info("Sliced to " + limited_rows + " rows");         
                     }                  
                     else{
-                        console.log("limiting rows is null");
+                        Logger.getInstance().debug("limiting rows is null");
                     }
-                }
-                // TODO: @gimenes Logic to get field names based on show_x_axis_labels, y_axes.series.axisId and y_axes.label, x_axes..
-                const map_axis = new Map<string, string>();
-                switch(vis_config.type)
-                {
-                    case "looker_column":
-                        // if(vis_config.show_y_axis_labels)
-                        console.log("Looker Column");
-                        break;
-                    case "looker_pie":
-                        console.log("Looker Pie");
-                        break;
-                    default: 
-                        console.log(vis_config.type);
                 }                
-            }                                      
+            }    
+            // TODO: @gimenes Logic to get field names based on show_x_axis_labels, y_axes.series.axisId and y_axes.label, x_axes..
+            const map_axis = new Map<string, string>();
+            switch(vis_config.type)
+            {
+                case "single_value":
+                    elementData = elementData.slice(0,1);
+                    break;
+                case "looker_column":
+                    // if(vis_config.show_y_axis_labels)
+                    Logger.getInstance().debug("Looker Column");
+                    break;
+                case "looker_pie":
+                    Logger.getInstance().debug("Looker Pie");
+                    break;
+                case "looker_grid":
+                    Logger.getInstance().debug("Looker Grid");
+                    // Force slice grid
+                    elementData = elementData.slice(0, 50);
+                    break;
+                default: 
+                    Logger.getInstance().debug(vis_config.type);
+            }                                                  
         }
+        Logger.getInstance().debug("Dashboard Elements: " + element.title + " - " + JSON.stringify(elementData, null, 2));
         return elementData;
+    }
+
+    /**
+     * Method to clean up Elements (TO BE USED)
+     * @param element 
+     * @returns 
+     */
+    private cleanElements(element: IDashboardElement) {
+        if(!element.result_maker?.vis_config)
+        {
+           return;
+        }
+        const vis_config = element.result_maker.vis_config;
+        if(!vis_config.limit_displayed_rows_values) {
+
+        return;
+        }
+         // slice the dataset based on the visualization settings
+        if(!vis_config.limit_displayed_rows_values.num_rows) {        
+         return;
+        }
+        
     }
     
 }

@@ -4,6 +4,7 @@ import LookerExploreDataModel from "../models/LookerExploreData";
 import { UtilsHelper } from "../utils/Helper";
 import { LookerSQLService } from "./LookerSQLService";
 import { PromptService, PromptTypeEnum } from "./PromptService";
+import { Logger } from "../utils/Logger"
 
 export interface FieldMetadata{
     label: string;
@@ -39,7 +40,8 @@ export class GenerativeExploreService {
         modelFields: FieldMetadata[],
         userInput: string,
         promptTypeEnum: PromptTypeEnum,
-        potentialFields?:string):Array<string> {        
+        potentialFields?:string, 
+        mergedResults?:string):Array<string> {        
 
         const shardedPrompts:Array<string> = [];        
         // Prompt for Limits only needs the userInput
@@ -54,6 +56,13 @@ export class GenerativeExploreService {
                     shardedPrompts.push(this.promptService.fillPromptVariables(promptTypeEnum, { userInput, potentialFields}));
                 }                
                 break;
+            case PromptTypeEnum.EXPLORE_VALIDATE_MERGED:
+                if(mergedResults!=null && userInput!=null)
+                    {
+                        shardedPrompts.push(this.promptService.fillPromptVariables(promptTypeEnum, { userInput, mergedResults}));
+                    }
+                break;
+
             default:
                 const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
                 for(const fieldGroup of generatedPromptsArray){
@@ -102,7 +111,7 @@ export class GenerativeExploreService {
         }
          // query to run
          const queryToRun = this.buildBigQueryLLMQuery(queryContents);
-         console.log("Query to Run: " + queryToRun);
+         Logger.getInstance().debug("Query to Run: " + queryToRun);
          const results = await this.sql.execute<{
              r: string
              status: string
@@ -130,7 +139,7 @@ export class GenerativeExploreService {
         {
             try {
                 if (!chunkResult || !chunkResult.r || chunkResult.r.length === 0) {
-                    console.log("Not found any JSON results from LLM");
+                    Logger.getInstance().trace("Not found any JSON results from LLM");
                     continue;
                 }
                 const llmChunkResult = JSON.parse(chunkResult.r);
@@ -138,14 +147,9 @@ export class GenerativeExploreService {
                 mergedResults.merge(exploreDataChunk);
             } catch (error) {
                 // @ts-ignore
-                console.error(error.message, chunkResult);
+                Logger.getInstance().error(error.message, chunkResult);
                 // throw new Error('LLM result does not contain a valid JSON');
             }
-        }
-        // remove pivots if not mentioned
-        if(!this.validateInputForPivots(userInput))
-        {
-            mergedResults.pivots = [];
         }
         // call LLM to ask for Limits
         const limitFromLLM = await this.findLimitsFromLLM(userInput);
@@ -153,14 +157,28 @@ export class GenerativeExploreService {
         if (pivotsFromLLM) {
             mergedResults.pivots = pivotsFromLLM;
         }
-
         // replace limit
         if (limitFromLLM) {
             mergedResults.limit = limitFromLLM;
         }
-        mergedResults.validate(allowedFieldNames);
-        // TODO: recheck with LLM if the fields makes sense;
-        return mergedResults;
+        // Only execute merged from LLM logic if needed
+        if(llmChunkedResults.length > 1)
+        {
+            Logger.getInstance().debug("Validate merged result");
+            // send the merged results to a final LLM to validate the merged Results
+            const checkMergedFromLLM:LookerExploreDataModel = await this.checkMergedFromLLM(mergedResults, userInput, allowedFieldNames);
+            // remove pivots if not mentioned explicitly
+            if(!this.validateInputForPivots(userInput))
+            {
+                checkMergedFromLLM.pivots = [];
+            }                               
+            return checkMergedFromLLM;
+        }
+        else
+        {
+            return mergedResults;
+        }
+       
     }
 
     private validateInputForPivots(userInput: string):boolean {
@@ -228,6 +246,31 @@ export class GenerativeExploreService {
         }
     }
 
+    private async checkMergedFromLLM( 
+        mergedModel: LookerExploreDataModel,
+        userInput: string,
+        allowedFieldNames: string[]
+        ): Promise<LookerExploreDataModel>
+    {       
+        let arrayPivots:Array<string> = [];    
+        try
+        {
+            const mergedResultsString = JSON.stringify(mergedModel);
+            // Generate Prompt returns an array, gets the first for the LIMIT
+            const promptCheckMerged = this.generatePrompt([], userInput, PromptTypeEnum.EXPLORE_VALIDATE_MERGED, undefined, mergedResultsString);
+            const results  = await this.retrieveLookerParametersFromLLM(promptCheckMerged);
+            const mergedChecked = UtilsHelper.firstElement(results).r;               
+            const cleanResult = UtilsHelper.cleanResult(mergedChecked);
+            var llmResultLine = JSON.parse(cleanResult);
+            return new LookerExploreDataModel(llmResultLine, allowedFieldNames);
+        }
+        catch(error)
+        {
+            // return the original input
+            Logger.getInstance().error("LLM could not clean and validate mergedResults");
+            return mergedModel;
+        }
+    }
 
 
     public async generatePromptSendToBigQuery(
@@ -253,16 +296,16 @@ export class GenerativeExploreService {
             })
             const queryId = llmQueryResult.value.client_id;
             if (!queryId) {
-                throw new Error('unable to retrieve query id from created query')
+                throw new Error('unable to retrieve query id from created query');
             }
-            console.log("llmQuery: " + JSON.stringify(exploreData, null, 2));
+            Logger.getInstance().info("llmQuery: " + JSON.stringify(exploreData, null, 2));
             return {
                 queryId,
                 modelName,
                 view: viewName,
             }
         } catch (err) {
-            console.log("LLM does not contain valid JSON: ");
+            Logger.getInstance().error("LLM does not contain valid JSON: ");
             throw new Error('LLM result does not contain a valid JSON');
         }
     }

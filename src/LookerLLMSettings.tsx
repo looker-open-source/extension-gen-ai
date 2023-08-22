@@ -9,10 +9,13 @@ import {
   SpaceVertical,  
   FieldCheckbox,
   MixedBoolean,
+  ComboboxInput,
 } from '@looker/components'
 import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
-import { Box, Heading } from '@looker/components'
+import { Box, Heading , Combobox, ComboboxOption, ComboboxList, MaybeComboboxOptionObject, Label} from '@looker/components'
 import { PromptService, PromptTypeEnum } from './services/PromptService'
+import { Logger } from './utils/Logger'
+
 
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
@@ -20,13 +23,12 @@ import { PromptService, PromptTypeEnum } from './services/PromptService'
 export const LookerLLMSettings: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
   const [message, setMessage] = useState('')
-  const [singleExploreMode, setSingleExploreMode] = useState(true as MixedBoolean);
+  const [logLevel, setLogLevel] = useState<string>("error");
   const [usingNativeBQML, setUsingNativeBQML] = useState(true as MixedBoolean)
   const [customPrompt, setCustomPrompt] = useState<string>();
-  const [bananaState, setBananaState] = useState(true as MixedBoolean);
 
   const storageNativeBQML = "usingNativeBQML";
-  const storageSingleExplore = "singleExplore";
+  const storageLogLevel = "logLevel";
   const storageCustomPrompt = "customPrompt";
 
   useEffect(() => {
@@ -35,16 +37,17 @@ export const LookerLLMSettings: React.FC = () => {
     const promptService = new PromptService(JSON.parse(window.sessionStorage.getItem(storageCustomPrompt)!));
     console.log("Use effect Initial");    
     setCustomPrompt(promptService.getPromptTemplateByType(PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));
-    const cStorageNativeBQML = window.sessionStorage.getItem(storageNativeBQML) === "true";
-    const cStorageSingleExplore = window.sessionStorage.getItem(storageSingleExplore) === "true";
+    const cStorageNativeBQML = window.sessionStorage.getItem(storageNativeBQML) === "true" || window.sessionStorage.getItem(storageNativeBQML) === null;
+    const cStorageLogLevel = window.sessionStorage.getItem(storageLogLevel);
     if(cStorageNativeBQML!= null)
     {      
       setUsingNativeBQML(cStorageNativeBQML);
     }
-    if(cStorageSingleExplore!=null)
+    if(cStorageLogLevel!=null)
     {
-      setSingleExploreMode(cStorageSingleExplore);    
-    }
+      setLogLevel(cStorageLogLevel);
+      Logger.setLogLevel(Logger.getInstance().levelToInt(cStorageLogLevel));
+    }    
 
   }, [])
   
@@ -56,6 +59,13 @@ export const LookerLLMSettings: React.FC = () => {
       [PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: e.currentTarget.value
     }
     window.sessionStorage.setItem(storageCustomPrompt, JSON.stringify(tempCustomPrompt));       
+  }
+
+  const handleChangeCombo= (e: MaybeComboboxOptionObject) => {
+    Logger.setLogLevel(Logger.getInstance().levelToInt(e!.value));
+    window.sessionStorage.setItem(storageLogLevel, e!.value);
+    setLogLevel(e!.value);
+    console.log(e!.value);
   }
 
   return (    
@@ -76,15 +86,18 @@ export const LookerLLMSettings: React.FC = () => {
           <Span fontSize="medium">
           Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b> or <b>gimenes@google.com</b>
           </Span>
-          <FieldCheckbox
-            label="Single Explore Mode"
-            checked={singleExploreMode}
-            onChange={() => {          
-              window.sessionStorage.setItem(storageSingleExplore, singleExploreMode?"false": "true");
-              setSingleExploreMode(!singleExploreMode);
-            }
-              }
-          />
+          <Label>Console Log Level</Label>
+          <Combobox  width={"300px"} value={logLevel} onChange={handleChangeCombo}>
+            <ComboboxInput />
+            <ComboboxList>
+              <ComboboxOption value="trace"/>
+              <ComboboxOption value="debug" />
+              <ComboboxOption value="info" />
+              <ComboboxOption value="warn" />
+              <ComboboxOption value="error" />
+            </ComboboxList>
+          </Combobox>
+
           <FieldCheckbox
             label="Yes - Use Native BQML Method, and No: use Fine tuned model"
             checked={usingNativeBQML}            
@@ -96,7 +109,7 @@ export const LookerLLMSettings: React.FC = () => {
           <FieldTextArea            
             width="100%"
             height="500px"
-            label="Prompt Template"  
+            label="Prompt Field, Filters, Sorts - Template for BQML.GENERATE_TEXT"  
             value={customPrompt}
             onChange={handleChangePrompt}
           />                                         
