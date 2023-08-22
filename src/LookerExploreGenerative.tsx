@@ -29,6 +29,7 @@ import { ExploreEvent, LookerEmbedSDK} from '@looker/embed-sdk'
 import { GenerativeExploreService, FieldMetadata } from './services/GenerativeExploreService'
 import { PromptService } from './services/PromptService'
 import { Logger } from './utils/Logger'
+import { ConfigReader } from './services/ConfigReader'
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
  */
@@ -238,7 +239,8 @@ export const LookerExploreGenerative: React.FC = () => {
         </Span>        
       </Space>
       <Space around>
-        <Heading fontWeight="semiBold">Looker AI Demo: go/lookerai-llm-demo - Design: go/lookerai-llm</Heading>                        
+        <Heading fontWeight="semiBold"> Looker AI Demo: go/lookerai-llm-demo - Design: go/lookerai-llm <br/>
+        v:{ConfigReader.CurrentVersion} - updated:{ConfigReader.LastUpdated}</Heading>                        
       </Space>      
       <Box display="flex" m="large">        
           <SpaceVertical>

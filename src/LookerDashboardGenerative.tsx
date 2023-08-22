@@ -13,6 +13,7 @@ import React, { FormEvent, useCallback, useContext, useEffect, useState } from '
 import { EmbedContainer } from './EmbedContainer'
 import { GenerativeDashboardService } from './services/GenerativeDashboardService'
 import { Logger } from './utils/Logger'
+import { ConfigReader } from './services/ConfigReader'
 
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
@@ -195,7 +196,7 @@ export const LookerDashboardGenerative: React.FC = () => {
         </Span>
       </Space>
       <Space around>
-        <Heading fontWeight="semiBold">Looker AI Insights on Dashboards version: 1.1.0 - updated 08/21/2023</Heading>
+        <Heading fontWeight="semiBold">Looker AI Insights on Dashboards <br/>v:{ConfigReader.CurrentVersion} - updated: {ConfigReader.LastUpdated}</Heading>
       </Space>
       <Box display="flex" m="large">
           <SpaceVertical>
