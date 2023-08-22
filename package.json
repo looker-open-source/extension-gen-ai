@@ -1,9 +1,10 @@
 {
   "name": "looker-genai",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Bootstrapped Looker Extension with React and Typescript",
   "main": "dist/bundle.js",
-  "author": "Ricardo Geh",
+  "author": "Ricardo Geh <gricardo@google.com>",
+  "contributors": ["Kaue Gimenes <gimenes@google.com>"],
   "license": "MIT",
   "scripts": {
     "analyze": "export ANALYZE_MODE=static && yarn build",

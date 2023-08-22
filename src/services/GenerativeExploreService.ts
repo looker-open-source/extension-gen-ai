@@ -139,7 +139,7 @@ export class GenerativeExploreService {
             } catch (error) {
                 // @ts-ignore
                 console.error(error.message, chunkResult);
-                throw new Error('LLM result does not contain a valid JSON');
+                // throw new Error('LLM result does not contain a valid JSON');
             }
         }
         // remove pivots if not mentioned
@@ -211,8 +211,9 @@ export class GenerativeExploreService {
             const promptPivots = this.generatePrompt([], userInput, PromptTypeEnum.PIVOTS, potentialFieldsString);
             const results  = await this.retrieveLookerParametersFromLLM(promptPivots);                
             const pivotResult = UtilsHelper.firstElement(results).r;
+            const cleanResult = UtilsHelper.cleanResult(pivotResult);
             // TODO: Validate result from schema joi
-            var llmResultLine = JSON.parse(pivotResult);
+            var llmResultLine = JSON.parse(cleanResult);
             if(llmResultLine.pivots != null && llmResultLine.pivots.length > 0)
             {
                 arrayPivots = arrayPivots.concat(llmResultLine.pivots);
