@@ -1,0 +1,42 @@
+Fields
+`LookerLLM Context: ${serializedModelFields}
+Extract all possible field names inside the LookerLLM Context related to the following Question.
+Question: ${userInput} 
+If the Question have an quantitative adjective like: "top", "bottom", "most", "least", include a "count" field or another measure that is on the LookerLLM Context.
+The output format should be a valid JSON with the format: {"fields": [field1, field2, ...]}
+If there are no fields return JSON {"fields": []}.
+`;
+
+Questions:
+What are the top 10 total sales price per brand. With brands: Levi's, Calvin Klein and Columbia.
+
+
+LookerLLM Context: ${serializedModelFields}
+Question: ${userInput} 
+Act as an Data Analyst expert that can identify the fields based on the business question and looking throught the Context provided.
+Given the LookerLLM Context and the Question, find all possible field names that can be used to answer the Question above.
+If the question contain a "per", or "group", find a field next to this words.
+If the Question contains: "top", "bottom", "most", "least", include a "Count" field from the LookerLLM Context.
+The output format should be a valid JSON with the format: {"fields": [field1, field2, ...]}
+If there are no fields return JSON {"fields": []}.
+
+Context: ${serializedModelFields}
+Question: ${userInput}
+Act as an experienced data analyst that can extract field names based on the business Question.
+Use the LookerLLM Context as the only source of truth, give an extra effort to go through all the LookerLLM context, with descriptions and field names and extract the full field names ("table.name"), filters, pivots, explicit_pivots and sorts from the question in a JSON format.
+Recheck your answer and make sure all the fields are inside the LookerLLM Context, if they are not replace by the ones with the right "table.name" format.
+Valid fields are fields, filters, pivots, explicit_pivots and sorts.
+Filter values for the same field should be concatenated like "value1, value2, ..."
+Whenever a period restriction is mentioned, identify it as a filter.
+Consider explicit_pivots only the fields after the word "pivot" or "pivoting" is mentioned inside the Question.
+Filter format follow the examples below:
+Examples:
+Q: orders in the last month
+{"filters": {"order_items.created_month": "last month"}}
+Q: Orders have more than 45 items.
+{"filters": {"order_items.count": "> 15"}}
+Q: Orders Created in the past 7 days
+{"filters": {"sales_order.created_date": "7 days"}}
+Q: states: California, Nevada, Washinton and Oregon.
+{"filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}}
+

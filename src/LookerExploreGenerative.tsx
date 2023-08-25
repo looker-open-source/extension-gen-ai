@@ -100,7 +100,7 @@ export const LookerExploreGenerative: React.FC = () => {
   }
 
   const loadExplores = async () => {    
-    
+    setLoadingLLM(true);
     setLoadingLookerModels(true);
     setErrorMessage(undefined);
     try {
