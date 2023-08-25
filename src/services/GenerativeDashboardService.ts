@@ -2,7 +2,7 @@ import { IDashboard, IDashboardBase, IDashboardElement, Looker40SDK } from "@loo
 import { UtilsHelper } from "../utils/Helper";
 import { DashboardTile, LookerDashboardService } from "./LookerDashboardService";
 import { LookerSQLService } from "./LookerSQLService";
-import { PromptService, PromptTypeEnum } from "./PromptService";
+import { PromptTemplateService, PromptTemplateTypeEnum } from "./PromptTemplateService";
 import { Logger } from "../utils/Logger"
 
 
@@ -10,7 +10,7 @@ import { Logger } from "../utils/Logger"
 export class GenerativeDashboardService {
     private sql: LookerSQLService;
     private dashboardService: LookerDashboardService;    
-    private promptService: PromptService|null = null;
+    private promptService: PromptTemplateService|null = null;
 
     public constructor(lookerSDK: Looker40SDK) {
         this.sql = new LookerSQLService(lookerSDK);
@@ -35,11 +35,11 @@ export class GenerativeDashboardService {
      * Method that gets the current PromptService - Lazy load
      * @returns 
      */
-    public getPromptService(): PromptService
+    public getPromptService(): PromptTemplateService
     {
         if(this.promptService==null)
         {
-            this.promptService = new PromptService();
+            this.promptService = new PromptTemplateService();
         }
         return this.promptService;
     }
@@ -137,7 +137,7 @@ export class GenerativeDashboardService {
         const tileContext = tile.title!= null? "Tile Title: " + tile.title: "" +
         tile.description!=null? " Tile Description: " + tile.description: "";
 
-        const promptSumarize = this.getPromptService().fillPromptVariables(PromptTypeEnum.DASH_SUMMARIZE, { dashBoardContext, userInput, serializedModelFields, tileContext});
+        const promptSumarize = this.getPromptService().fillByType(PromptTemplateTypeEnum.DASH_SUMMARIZE, { dashBoardContext, userInput, serializedModelFields, tileContext});
         const summaryResult = await this.sendPromptToBigQuery(promptSumarize);
         try {
             tile.data = JSON.parse(summaryResult);

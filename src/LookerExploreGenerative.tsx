@@ -1,6 +1,6 @@
 // Copyright 2023 Google LLC
 
-import React, { useContext, useEffect, useState , FormEvent, useCallback } from 'react'
+import React, { useContext, useEffect, useState , FormEvent, useCallback} from 'react'
 import { 
   Button, 
   ComponentsProvider,
@@ -12,9 +12,9 @@ import {
   FieldSelect, 
   ComboboxOptionObject,
   ComboboxCallback,
-  MaybeComboboxOptionObject,
+  MaybeComboboxOptionObject
 } from '@looker/components'
-import { Dialog, DialogLayout } from '@looker/components'
+import { Dialog, DialogLayout} from '@looker/components'
 import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
 import { 
   IRequestAllLookmlModels,
@@ -27,9 +27,11 @@ import { Box, Heading } from '@looker/components'
 import { EmbedContainer } from './EmbedContainer'
 import { ExploreEvent, LookerEmbedSDK} from '@looker/embed-sdk'
 import { GenerativeExploreService, FieldMetadata } from './services/GenerativeExploreService'
-import { PromptService } from './services/PromptService'
+import { PromptTemplateService } from './services/PromptTemplateService'
 import { Logger } from './utils/Logger'
 import { ConfigReader } from './services/ConfigReader'
+import { PromptService } from './services/PromptService'
+import PromptModel from './models/PromptModel'
 /**
  * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
  */
@@ -40,8 +42,9 @@ export const LookerExploreGenerative: React.FC = () => {
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
   const [lookerModels, setLookerModels] = useState<ILookmlModel[]>([])
   const [errorMessage, setErrorMessage] = useState<string>()
-  const [allComboExplores, setAllComboExplores] = useState<ComboboxOptionObject[]>()
+  const [allComboExplores, setAllComboExplores] = useState<ComboboxOptionObject[]>()  
   const [currentComboExplores, setCurrentComboExplores] = useState<ComboboxOptionObject[]>()
+  const [selectedModelExplore, setSelectedModelExplore] = useState<string>()
   const [currentModelName, setCurrentModelName] = useState<string>()
   const [currentExploreName, setCurrentExploreName] = useState<string>()
   const [prompt, setPrompt] = useState<string>()
@@ -49,11 +52,17 @@ export const LookerExploreGenerative: React.FC = () => {
   const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
   const [hostUrl, setHostUrl] = useState<string>()
 
-  const defaultPromptValue = "What are the top 15 count, language and day. Pivot per day";
+  const [topPromptsCombos, setTopPromptsCombos] = useState<ComboboxOptionObject[]>()
+  const [topPrompts, setTopPrompts] = useState<PromptModel[]>([])
 
+  const [showInstructions, setShowInstructions] = useState<boolean>(true);
+
+  const promptService: PromptService = new PromptService(core40SDK);
 
   useEffect(() => {
-    loadExplores()
+    loadExplores();
+    setShowInstructions(window.sessionStorage.getItem("showInstructions")==='true' || window.sessionStorage.getItem("showInstructions")==null)
+  ;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -76,25 +85,41 @@ export const LookerExploreGenerative: React.FC = () => {
     });
     // set Initial Combo Explore and All
     setAllComboExplores(allValues);
-    setCurrentComboExplores(allValues);
-    setPrompt(defaultPromptValue);
+    setCurrentComboExplores(allValues);    
   }
 
-  const loadExplores = async () => {
-    setLoadingLookerModels(true);
+  function generateCombosForTopPrompts(prompts: Array<PromptModel>) {
+    var allValues:ComboboxOptionObject[] = [];
+    prompts.forEach(promptModel => {
+      allValues.push({
+        label: promptModel.description,
+        value: promptModel.modelExplore
+      });                
+    });
+    setTopPromptsCombos(allValues);
+  }
+
+  const loadExplores = async () => {    
+    setLoadingLookerModels(true);6
     setErrorMessage(undefined);
     try {
       const req: IRequestAllLookmlModels = {
       }
-      const result = await core40SDK.ok(core40SDK.all_lookml_models(req))
-      setLookerModels(result);
-      generateComboExploreFromModels(result);      
+      const modelsPromise = core40SDK.ok(core40SDK.all_lookml_models(req));
+      const promptPromise = promptService.getExplorePrompts();
+      const [models, prompts] = await Promise.all([modelsPromise, promptPromise]);  
+      setLookerModels(models);
+      setTopPrompts(prompts);
+      generateComboExploreFromModels(models);  
+      generateCombosForTopPrompts(prompts);
       setLoadingLookerModels(false);
+      setLoadingLLM(false);
     } catch (error) {
       setLoadingLookerModels(false)
       setErrorMessage('Error loading looks')
     }
   }
+
 
   const selectComboExplore = ((selectedValue: string) => {
     const splittedArray = selectedValue.split(".");
@@ -104,8 +129,20 @@ export const LookerExploreGenerative: React.FC = () => {
     } 
     else{
       Logger.getInstance().error("Error selecting combobox, modelName and exploreName are null or not divided by .");
-    }   
+    }       
+    setSelectedModelExplore(selectedValue);
   });
+
+  const selectTopPromptCombo = ((selectedValue: string) => {    
+    selectComboExplore(selectedValue);
+    topPrompts.forEach(topPrompt => {
+      if(topPrompt.modelExplore === selectedValue)
+      {
+        setPrompt(topPrompt.prompt);        
+      }
+    });    
+  });
+
   
   const onFilterComboBox = ((filteredTerm: string) => {
     Logger.getInstance().info("Filtering");
@@ -167,7 +204,7 @@ export const LookerExploreGenerative: React.FC = () => {
     handleClearAll();  
     setLoadingLLM(true);
     Logger.getInstance().debug("Debug CustomPrompt" +  window.sessionStorage.getItem("customPrompt"));
-    const promptService = new PromptService(JSON.parse(window.sessionStorage.getItem("customPrompt")!));
+    const promptService = new PromptTemplateService(JSON.parse(window.sessionStorage.getItem("customPrompt")!));
     const generativeExploreService = new GenerativeExploreService(core40SDK, promptService);
 
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
@@ -237,37 +274,46 @@ export const LookerExploreGenerative: React.FC = () => {
         <Span fontSize="xxxxxlarge">
           {message}
         </Span>        
-      </Space>
-      <Space around>
-        <Heading fontWeight="semiBold"> Looker AI Demo: go/lookerai-llm-demo - Design: go/lookerai-llm <br/>
-        v:{ConfigReader.CurrentVersion} - updated:{ConfigReader.LastUpdated}</Heading>                        
       </Space>      
+      <SpaceVertical>
+        <Space around> 
+        <Heading fontWeight="semiBold"> Looker AI Demo: go/lookerai-llm-demo - Design: go/lookerai-llm</Heading>                        
+        </Space>
+        <Space around> 
+        <Span> v:{ConfigReader.CurrentVersion} - updated:{ConfigReader.LastUpdated}</Span>
+        </Space>
+      </SpaceVertical>      
       <Box display="flex" m="large">        
           <SpaceVertical>
-          <Span fontSize="x-large">
-          Quick Start:                                    
-          </Span>  
+          {showInstructions? 
+          <SpaceVertical>
+            <Span fontSize="x-large">
+            Quick Start:                                    
+            </Span>  
+            <Span fontSize="medium">
+            1. Select the Explore by selecting or typing - <b>example - type wiki:  bi_engine_demo - wiki100_m</b>
+            </Span>          
+            <Span fontSize="medium">
+            2. Click on the Text Area and type your question to the Explore - <b>example: What are the top 15 count, language and day. Pivot per day</b>
+            </Span>
+            <Span fontSize="medium">
+            3. Wait for the Explore to appear below and add to an dashboard if needed
+            </Span>                      
+          </SpaceVertical> 
+            : <Span/>
+          }                  
           <Span fontSize="medium">
-          1. Select the Explore by selecting or typing - <b>example - type wiki:  bi_engine_demo - wiki100_m</b>
-          </Span>
-          <Span fontSize="medium">
-          2. Click on the Text Area and type your question to the Explore - <b>example: What are the top 15 count, language and day. Pivot per day</b>
-          </Span>
-          <Span fontSize="medium">
-          3. Wait for the Explore to appear below and add to an dashboard if needed
-          </Span>          
-          <Span fontSize="medium">
-          Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b> or <b>gimenes@google.com</b>
-          </Span>
-
-          {/* <FieldSelect            
-            label="Examples to Try"
-            onChange={changeComboExamples}            
-            options={examplesCombos}
+            Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b> or <b>gimenes@google.com</b>
+          </Span>   
+          <FieldSelect 
+            id="topExamplesId"           
+            label="Top Examples to Try"
+            onChange={selectTopPromptCombo}           
+            options={topPromptsCombos}
             width={500}
-          />    */}
+          />
 
-          <FieldSelect
+          <FieldSelect            
             onOpen={resetComboExplore}                        
             isFilterable
             onFilter={onFilterComboBox}
@@ -276,6 +322,7 @@ export const LookerExploreGenerative: React.FC = () => {
             onChange={selectComboExplore}            
             options={currentComboExplores}
             width={500}
+            value={selectedModelExplore}
           />    
           <FieldTextArea            
             width="100%"
@@ -301,3 +348,5 @@ export const LookerExploreGenerative: React.FC = () => {
     </ComponentsProvider>
   )
 }
+
+
