@@ -8,7 +8,7 @@ export class Logger {
         'warn': 4,
         'error': 5
     };
-    private logLevel: number = 5;    
+    private logLevel: number = 3;    
   
     private constructor() {
         
@@ -54,11 +54,11 @@ export class Logger {
         console.log(logLevel + "=> ",message, ...optionalParams);                        
     }
 
-    public trace(message: any, ...optionalParams: any[]): void { this.log('trace', message); }
-    public debug(message: any, ...optionalParams: any[]): void { this.log('debug', message); }
-    public info(message: any, ...optionalParams: any[]): void  { this.log('info', message); }
-    public warn(message: any, ...optionalParams: any[]): void  { this.log('warn', message); }
-    public error(message: any, ...optionalParams: any[]): void { this.log('error', message); }
+    public trace(message: any, ...optionalParams: any[]): void { this.log('trace', message, ...optionalParams); }
+    public debug(message: any, ...optionalParams: any[]): void { this.log('debug', message, ...optionalParams); }
+    public info(message: any, ...optionalParams: any[]): void  { this.log('info', message, ...optionalParams); }
+    public warn(message: any, ...optionalParams: any[]): void  { this.log('warn', message, ...optionalParams); }
+    public error(message: any, ...optionalParams: any[]): void { this.log('error', message, ...optionalParams); }
 
 
   }
