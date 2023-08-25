@@ -1,4 +1,4 @@
-import { IRequestRunQuery, ISqlQueryCreate, IWriteQuery, Looker40SDK } from "@looker/sdk";
+import { IRequestRunQuery, ISqlQueryCreate, IWriteQuery, Looker40SDK, sql_query } from "@looker/sdk";
 import {ITransportSettings} from "@looker/sdk-rtl";
 
 export class LookerSQLService {
@@ -39,10 +39,9 @@ export class LookerSQLService {
             sql: query,
         }
         
-       
         const result = await this.lookerSDK.create_sql_query(queryCreate, LookerSQLService.transportTimeoutCustom);        
         if (!result.ok) {
-            throw new Error('unable to create SQL query');
+            throw new Error('unable to create SQL query: ' + query);
         }
         if (!result.value.slug) {
             throw new Error('invalid SQL query results. Missing slug');

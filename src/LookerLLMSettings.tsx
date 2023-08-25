@@ -13,7 +13,7 @@ import {
 } from '@looker/components'
 import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
 import { Box, Heading , Combobox, ComboboxOption, ComboboxList, MaybeComboboxOptionObject, Label} from '@looker/components'
-import { PromptService, PromptTypeEnum } from './services/PromptService'
+import { PromptTemplateService, PromptTemplateTypeEnum } from './services/PromptTemplateService'
 import { Logger } from './utils/Logger'
 
 
@@ -23,10 +23,12 @@ import { Logger } from './utils/Logger'
 export const LookerLLMSettings: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
   const [message, setMessage] = useState('')
-  const [logLevel, setLogLevel] = useState<string>("error");
+  const [logLevel, setLogLevel] = useState<string>("info");
   const [usingNativeBQML, setUsingNativeBQML] = useState(true as MixedBoolean)
+  const [showInstructions, setShowInstructions] = useState(true as MixedBoolean)
   const [customPrompt, setCustomPrompt] = useState<string>();
 
+  const storageShowInstructions = "showInstructions";
   const storageNativeBQML = "usingNativeBQML";
   const storageLogLevel = "logLevel";
   const storageCustomPrompt = "customPrompt";
@@ -34,9 +36,10 @@ export const LookerLLMSettings: React.FC = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     // Every time it reloads
-    const promptService = new PromptService(JSON.parse(window.sessionStorage.getItem(storageCustomPrompt)!));     
-    setCustomPrompt(promptService.getPromptTemplateByType(PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));
+    const promptService = new PromptTemplateService(JSON.parse(window.sessionStorage.getItem(storageCustomPrompt)!));     
+    setCustomPrompt(promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));
     const cStorageNativeBQML = window.sessionStorage.getItem(storageNativeBQML) === "true" || window.sessionStorage.getItem(storageNativeBQML) === null;
+    const cStorageShowInstructions = window.sessionStorage.getItem(storageShowInstructions) === "true" || window.sessionStorage.getItem(storageNativeBQML) === null;
     const cStorageLogLevel = window.sessionStorage.getItem(storageLogLevel);
     if(cStorageNativeBQML!= null)
     {      
@@ -47,6 +50,10 @@ export const LookerLLMSettings: React.FC = () => {
       setLogLevel(cStorageLogLevel);
       Logger.setLogLevel(Logger.getInstance().levelToInt(cStorageLogLevel));
     }    
+    if(cStorageShowInstructions!=null)
+    {
+      setShowInstructions(cStorageShowInstructions);      
+    }
 
   }, [])
   
@@ -54,8 +61,8 @@ export const LookerLLMSettings: React.FC = () => {
 
   const handleChangePrompt = (e: FormEvent<HTMLTextAreaElement>) => {    
     setCustomPrompt(e.currentTarget.value);    
-    const tempCustomPrompt: { [key in PromptTypeEnum]?: string } = {
-      [PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: e.currentTarget.value
+    const tempCustomPrompt: { [key in PromptTemplateTypeEnum]?: string } = {
+      [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: e.currentTarget.value
     }
     window.sessionStorage.setItem(storageCustomPrompt, JSON.stringify(tempCustomPrompt));       
   }
@@ -104,7 +111,17 @@ export const LookerLLMSettings: React.FC = () => {
               window.sessionStorage.setItem(storageNativeBQML, usingNativeBQML?"false": "true");
               setUsingNativeBQML(!usingNativeBQML);              
             }}
-          />          
+          />        
+
+           <FieldCheckbox
+            label="Show Instructions"
+            checked={showInstructions}            
+            onChange={() => {             
+              window.sessionStorage.setItem(storageShowInstructions, showInstructions?"false": "true");
+              setShowInstructions(!showInstructions);              
+            }}
+          />     
+
           <FieldTextArea            
             width="100%"
             height="500px"

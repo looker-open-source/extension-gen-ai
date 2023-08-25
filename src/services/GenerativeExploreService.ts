@@ -3,7 +3,7 @@ import { IDictionary } from "@looker/sdk-rtl";
 import LookerExploreDataModel from "../models/LookerExploreData";
 import { UtilsHelper } from "../utils/Helper";
 import { LookerSQLService } from "./LookerSQLService";
-import { PromptService, PromptTypeEnum } from "./PromptService";
+import { PromptTemplateService, PromptTemplateTypeEnum } from "./PromptTemplateService";
 import { Logger } from "../utils/Logger"
 
 export interface FieldMetadata{
@@ -13,11 +13,12 @@ export interface FieldMetadata{
     // type: string;
 }
 
+
 export class GenerativeExploreService {
     private sql: LookerSQLService;
-    private promptService: PromptService;
+    private promptService: PromptTemplateService;
 
-    public constructor(lookerSDK: Looker40SDK, promptService: PromptService) {
+    public constructor(lookerSDK: Looker40SDK, promptService: PromptTemplateService) {
         this.sql = new LookerSQLService(lookerSDK);
         this.promptService = promptService;
     }
@@ -39,7 +40,7 @@ export class GenerativeExploreService {
     private generatePrompt(
         modelFields: FieldMetadata[],
         userInput: string,
-        promptTypeEnum: PromptTypeEnum,
+        promptTypeEnum: PromptTemplateTypeEnum,
         potentialFields?:string, 
         mergedResults?:string):Array<string> {        
 
@@ -47,19 +48,19 @@ export class GenerativeExploreService {
         // Prompt for Limits only needs the userInput
         switch(promptTypeEnum)
         {
-            case PromptTypeEnum.LIMITS:
-                shardedPrompts.push(this.promptService.fillPromptVariables(promptTypeEnum, { userInput }));
+            case PromptTemplateTypeEnum.LIMITS:
+                shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput }));
                 break;
-            case PromptTypeEnum.PIVOTS:
+            case PromptTemplateTypeEnum.PIVOTS:
                 if(potentialFields!=null)
                 {
-                    shardedPrompts.push(this.promptService.fillPromptVariables(promptTypeEnum, { userInput, potentialFields}));
+                    shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput, potentialFields}));
                 }                
                 break;
-            case PromptTypeEnum.EXPLORE_VALIDATE_MERGED:
+            case PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED:
                 if(mergedResults!=null && userInput!=null)
                     {
-                        shardedPrompts.push(this.promptService.fillPromptVariables(promptTypeEnum, { userInput, mergedResults}));
+                        shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput, mergedResults}));
                     }
                 break;
 
@@ -67,7 +68,7 @@ export class GenerativeExploreService {
                 const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
                 for(const fieldGroup of generatedPromptsArray){
                     const serializedModelFields = JSON.stringify(fieldGroup);
-                    const generatedPrompt = this.promptService.fillPromptVariables(promptTypeEnum, {serializedModelFields, userInput});
+                    const generatedPrompt = this.promptService.fillByType(promptTypeEnum, {serializedModelFields, userInput});
                     shardedPrompts.push(generatedPrompt);
                 }
                 break;        
@@ -124,7 +125,7 @@ export class GenerativeExploreService {
         userInput: string): Promise<LookerExploreDataModel>
     {
         // Generate the Base Prompt
-        const fieldsPrompts: Array<string> = this.generatePrompt(modelFields, userInput, PromptTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS);
+        const fieldsPrompts: Array<string> = this.generatePrompt(modelFields, userInput, PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS);
         const llmChunkedResults = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
         const allowedFieldNames: string[] = modelFields.map(field => field.name);
         let mergedResults = new LookerExploreDataModel({
@@ -195,7 +196,7 @@ export class GenerativeExploreService {
         userInput: string): Promise<string>
     {
         // Generate Prompt returns an array, gets the first for the LIMIT
-        const promptLimit = this.generatePrompt([], userInput, PromptTypeEnum.LIMITS);
+        const promptLimit = this.generatePrompt([], userInput, PromptTemplateTypeEnum.LIMITS);
         const results  = await this.retrieveLookerParametersFromLLM(promptLimit);
         const limitResult = UtilsHelper.firstElement(results).r;
         // validate the result
@@ -226,7 +227,7 @@ export class GenerativeExploreService {
         {            
             const potentialFieldsString = JSON.stringify(potentialFields);
             // Generate Prompt returns an array, gets the first for the LIMIT
-            const promptPivots = this.generatePrompt([], userInput, PromptTypeEnum.PIVOTS, potentialFieldsString);
+            const promptPivots = this.generatePrompt([], userInput, PromptTemplateTypeEnum.PIVOTS, potentialFieldsString);
             const results  = await this.retrieveLookerParametersFromLLM(promptPivots);                
             const pivotResult = UtilsHelper.firstElement(results).r;
             const cleanResult = UtilsHelper.cleanResult(pivotResult);
@@ -257,7 +258,7 @@ export class GenerativeExploreService {
         {
             const mergedResultsString = JSON.stringify(mergedModel);
             // Generate Prompt returns an array, gets the first for the LIMIT
-            const promptCheckMerged = this.generatePrompt([], userInput, PromptTypeEnum.EXPLORE_VALIDATE_MERGED, undefined, mergedResultsString);
+            const promptCheckMerged = this.generatePrompt([], userInput, PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED, undefined, mergedResultsString);
             const results  = await this.retrieveLookerParametersFromLLM(promptCheckMerged);
             const mergedChecked = UtilsHelper.firstElement(results).r;               
             const cleanResult = UtilsHelper.cleanResult(mergedChecked);
@@ -271,7 +272,6 @@ export class GenerativeExploreService {
             return mergedModel;
         }
     }
-
 
     public async generatePromptSendToBigQuery(
         modelFields: FieldMetadata[],

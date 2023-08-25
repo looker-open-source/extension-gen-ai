@@ -35,12 +35,14 @@ export const LookerDashboardGenerative: React.FC = () => {
   const [llmInsights, setLlmInsights] = useState<string>()
   const [dashboardDivElement, setDashboardDivElement] = useState<HTMLDivElement>()
   const [hostUrl, setHostUrl] = useState<string>()
+  const [showInstructions, setShowInstructions] = useState<boolean>(true);
 
   const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
   const defaultPromptValue = "Can you summarize the following datasets in 10 bullet points?";
 
   useEffect(() => {
-    loadDashboards()
+    loadDashboards();
+    setShowInstructions(window.sessionStorage.getItem("showInstructions")==='true' || window.sessionStorage.getItem("showInstructions")==null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -195,10 +197,17 @@ export const LookerDashboardGenerative: React.FC = () => {
           {message}
         </Span>
       </Space>
-      <Space around>
-        <Heading fontWeight="semiBold">Looker AI Insights on Dashboards <br/>v:{ConfigReader.CurrentVersion} - updated: {ConfigReader.LastUpdated}</Heading>
-      </Space>
+      <SpaceVertical>
+        <Space around> 
+        <Heading fontWeight="semiBold"> Looker AI Demo: go/lookerai-llm-demo - Design: go/lookerai-llm</Heading>                        
+        </Space>
+        <Space around> 
+        <Span> v:{ConfigReader.CurrentVersion} - updated:{ConfigReader.LastUpdated}</Span>
+        </Space>
+      </SpaceVertical>
       <Box display="flex" m="large">
+          <SpaceVertical>
+          {showInstructions? 
           <SpaceVertical>
           <Span fontSize="x-large">
           Quick Start:
@@ -208,11 +217,13 @@ export const LookerDashboardGenerative: React.FC = () => {
           </Span>
           <Span fontSize="medium">
           2. Input a question that you want to ask the dashboard - <b>example: How is the status of the business? Give me some insights!</b>
-          </Span>
+          </Span>          
+          </SpaceVertical>
+          :
+          <Span/>}
           <Span fontSize="medium">
-          Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b>
+          Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b> or <b>gimenes@google.com</b>
           </Span>
-
           <FieldSelect
             onOpen={resetComboExplore}
             isFilterable
