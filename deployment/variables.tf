@@ -1,6 +1,6 @@
 variable "project_id" {
   type = string
-  default = "gricardo04-looker-llm"
+  default = "PROJECT_ID"
 }
 variable "training_region"{
   type = string
@@ -30,5 +30,10 @@ provider "google" {
 variable "org_domain" {
   type = string
   default = "gricardo.altostrat.com"
+}
+
+variable "dataset_id_name"{
+  type = string
+  default = "llm"
 }
 
