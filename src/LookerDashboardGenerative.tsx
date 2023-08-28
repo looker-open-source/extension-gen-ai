@@ -16,7 +16,7 @@ import { Logger } from './utils/Logger'
 import { ConfigReader } from './services/ConfigReader'
 
 /**
- * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
+ * Ask a Question to a Dashboard using LLM Models
  */
 export const LookerDashboardGenerative: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)

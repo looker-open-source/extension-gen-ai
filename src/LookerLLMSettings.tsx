@@ -18,7 +18,7 @@ import { Logger } from './utils/Logger'
 
 
 /**
- * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
+ * Settings
  */
 export const LookerLLMSettings: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
