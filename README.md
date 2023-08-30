@@ -1,9 +1,10 @@
-# Looker Gen AI Extension 
-- [Looker Gen AI Extension](#looker-gen-ai-extension)
+# Looker GenAI Extension 
+- [Looker GenAI Extension](#looker-genai-extension)
   - [1. Overview](#1-overview)
   - [2. Solutions architecture overview](#2-solutions-architecture-overview)
     - [2.1 Data Exploration](#21-data-exploration)
-      - [Workflow for Data Exploration](#workflow-for-data-exploration)
+      - [Workflow for Data Exploration with BQML Remote Models](#workflow-for-data-exploration-with-bqml-remote-models)
+    - [Workflow for Data Exploration with Custom Fine Tune Model (Optional Path)](#workflow-for-data-exploration-with-custom-fine-tune-model-optional-path)
     - [2.2 Business Insights](#22-business-insights)
       - [Workflow for Business Insights](#workflow-for-business-insights)
   - [3. Getting Started](#3-getting-started)
@@ -18,7 +19,7 @@
 ## 1. Overview
 This repository compiles prescriptive code samples demonstrating how to create a Looker Extension integrating Looker with Vertex AI Large Language Models (LLMs).
 
-Looker Gen AI is an extension created to showcase interactivity between Looker and LLM with 2 main applications:
+Looker GenAI is an extension created to showcase interactivity between Looker and LLM with 2 main applications:
 1.  Data Exploration using NLP and GenAI (ask a looker explore). Using Natural Language to ask your data about specific things. The LLM Model will try to find the right fields, filters and pivots to explore the data.
 2.  Business Insights on top of Dashboards. With this feature, we ingest all the data from the selected Dashboard as a context and can ask the LLM model a question based on the context provided
 
@@ -29,8 +30,17 @@ Looker Gen AI is an extension created to showcase interactivity between Looker a
 There are two tabs on the extension:
 ### 2.1 Data Exploration
 User chooses a Looker Explore and asks questions using natural language. The application gathers the metadata from the explore and creates a prompt to the LLM model that will return an explore with the appropriate fields, filters, sorts and pivots rendered on the Extension. The user can select a Visualization and add it to a Dashboard.
-#### Workflow for Data Exploration
+
+#### Workflow for Data Exploration with BQML Remote Models
+The current default implementation uses the native integration between BigQuery and LLM models using BQML Remote Models [https://cloud.google.com/bigquery/docs/generate-text]
+
 ![Workflow](/images/looker-extension-workflow-data-exploration.png)
+
+### Workflow for Data Exploration with Custom Fine Tune Model (Optional Path)
+Optionally, users can train their own custom fine tune model, giving more examples to make it more accurate than the default model.
+If users want to follow this path, on this repo there is a Terraform Deployment Example on how to achieve that using Cloud Workflows to orchestrate the creation of the Fine Tuned Model, the Cloud Function and BigQuery UDF calling the Cloud Function.
+
+![Workflow](/images/looker-extension-workflow-data-exploration-fine-tuned-model.png)
 
 ### 2.2 Business Insights
 User chooses a Looker Dashboard and asks questions using natural language. In this scenario, the Extension builds a prompt and sends all the data from all tiles to the LLM model as a context and the question from the user.
