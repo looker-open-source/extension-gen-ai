@@ -7,7 +7,8 @@ export interface TopPrompts {
     modelExplore: string;
 }
 export class ConfigReader {
-    public static readonly CurrentVersion = "1.2";
-    public static readonly LastUpdated = "08/24/2023";
-    public static readonly DefaultDataset = "llm";
+    public static readonly CURRENT_VERSION = "1.2";
+    public static readonly LAST_UPDATED = "08/24/2023";
+    public static readonly DEFAULT_DATASET = "llm";
+    public static readonly BQML_MODEL = "llm.llm_model";
 }   

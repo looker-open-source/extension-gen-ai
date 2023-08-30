@@ -3,7 +3,7 @@ import { LookerSQLService } from "../services/LookerSQLService";
 import { Looker40SDK } from "@looker/sdk";
 
 
-export class PromptDb{
+export class PromptRepository{
 
     private sql: LookerSQLService;
     

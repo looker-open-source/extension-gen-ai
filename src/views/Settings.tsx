@@ -13,14 +13,14 @@ import {
 } from '@looker/components'
 import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
 import { Box, Heading , Combobox, ComboboxOption, ComboboxList, MaybeComboboxOptionObject, Label} from '@looker/components'
-import { PromptTemplateService, PromptTemplateTypeEnum } from './services/PromptTemplateService'
-import { Logger } from './utils/Logger'
+import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/PromptTemplateService'
+import { Logger } from '../utils/Logger'
 
 
 /**
  * Settings
  */
-export const LookerLLMSettings: React.FC = () => {
+export const Settings: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
   const [message, setMessage] = useState('')
   const [logLevel, setLogLevel] = useState<string>("info");
@@ -82,7 +82,7 @@ export const LookerLLMSettings: React.FC = () => {
         </Span>        
       </Space>
       <Space around>
-        <Heading fontWeight="semiBold">Looker AI Demo: go/lookerai-llm-demo - Design: go/lookerai-llm</Heading>                        
+        <Heading fontWeight="semiBold"> Looker GenAI Demo: go/lookerllm - Design: go/lookerllm-design</Heading>
       </Space>      
       <Box display="flex" m="large">        
           <SpaceVertical>
