@@ -11,16 +11,17 @@ import {
 } from '@looker/sdk'
 import React, { FormEvent, useCallback, useContext, useEffect, useState } from 'react'
 import { EmbedContainer } from './EmbedContainer'
-import { GenerativeDashboardService } from './services/GenerativeDashboardService'
-import { Logger } from './utils/Logger'
-import { ConfigReader } from './services/ConfigReader'
+import { DashboardService } from '../services/DashboardService'
+import { Logger } from '../utils/Logger'
+import { ConfigReader } from '../services/ConfigReader'
 
 /**
  * Ask a Question to a Dashboard using LLM Models
+ * Dashboard Component
  */
-export const LookerDashboardGenerative: React.FC = () => {
+export const Dashboard: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
-  const generativeDashboardService = new GenerativeDashboardService(core40SDK);
+  const generativeDashboardService = new DashboardService(core40SDK);
   const [message, setMessage] = useState('')
   const [loadingCombobox, setLoadingCombobox] = useState<boolean>(false)
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
@@ -124,7 +125,7 @@ export const LookerDashboardGenerative: React.FC = () => {
 
   const onFilterComboBox = ((filteredTerm: string) => {
     Logger.getInstance().debug("Filtering");
-    setCurrentCombo(allCombo?.filter(explore => explore.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
+    setCurrentCombo(allCombo?.filter(dash => dash.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
   });
 
   const selectCurrentDashId = (dashId: string) => {
@@ -142,16 +143,12 @@ export const LookerDashboardGenerative: React.FC = () => {
     setPrompt(e.currentTarget.value)
   }
 
-  // resets combo explore with all models and explores
-  const resetComboExplore = (callback: (ComboboxCallback<MaybeComboboxOptionObject>)) => {
-    setCurrentCombo(allCombo);
-  }
 
   const extensionContext = useContext<ExtensionContextData>(ExtensionContext);
 
   const embedCtrRef = useCallback((el) => {
     setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);
-    // set the explore div element outside
+    // set the Dashboard div element outside
     setDashboardDivElement(el);
   }, [])
 
@@ -199,10 +196,10 @@ export const LookerDashboardGenerative: React.FC = () => {
       </Space>
       <SpaceVertical>
         <Space around> 
-        <Heading fontWeight="semiBold"> Looker AI Demo: go/lookerai-llm-demo - Design: go/lookerai-llm</Heading>                        
+        <Heading fontWeight="semiBold"> Looker GenAI Demo: go/lookerllm - Design: go/lookerllm-design</Heading>                        
         </Space>
         <Space around> 
-        <Span> v:{ConfigReader.CurrentVersion} - updated:{ConfigReader.LastUpdated}</Span>
+        <Span> v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Span>
         </Space>
       </SpaceVertical>
       <Box display="flex" m="large">
@@ -225,7 +222,6 @@ export const LookerDashboardGenerative: React.FC = () => {
           Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b> or <b>gimenes@google.com</b>
           </Span>
           <FieldSelect
-            onOpen={resetComboExplore}
             isFilterable
             onFilter={onFilterComboBox}
             isLoading={loadingCombobox}

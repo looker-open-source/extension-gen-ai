@@ -1,13 +1,12 @@
 import { Looker40SDK } from "@looker/sdk";
-import { LookerSQLService } from "./LookerSQLService";
-import { PromptDb } from "../databases/PromptDb";
+import { PromptRepository } from "../databases/PromptRepository";
 
 export class PromptService {
 
-    private dbService: PromptDb;
+    private dbService: PromptRepository;
 
     public constructor(lookerSDK: Looker40SDK) {
-        this.dbService = new PromptDb(lookerSDK);
+        this.dbService = new PromptRepository(lookerSDK);
     }
 
     public getExplorePrompts()

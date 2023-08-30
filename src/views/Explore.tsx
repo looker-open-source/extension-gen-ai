@@ -26,16 +26,16 @@ import {
 import { Box, Heading } from '@looker/components'
 import { EmbedContainer } from './EmbedContainer'
 import { ExploreEvent, LookerEmbedSDK} from '@looker/embed-sdk'
-import { GenerativeExploreService, FieldMetadata } from './services/GenerativeExploreService'
-import { PromptTemplateService } from './services/PromptTemplateService'
-import { Logger } from './utils/Logger'
-import { ConfigReader } from './services/ConfigReader'
-import { PromptService } from './services/PromptService'
-import PromptModel from './models/PromptModel'
+import { ExploreService, FieldMetadata } from '../services/ExploreService'
+import { PromptTemplateService } from '../services/PromptTemplateService'
+import { Logger } from '../utils/Logger'
+import { ConfigReader } from '../services/ConfigReader'
+import { PromptService } from '../services/PromptService'
+import PromptModel from '../models/PromptModel'
 /**
- * A simple component that uses the Looker SDK through the extension sdk to display a customized hello message.
+ * Looker GenAI - Explore Component
  */
-export const LookerExploreGenerative: React.FC = () => {
+export const Explore: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
   const [message, setMessage] = useState('')
   const [loadingLookerModels, setLoadingLookerModels] = useState<boolean>(false)
@@ -185,11 +185,6 @@ export const LookerExploreGenerative: React.FC = () => {
   }
 
 
-  // resets combo explore with all models and explores
-  const resetComboExplore = (callback: (ComboboxCallback<MaybeComboboxOptionObject>)) => {
-    setCurrentComboExplores(allComboExplores);
-  }
-
   const extensionContext = useContext<ExtensionContextData>(ExtensionContext);
 
 
@@ -206,7 +201,7 @@ export const LookerExploreGenerative: React.FC = () => {
     setLoadingLLM(true);
     Logger.getInstance().debug("Debug CustomPrompt" +  window.sessionStorage.getItem("customPrompt"));
     const promptService = new PromptTemplateService(JSON.parse(window.sessionStorage.getItem("customPrompt")!));
-    const generativeExploreService = new GenerativeExploreService(core40SDK, promptService);
+    const generativeExploreService = new ExploreService(core40SDK, promptService);
 
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
     Logger.getInstance().info("1. Get the Metadata from Looker from the selected Explorer");    
@@ -278,10 +273,10 @@ export const LookerExploreGenerative: React.FC = () => {
       </Space>      
       <SpaceVertical>
         <Space around> 
-        <Heading fontWeight="semiBold"> Looker AI Demo: go/lookerai-llm-demo - Design: go/lookerai-llm</Heading>                        
+        <Heading fontWeight="semiBold"> Looker GenAI Demo: go/lookerllm - Design: go/lookerllm-design</Heading>
         </Space>
         <Space around> 
-        <Span> v:{ConfigReader.CurrentVersion} - updated:{ConfigReader.LastUpdated}</Span>
+        <Span> v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Span>
         </Space>
       </SpaceVertical>      
       <Box display="flex" m="large">        
@@ -314,8 +309,7 @@ export const LookerExploreGenerative: React.FC = () => {
             width={500}
           />
 
-          <FieldSelect            
-            onOpen={resetComboExplore}                        
+          <FieldSelect                       
             isFilterable
             onFilter={onFilterComboBox}
             isLoading={loadingLookerModels}

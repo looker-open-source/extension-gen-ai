@@ -4,10 +4,11 @@ import { DashboardTile, LookerDashboardService } from "./LookerDashboardService"
 import { LookerSQLService } from "./LookerSQLService";
 import { PromptTemplateService, PromptTemplateTypeEnum } from "./PromptTemplateService";
 import { Logger } from "../utils/Logger"
+import { ConfigReader } from "./ConfigReader";
 
 
 
-export class GenerativeDashboardService {
+export class DashboardService {
     private sql: LookerSQLService;
     private dashboardService: LookerDashboardService;    
     private promptService: PromptTemplateService|null = null;
@@ -16,9 +17,7 @@ export class GenerativeDashboardService {
         this.sql = new LookerSQLService(lookerSDK);
         this.dashboardService = new LookerDashboardService(lookerSDK, this.sql);        
     }
-
-    // Change this variable if you want to change the ML model from BQML
-    static readonly BQML_DATASET: string = "llm.llm_model";
+    
     static readonly MAX_CHAR_PER_PROMPT: number = 8000*3;
     static readonly MAX_CHAR_PER_TILE: number = 15000*3;
     static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 2000*3;
@@ -92,12 +91,12 @@ export class GenerativeDashboardService {
             const tileData = dashTile.data;
             const tileLength = JSON.stringify(tileData).length;            
             Logger.getInstance().debug("Tile Length: "+ tileLength);
-            if( tileLength > GenerativeDashboardService.MAX_CHAR_PER_TILE)
+            if( tileLength > DashboardService.MAX_CHAR_PER_TILE)
             {                
                 Logger.getInstance().trace("Limit of Element Data per Tile to be summarizable");
                 arrayTilesNotSummarizable.push(dashTile);
             }
-            else if (tileLength> GenerativeDashboardService.MIN_SUMMARIZE_CHAR_PER_TILE)
+            else if (tileLength> DashboardService.MIN_SUMMARIZE_CHAR_PER_TILE)
             {
                 // Summarize
                 Logger.getInstance().trace("Summarize this tile: " + dashTile.title);
@@ -168,7 +167,7 @@ export class GenerativeDashboardService {
         question: string): Promise<string> {
         // Fix some characters that breaks BigQuery Query
         let serializedElementData = JSON.stringify(dashboardElementData);            
-        if (serializedElementData.length > GenerativeDashboardService.MAX_CHAR_PER_PROMPT)
+        if (serializedElementData.length > DashboardService.MAX_CHAR_PER_PROMPT)
         {
             serializedElementData = await this.shardDashboardData(dashboardElementData, question);
         }
@@ -191,7 +190,7 @@ export class GenerativeDashboardService {
         const query = `SELECT ml_generate_text_llm_result as r, ml_generate_text_status
         FROM
         ML.GENERATE_TEXT(
-            MODEL `+ GenerativeDashboardService.BQML_DATASET +`,
+            MODEL `+ ConfigReader.BQML_MODEL +`,
             (
             SELECT '`+ promptParameter + `' AS prompt
             ),

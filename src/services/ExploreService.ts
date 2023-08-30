@@ -14,7 +14,7 @@ export interface FieldMetadata{
 }
 
 
-export class GenerativeExploreService {
+export class ExploreService {
     private sql: LookerSQLService;
     private promptService: PromptTemplateService;
 

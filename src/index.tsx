@@ -2,7 +2,7 @@
 
 import React from 'react'
 import ReactDOM from 'react-dom'
-import { App } from './App'
+import { App } from './views/App'
 
 window.addEventListener('DOMContentLoaded', (_) => {
   const root = document.createElement('div')
