@@ -129,7 +129,7 @@ export const Explore: React.FC = () => {
       setCurrentExploreName(splittedArray[1]);              
     } 
     else{
-      Logger.getInstance().error("Error selecting combobox, modelName and exploreName are null or not divided by .");
+      Logger.error("Error selecting combobox, modelName and exploreName are null or not divided by .");
     }       
     setSelectedModelExplore(selectedValue);
   });
@@ -146,7 +146,7 @@ export const Explore: React.FC = () => {
 
   
   const onFilterComboBox = ((filteredTerm: string) => {
-    Logger.getInstance().info("Filtering");
+    Logger.info("Filtering");
     setCurrentComboExplores(allComboExplores?.filter(explore => explore.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
   });
 
@@ -199,17 +199,17 @@ export const Explore: React.FC = () => {
   {    
     handleClearAll();  
     setLoadingLLM(true);
-    Logger.getInstance().debug("Debug CustomPrompt" +  window.sessionStorage.getItem("customPrompt"));
+    Logger.debug("Debug CustomPrompt" +  window.sessionStorage.getItem("customPrompt"));
     const promptService = new PromptTemplateService(JSON.parse(window.sessionStorage.getItem("customPrompt")!));
     const generativeExploreService = new ExploreService(core40SDK, promptService);
 
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
-    Logger.getInstance().info("1. Get the Metadata from Looker from the selected Explorer");    
+    Logger.info("1. Get the Metadata from Looker from the selected Explorer");    
     if(currentModelName!=null && currentExploreName!=null)
     {
       core40SDK.lookml_model_explore(currentModelName, currentExploreName, "id, name, description, fields, label").then
       (async exploreResult => {
-        Logger.getInstance().info("2. Received Data from Looker");
+        Logger.info("2. Received Data from Looker");
         // @ts-ignore
         const fields:ILookmlModelExploreFieldset = exploreResult.value.fields;
         const f_dimensions:ILookmlModelExploreField[]  =  fields.dimensions!;
@@ -240,18 +240,18 @@ export const Explore: React.FC = () => {
         if (!prompt) {
           throw new Error('missing user prompt, unable to create query');
         }                
-        Logger.getInstance().info("3. Generate Prompts and Send to BigQuery");
+        Logger.info("3. Generate Prompts and Send to BigQuery");
         const { modelName, queryId, view } = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!);
         // Update the Explore with New QueryId
         LookerEmbedSDK.init(hostUrl!);
-        Logger.getInstance().debug("explore not null: " + currentExploreId);
+        Logger.debug("explore not null: " + currentExploreId);
         LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?qid=${queryId}`)
           .appendTo(exploreDivElement!)         
           .build()          
           .connect()                    
           .then()          
           .catch((error: Error) => {
-            Logger.getInstance().error('Connection error', error);
+            Logger.error('Connection error', error);
             setLoadingLLM(false);
           });
         setLoadingLLM(false);

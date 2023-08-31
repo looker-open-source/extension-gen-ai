@@ -63,7 +63,7 @@ export class DashboardService {
         throw new Error('dashboard does not contain any elements');
         }
         // Debug:        
-        // Logger.getInstance().debug("Dashboard Elements: " + JSON.stringify(elements, null, 2));
+        // Logger.debug("Dashboard Elements: " + JSON.stringify(elements, null, 2));
         const elementsData: Array<DashboardTile<ElementData>> = await this.dashboardService.mapElementData<ElementData>(elements);
 
         const { title, description } = dashboard;        
@@ -90,23 +90,23 @@ export class DashboardService {
         dashboardElementData.elements.map((dashTile) => {
             const tileData = dashTile.data;
             const tileLength = JSON.stringify(tileData).length;            
-            Logger.getInstance().debug("Tile Length: "+ tileLength);
+            Logger.debug("Tile Length: "+ tileLength);
             if( tileLength > DashboardService.MAX_CHAR_PER_TILE)
             {                
-                Logger.getInstance().trace("Limit of Element Data per Tile to be summarizable");
+                Logger.trace("Limit of Element Data per Tile to be summarizable");
                 arrayTilesNotSummarizable.push(dashTile);
             }
             else if (tileLength> DashboardService.MIN_SUMMARIZE_CHAR_PER_TILE)
             {
                 // Summarize
-                Logger.getInstance().trace("Summarize this tile: " + dashTile.title);
+                Logger.trace("Summarize this tile: " + dashTile.title);
                 arrayPromisesSummarizer.push(
                     this.summarizeTile(dashTile, question,
                          dashboardElementData.title, dashboardElementData.description));
             }
             else
             {
-                Logger.getInstance().trace("Sending as IS");
+                Logger.trace("Sending as IS");
                 arrayTiles.push(dashTile);
             }
         });
@@ -144,7 +144,7 @@ export class DashboardService {
         }
         catch (error)
         {
-            Logger.getInstance().debug(error);
+            Logger.debug(error);
             throw new Error("unable to summarize: Could not parse JSON from BQ LLM");            
         }                         
     }
@@ -173,7 +173,7 @@ export class DashboardService {
         }
         // Clean string to send to BigQuery
         serializedElementData = serializedElementData.replace(/\'/g, '\\\'');
-        Logger.getInstance().debug("Sending Prompt to BigQuery LLM");
+        Logger.debug("Sending Prompt to BigQuery LLM");
         const singleLineString = `Act as an experienced Business Data Analyst with PHD and answer the question having into context the following Data: ${serializedElementData} Question: ${question}`;                
         return this.sendPromptToBigQuery(singleLineString);        
 

@@ -112,7 +112,7 @@ export class ExploreService {
         }
          // query to run
          const queryToRun = this.buildBigQueryLLMQuery(queryContents);
-         Logger.getInstance().debug("Query to Run: " + queryToRun);
+         Logger.debug("Query to Run: " + queryToRun);
          const results = await this.sql.execute<{
              r: string
              status: string
@@ -140,7 +140,7 @@ export class ExploreService {
         {
             try {
                 if (!chunkResult || !chunkResult.r || chunkResult.r.length === 0) {
-                    Logger.getInstance().trace("Not found any JSON results from LLM");
+                    Logger.trace("Not found any JSON results from LLM");
                     continue;
                 }
                 const llmChunkResult = JSON.parse(chunkResult.r);
@@ -148,7 +148,7 @@ export class ExploreService {
                 mergedResults.merge(exploreDataChunk);
             } catch (error) {
                 // @ts-ignore
-                Logger.getInstance().error(error.message, chunkResult);
+                Logger.error(error.message, chunkResult);
                 // throw new Error('LLM result does not contain a valid JSON');
             }
         }
@@ -165,7 +165,7 @@ export class ExploreService {
         // Only execute merged from LLM logic if needed
         if(llmChunkedResults.length > 1)
         {
-            Logger.getInstance().debug("Validate merged result");
+            Logger.debug("Validate merged result");
             // send the merged results to a final LLM to validate the merged Results
             const checkMergedFromLLM:LookerExploreDataModel = await this.checkMergedFromLLM(mergedResults, userInput, allowedFieldNames);
             // remove pivots if not mentioned explicitly
@@ -174,7 +174,7 @@ export class ExploreService {
         // Validate if word Pivots is present
         if(!this.validateInputForPivots(userInput))
         {
-            Logger.getInstance().debug("Removing Pivots");
+            Logger.debug("Removing Pivots");
             mergedResults.pivots = [];
         }
         return mergedResults;
@@ -268,7 +268,7 @@ export class ExploreService {
         catch(error)
         {
             // return the original input
-            Logger.getInstance().error("LLM could not clean and validate mergedResults");
+            Logger.error("LLM could not clean and validate mergedResults");
             return mergedModel;
         }
     }
@@ -298,14 +298,14 @@ export class ExploreService {
             if (!queryId) {
                 throw new Error('unable to retrieve query id from created query');
             }
-            Logger.getInstance().info("llmQuery: " + JSON.stringify(exploreData, null, 2));
+            Logger.info("llmQuery: " + JSON.stringify(exploreData, null, 2));
             return {
                 queryId,
                 modelName,
                 view: viewName,
             }
         } catch (err) {
-            Logger.getInstance().error("LLM does not contain valid JSON: ");
+            Logger.error("LLM does not contain valid JSON: ");
             throw new Error('LLM result does not contain a valid JSON');
         }
     }
