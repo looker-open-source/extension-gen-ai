@@ -1,64 +1,61 @@
+export enum LoggerLevelEnum {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error
+}
+
 export class Logger {
+    private static minLevel: LoggerLevelEnum;
 
-    private static instance: Logger;    
-    public readonly levels: { [key: string]: number } = {
-        'trace': 1,
-        'debug': 2,
-        'info': 3,
-        'warn': 4,
-        'error': 5
-    };
-    private logLevel: number = 3;    
-  
-    private constructor() {
-        
-    }
-  
-    static getInstance() {
-      if (Logger.instance) {
-        return this.instance;
-      }
-      this.instance = new Logger();
-      return this.instance;
+    public static setLoggerLevelByNumber(levelIndex: number){
+        const levels: string[] = Object.keys(LoggerLevelEnum)
+        const level: unknown = levels[levelIndex];
+        if (!level) {
+            throw new Error('invalid log level');
+        }
+        this.minLevel = level as LoggerLevelEnum;
     }
 
-    public static setLogLevel(logLevel: number){
-        this.getInstance().logLevel = logLevel;
+    public static setLoggerLevel(levelName: LoggerLevelEnum){
+        this.minLevel = levelName;
     }
 
-    public static getLogLevel()
-    {
-        return this.getInstance().logLevel;
+    public static setLoggerLevelByName(levelName: string){
+        const levels: string[] = Object.keys(LoggerLevelEnum)
+        const levelIndex = levels.indexOf(levelName);
+        if (levelIndex === -1) {
+            throw new Error('invalid log level name');
+        }
+        this.minLevel = levelIndex;
     }
-
-    /**
-     * Converts a string level (trace/debug/info/warn/error) into a number 
-     * 
-     * @param minLevel 
-     */
-    public levelToInt(minLevel: string): number {
-        if (minLevel.toLowerCase() in this.levels)
-            return this.levels[minLevel.toLowerCase()];
-        else
-            return 99;
-    }
-
     /**
      * Central logging method.
      * @param logLevel 
      * @param message 
      */
-    public log(logLevel: string, message: any, ...optionalParams: any[]): void {
-        const level = this.levelToInt(logLevel);
-        if (level < Logger.getInstance().logLevel) return;                                 
-        console.log(logLevel + "=> ",message, ...optionalParams);                        
+    private static writeLog(level: LoggerLevelEnum, message: any, ...optionalParams: any[]): void {
+        if (this.minLevel < level) {
+            return;
+        }
+        const levelName: string = LoggerLevelEnum[level];
+        const standardOutputHandlerMap: {
+            [key in LoggerLevelEnum]: (message?: any, ...optionalParams: any[]) => void
+        } = {
+            [LoggerLevelEnum.Trace]: console.trace,
+            [LoggerLevelEnum.Debug]: console.debug,
+            [LoggerLevelEnum.Info]: console.info,
+            [LoggerLevelEnum.Warn]: console.warn,
+            [LoggerLevelEnum.Error]: console.error,
+        }
+        const standardOutputHandler = standardOutputHandlerMap[level];
+        standardOutputHandler(`${levelName}\t`, message, ...optionalParams)
     }
 
-    public trace(message: any, ...optionalParams: any[]): void { this.log('trace', message, ...optionalParams); }
-    public debug(message: any, ...optionalParams: any[]): void { this.log('debug', message, ...optionalParams); }
-    public info(message: any, ...optionalParams: any[]): void  { this.log('info', message, ...optionalParams); }
-    public warn(message: any, ...optionalParams: any[]): void  { this.log('warn', message, ...optionalParams); }
-    public error(message: any, ...optionalParams: any[]): void { this.log('error', message, ...optionalParams); }
-
-
+    public static trace(message: any, ...optionalParams: any[]): void { this.writeLog(LoggerLevelEnum.Trace, message, ...optionalParams); }
+    public static debug(message: any, ...optionalParams: any[]): void { this.writeLog(LoggerLevelEnum.Debug, message, ...optionalParams); }
+    public static info(message: any, ...optionalParams: any[]): void  { this.writeLog(LoggerLevelEnum.Info, message, ...optionalParams); }
+    public static warn(message: any, ...optionalParams: any[]): void  { this.writeLog(LoggerLevelEnum.Warn, message, ...optionalParams); }
+    public static error(message: any, ...optionalParams: any[]): void { this.writeLog(LoggerLevelEnum.Error, message, ...optionalParams); }
   }
