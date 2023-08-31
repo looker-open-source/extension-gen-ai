@@ -97,7 +97,7 @@ Then follow instructions for [4. Developing the Extension](#3-getting-started-fo
         label: "Looker GenAI Extension"
         # for development: url: "https://localhost:8080/bundle.js"
         # production
-        file: "bundle.js
+        file: "bundle.js"
         entitlements: {
           use_embeds: yes
           use_form_submit: yes
