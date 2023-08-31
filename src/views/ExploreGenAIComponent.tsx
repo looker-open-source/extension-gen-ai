@@ -12,12 +12,12 @@ export class ExploreGenAIComponent extends Component {
     //     // super(props);
     //     // debugger;
     //     // this.refInput = React.createRef(); //create ref
-    //     console.log("Criou elemento Component Explore GenAI Component");
+    //     Logger.debug("Criou elemento Component Explore GenAI Component");
     // }
     constructor(props:any)
     {
         super(props);
-        console.log("Criou elemento Component Explore GenAI Component");
+        Logger.debug("Criou elemento Component Explore GenAI Component");
     }
     shouldComponentUpdate(nextProps:any) {
         // Rendering the component only if 
@@ -27,12 +27,12 @@ export class ExploreGenAIComponent extends Component {
 
     
     componentDidMount() {
-        console.log("Component did mount");
+        Logger.debug("Component did mount");
     }
 
     render() {
         //to associate the ref with our component
-        console.log("Rendering");
+        Logger.debug("Rendering");
         return (
             <Box>
                 <Space around>

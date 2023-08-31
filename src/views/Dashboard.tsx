@@ -82,7 +82,7 @@ export const Dashboard: React.FC = () => {
       setCurrentDashId(splittedArray[1]);
     }
     else{
-      Logger.getInstance().error("Error selecting combobox, modelName and exploreName are null or not divided by .");
+      Logger.error("Error selecting combobox, modelName and exploreName are null or not divided by .");
     }
 
     // Removes the first child
@@ -103,14 +103,14 @@ export const Dashboard: React.FC = () => {
       // TODO: support content reflected by filters
       if(event.dashboard.dashboard_filters!=null)
       {
-        Logger.getInstance().debug("dashboard:filters:changed");
-        // Logger.getInstance().debug(event);
-        // Logger.getInstance().debug(JSON.stringify(event, null, 2));
+        Logger.debug("dashboard:filters:changed");
+        // Logger.debug(event);
+        // Logger.debug(JSON.stringify(event, null, 2));
       }      
     })
     .on('dashboard:filters:changed',(event:DashboardEvent) =>
     {
-      Logger.getInstance().debug("Filters changed");
+      Logger.debug("Filters changed");
     })
     .build()
     .connect()
@@ -124,7 +124,7 @@ export const Dashboard: React.FC = () => {
   });
 
   const onFilterComboBox = ((filteredTerm: string) => {
-    Logger.getInstance().debug("Filtering");
+    Logger.debug("Filtering");
     setCurrentCombo(allCombo?.filter(dash => dash.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
   });
 
@@ -156,7 +156,7 @@ export const Dashboard: React.FC = () => {
   const handleSend = async () =>
   {
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
-    Logger.getInstance().info("1. Get the Data From all the Dashboards");
+    Logger.info("1. Get the Data From all the Dashboards");
     if(!currentDashName || !currentDashId)
     {
       console.error('unable to find current dashboard id');
