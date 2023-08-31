@@ -1,3 +1,5 @@
+import { UtilsHelper } from "./Helper";
+
 export enum LoggerLevelEnum {
     Trace,
     Debug,
@@ -10,7 +12,7 @@ export class Logger {
     private static minLevel: LoggerLevelEnum;
 
     public static setLoggerLevelByNumber(levelIndex: number){
-        const levels: string[] = Object.keys(LoggerLevelEnum)
+        const levels: string[] = UtilsHelper.enumToArray(LoggerLevelEnum);
         const level: unknown = levels[levelIndex];
         if (!level) {
             throw new Error('invalid log level');
@@ -23,8 +25,9 @@ export class Logger {
     }
 
     public static setLoggerLevelByName(levelName: string){
-        const levels: string[] = Object.keys(LoggerLevelEnum)
-        const levelIndex = levels.indexOf(levelName);
+        const levels: string[] = UtilsHelper.enumToArray(LoggerLevelEnum);
+        const levelIndex = levels.findIndex((level) =>
+            level.toLowerCase() === levelName.toLowerCase());
         if (levelIndex === -1) {
             throw new Error('invalid log level name');
         }
@@ -36,7 +39,7 @@ export class Logger {
      * @param message 
      */
     private static writeLog(level: LoggerLevelEnum, message: any, ...optionalParams: any[]): void {
-        if (this.minLevel < level) {
+        if (level < this.minLevel) {
             return;
         }
         const levelName: string = LoggerLevelEnum[level];

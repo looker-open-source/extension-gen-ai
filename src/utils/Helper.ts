@@ -54,4 +54,12 @@ export class UtilsHelper {
     public static removeDuplicates<T>(array: Array<T>): Array<T> {
         return Array.from(new Set(array));
     }
+
+    public static isNumber = (value: any) => isNaN(Number(value)) === false;
+
+    public static enumToArray(enumerator: any): string[] {
+        return Object.keys(enumerator)
+            .filter(this.isNumber)
+            .map(key => enumerator[key]);
+    }
 }
