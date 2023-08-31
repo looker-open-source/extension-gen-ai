@@ -61,7 +61,7 @@ export const Settings: React.FC = () => {
     Logger.setLoggerLevelByName(comboboxComponent.value);
     window.sessionStorage.setItem(storageLogLevel, comboboxComponent.value);
     setLogLevel(comboboxComponent.value);
-    console.log(comboboxComponent.value);
+    Logger.debug(comboboxComponent.value);
   }
 
   return (
