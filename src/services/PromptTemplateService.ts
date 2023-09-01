@@ -75,9 +75,9 @@ Q: What are the top 50 products with the largest sales amount?
 Q: What are the total sales per month?
 500`,
         [PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED]:`Context: {{mergedResults}}
-The Context provided contains all the possible fields, filters, pivots and sort.
+The Context provided contains all the possible field_names, filters, pivots and sort.
 Return the JSON with only the fields needed to answer following Question.
-The ouput format is a valid JSON.
+The ouput format is a valid JSON: {"field_names": [], "filters":{}, "pivots": [], "sorts": []}
 Question: {{userInput}}`,
 
         [PromptTemplateTypeEnum.DASH_SUMMARIZE]:` 
