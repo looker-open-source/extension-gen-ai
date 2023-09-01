@@ -41,6 +41,7 @@ export class UtilsHelper {
      */
     public static cleanResult(originalString: string): string {
         let fixedString = originalString;
+        fixedString = fixedString.replace("```json", "");
         fixedString = fixedString.replace("```JSON", "");
         fixedString = fixedString.replace("```", "");
         return fixedString;

@@ -143,7 +143,8 @@ export class ExploreService {
                     Logger.trace("Not found any JSON results from LLM");
                     continue;
                 }
-                const llmChunkResult = JSON.parse(chunkResult.r);
+                const cleanResult = UtilsHelper.cleanResult(chunkResult.r);
+                const llmChunkResult = JSON.parse(cleanResult);
                 const exploreDataChunk = new LookerExploreDataModel(llmChunkResult, allowedFieldNames);
                 mergedResults.merge(exploreDataChunk);
             } catch (error) {
