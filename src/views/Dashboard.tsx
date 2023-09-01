@@ -1,18 +1,19 @@
 // Copyright 2023 Google LLC
 
-import {
-    Box, Button, ComboboxOptionObject, ComponentsProvider, Dialog,
-    DialogLayout, FieldSelect, FieldTextArea, Heading, Space, SpaceVertical, Span, Spinner, TextArea
-} from '@looker/components'
-import { DashboardEvent, LookerEmbedDashboard, LookerEmbedSDK } from '@looker/embed-sdk'
+import { Box, Button, ComboboxCallback, ComboboxOptionObject, ComponentsProvider, Dialog,
+   DialogLayout, FieldSelect, FieldTextArea, TextArea, Heading, MaybeComboboxOptionObject,
+    Space, SpaceVertical, Span, Spinner } from '@looker/components'
+import { LookerEmbedSDK, LookerEmbedDashboard, DashboardEvent} from '@looker/embed-sdk'
 import { ExtensionContext, ExtensionContextData } from '@looker/extension-sdk-react'
 import {
-    IDashboardBase
+  IDashboardBase,
+  ISqlQueryCreate
 } from '@looker/sdk'
 import React, { FormEvent, useCallback, useContext, useEffect, useState } from 'react'
-import { ConfigReader } from '../services/ConfigReader'
+import { EmbedContainer } from './EmbedContainer'
 import { DashboardService } from '../services/DashboardService'
 import { Logger } from '../utils/Logger'
+import { ConfigReader } from '../services/ConfigReader'
 
 /**
  * Ask a Question to a Dashboard using LLM Models
@@ -105,7 +106,7 @@ export const Dashboard: React.FC = () => {
         Logger.debug("dashboard:filters:changed");
         // Logger.debug(event);
         // Logger.debug(JSON.stringify(event, null, 2));
-      }
+      }      
     })
     .on('dashboard:filters:changed',(event:DashboardEvent) =>
     {
@@ -115,7 +116,7 @@ export const Dashboard: React.FC = () => {
     .connect()
     .then((dash)=> {
       setCurrentDashboard(dash);
-    })
+    })    
     .catch((error: Error) => {
       console.error('Connection error', error)
     });
@@ -180,7 +181,7 @@ export const Dashboard: React.FC = () => {
       else
       {
         setLlmInsights(`Unexpected error:` + error);
-      }
+      }      
     } finally {
       setLoadingLLM(false);
     }
@@ -194,16 +195,16 @@ export const Dashboard: React.FC = () => {
         </Span>
       </Space>
       <SpaceVertical>
-        <Space around>
-        <Heading fontWeight="semiBold"> Looker GenAI Demo: go/lookerllm - Design: go/lookerllm-design</Heading>
+        <Space around> 
+        <Heading fontWeight="semiBold"> Looker GenAI Demo: go/lookerllm - Design: go/lookerllm-design</Heading>                        
         </Space>
-        <Space around>
+        <Space around> 
         <Span> v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Span>
         </Space>
       </SpaceVertical>
       <Box display="flex" m="large">
           <SpaceVertical>
-          {showInstructions?
+          {showInstructions? 
           <SpaceVertical>
           <Span fontSize="x-large">
           Quick Start:
@@ -213,7 +214,7 @@ export const Dashboard: React.FC = () => {
           </Span>
           <Span fontSize="medium">
           2. Input a question that you want to ask the dashboard - <b>example: How is the status of the business? Give me some insights!</b>
-          </Span>
+          </Span>          
           </SpaceVertical>
           :
           <Span/>}
