@@ -1,6 +1,7 @@
 import { Box, Heading, Space, SpaceVertical, Span } from "@looker/components";
 import React, { Component, useRef } from "react";
 import { ConfigReader } from "../services/ConfigReader";
+import { Logger } from "../utils/Logger"
 
 export class ExploreGenAIComponent extends Component {
     // private refInput: React.RefObject<ExploreGenAIComponent>;s
