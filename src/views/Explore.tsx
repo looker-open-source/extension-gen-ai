@@ -299,7 +299,7 @@ export const Explore: React.FC = () => {
             : <Span/>
           }                  
           <Span fontSize="medium">
-            Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b> or <b>gimenes@google.com</b>
+            Any doubts or feedback or bugs, send it to <b>looker-genai-extension@google.com</b>
           </Span>   
           <FieldSelect 
             id="topExamplesId"           

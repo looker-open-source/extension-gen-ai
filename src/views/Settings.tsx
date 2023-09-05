@@ -1,25 +1,31 @@
 // Copyright 2023 Google LLC
 
 import { Box, Combobox, ComboboxInput, ComboboxList, ComboboxOption, ComponentsProvider, FieldCheckbox, FieldTextArea, Heading, Label, MaybeComboboxOptionObject, MixedBoolean, Space, SpaceVertical, Span } from '@looker/components'
-import React, { FormEvent, useEffect, useState } from 'react'
+import React, { FormEvent, useContext, useEffect, useState } from 'react'
 import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/PromptTemplateService'
 import { Logger } from '../utils/Logger'
+import { PromptService } from '../services/PromptService'
+import { ExtensionContext } from '@looker/extension-sdk-react'
 
 
 /**
  * Settings
  */
-export const Settings: React.FC = () => {
+export const Settings: React.FC = () => {  
   const [message] = useState('')
   const [logLevel, setLogLevel] = useState<string>("info");
   const [usingNativeBQML, setUsingNativeBQML] = useState(true as MixedBoolean)
   const [showInstructions, setShowInstructions] = useState(true as MixedBoolean)
-  const [customPrompt, setCustomPrompt] = useState<string>();
+  const [customPrompt, setCustomPrompt] = useState<string>();  
 
   const storageShowInstructions = "showInstructions";
   const storageNativeBQML = "usingNativeBQML";
   const storageLogLevel = "logLevel";
   const storageCustomPrompt = "customPrompt";
+
+  const { core40SDK } =  useContext(ExtensionContext)
+  const promptService: PromptService = new PromptService(core40SDK);
+  
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,7 +86,7 @@ export const Settings: React.FC = () => {
           Extension Settings
           </Span>
           <Span fontSize="medium">
-          Any doubts or feedback or bugs, send it to <b>gricardo@google.com</b> or <b>gimenes@google.com</b>
+          Any doubts or feedback or bugs, send it to <b>looker-genai-extension@google.com</b>
           </Span>
           <Label>Console Log Level</Label>
           <Combobox  width={"300px"} value={logLevel} onChange={handleChangeCombo}>

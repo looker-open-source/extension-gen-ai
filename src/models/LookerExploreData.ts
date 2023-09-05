@@ -7,7 +7,7 @@ export interface ILookerExploreDataModel {
     field_names: string[],
     filters: { [key: string]: string },
     pivots?: string[],
-    sorts: string[],
+    sorts?: string[],
     limit?: string,
 }
 
@@ -34,7 +34,7 @@ class LookerExploreDataModel extends BaseSchema {
             this.pivots = this.pivots.concat(pivots);
         }
         if (sorts) {
-            this.sorts = this.sorts.concat(sorts);
+            this.sorts = this.sorts!.concat(sorts);
         }
         if (filters)
         {

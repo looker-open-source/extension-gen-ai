@@ -80,8 +80,7 @@ Return the JSON with only the fields needed to answer following Question.
 The ouput format is a valid JSON: {"field_names": [], "filters":{}, "pivots": [], "sorts": []}
 Question: {{userInput}}`,
 
-        [PromptTemplateTypeEnum.DASH_SUMMARIZE]:` 
-Dashboard Context: {{dashboardContext}}
+        [PromptTemplateTypeEnum.DASH_SUMMARIZE]:`Dashboard Context: {{dashboardContext}}
 Tile Context: {{tileContext}}
 InputData: {{serializedModelFields}}
 Question: {{userInput}}

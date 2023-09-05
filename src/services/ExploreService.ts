@@ -5,6 +5,7 @@ import { UtilsHelper } from "../utils/Helper";
 import { LookerSQLService } from "./LookerSQLService";
 import { PromptTemplateService, PromptTemplateTypeEnum } from "./PromptTemplateService";
 import { Logger } from "../utils/Logger"
+import { ConfigReader } from "./ConfigReader";
 
 export interface FieldMetadata{
     label: string;
@@ -78,7 +79,8 @@ export class ExploreService {
 
     private buildBigQueryLLMQuery(selectPrompt:string)
     {
-        return `SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
+        return `#Looker GenAI Extension - version: ${ConfigReader.CURRENT_VERSION}
+        SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
         FROM
         ML.GENERATE_TEXT(
             MODEL llm.llm_model,
@@ -112,7 +114,7 @@ export class ExploreService {
         }
          // query to run
          const queryToRun = this.buildBigQueryLLMQuery(queryContents);
-         Logger.debug("Query to Run: " + queryToRun);
+         Logger.debug("Query to Run: " + queryToRun);                 
          const results = await this.sql.execute<{
              r: string
              status: string
