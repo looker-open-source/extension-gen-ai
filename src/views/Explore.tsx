@@ -283,17 +283,17 @@ export const Explore: React.FC = () => {
           <SpaceVertical>
           {showInstructions? 
           <SpaceVertical>
-            <Span fontSize="x-large">
+            <Span fontSize="large">
             Quick Start:                                    
             </Span>  
             <Span fontSize="medium">
-            1. Select the Explore by selecting or typing - <b>example - type wiki:  bi_engine_demo - wiki100_m</b>
+            1. Select the Explore by selecting or typing.
             </Span>          
             <Span fontSize="medium">
             2. Click on the Text Area and type your question to the Explore - <b>example: What are the top 15 count, language and day. Pivot per day</b>
             </Span>
             <Span fontSize="medium">
-            3. Wait for the Explore to appear below and add to an dashboard if needed
+            3. Wait for the Explore to appear below and add to an dashboard if needed.
             </Span>                      
           </SpaceVertical> 
             : <Span/>
