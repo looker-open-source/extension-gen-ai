@@ -1,5 +1,5 @@
 export class ConfigReader {
-    public static readonly CURRENT_VERSION = "1.2";
-    public static readonly LAST_UPDATED = "08/24/2023";
+    public static readonly CURRENT_VERSION = "1.3";
+    public static readonly LAST_UPDATED = "09/05/2023";
     public static readonly BQML_MODEL = "llm.llm_model";
 }   
