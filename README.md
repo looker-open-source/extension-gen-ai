@@ -89,7 +89,7 @@ Then follow instructions for [4. Developing the Extension](#3-getting-started-fo
 
 5. Create a `manifest` file
 
-   Either drag and upload the `manifest.lkml` file in this directory into your Looker project, or create a `manifest.lkml` with the same content. Change the  `label` or `url` as needed.
+   Either drag and upload the `manifest.lkml` file from `looker-project-structure` directory in this directory into your Looker project, or create a `manifest.lkml` with the same content. Change the  `label` or `url` as needed.
 
    ```
     project_name: "looker-genai"
@@ -110,11 +110,12 @@ Then follow instructions for [4. Developing the Extension](#3-getting-started-fo
     }
    ```
 
-6. Create a `model` LookML file in your project.
+6. Create a `model` LookML file in your project. The example model file is on `looker-project-structure` folder, named `looker-genai.model`
 
    Typically, the model is named the same as the extension project. The model is used to control access to the extension.
 
    - [Configure the model you created](https://docs.looker.com/data-modeling/getting-started/create-projects#configuring_a_model) so that it has access to some connection (any connection).
+
 
 7. Connect the new project to Git.
 
@@ -122,10 +123,11 @@ Then follow instructions for [4. Developing the Extension](#3-getting-started-fo
 
 8. Commit the changes and deploy them to production through the Project UI.
 
-9. Reload the page and click the `Browse` dropdown menu. You should see the extension label in the list.
+9. Reload the page and click the `Browse` dropdown menu. You should see the extension label in the list of Applications.
 
-   - The extension will load the JavaScript from the `url` you provided in the `application` definition. By default, this is `https://localhost:8080/bundle.js`. If you change the port your server runs on in the `package.json`, you will need to also update it in the `manifest.lkml`.
-   - Reloading the extension page will bring in any new code changes from the extension template.
+   - The extension will load the JavaScript from the `url` you provided in the `application` definition. In Production, this is `file: bundle.js`. 
+   - When you are developing it will be the `localhost://8080/bundle.js`. If you change the port your server runs on in the `package.json`, you will need to also update it in the `manifest.lkml`.
+   - When developing, reloading the extension page will bring in any new code changes from the extension template.
 
 ## 5. Deploying the Looker Extension
 
@@ -173,14 +175,13 @@ The architecture needs the following infrastructure:
 - IAM Service Accounts to create a connection to Looker
   
 Deploy the terraform script:
-First Edit the `variables.tf`
-Replace the `project_id` and `organization_id` to your own.
+
 
 Run the following commands:
 ```
   cd deployment
   terraform init
-  terraform apply 
+  terraform apply -var="project_id=YOUR_PROJECT_ID" -var="org_domain=YOUR_ORG_ID"   
 ```
 
 ---
