@@ -115,6 +115,8 @@ Then follow instructions for [4. Developing the Extension](#3-getting-started-fo
    Typically, the model is named the same as the extension project. The model is used to control access to the extension.
 
    - [Configure the model you created](https://docs.looker.com/data-modeling/getting-started/create-projects#configuring_a_model) so that it has access to some connection (any connection).
+   
+  Make sure sure the connection have access to query the BigQuery Dataset and Model Deployed. Go to the project dataset and give the connection service account or user the permission to query.
 
 
 7. Connect the new project to Git.
@@ -174,7 +176,7 @@ Run the following commands:
 ```
   cd deployment
   terraform init
-  terraform apply -var="project_id=YOUR_PROJECT_ID" -var="org_domain=YOUR_ORG_ID"   
+  terraform apply -var="project_id=YOUR_PROJECT_ID"  
 ```
 
 ---

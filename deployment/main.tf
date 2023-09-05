@@ -44,10 +44,7 @@ resource "time_sleep" "wait_after_apis_activate" {
   create_duration = "300s"
 }
 
-data "google_organization" "org" {
-  domain = var.org_domain
-  depends_on = [ time_sleep.wait_after_apis_activate ]
-}
+
 data "google_project" "project" {}
 
 # [START storage_create_new_bucket_tf]

@@ -26,10 +26,6 @@ provider "google" {
   region = var.deployment_region
 }
 
-variable "org_domain" {
-  type = string
-}
-
 variable "dataset_id_name"{
   type = string
   default = "llm"
