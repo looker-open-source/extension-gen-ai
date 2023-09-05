@@ -151,7 +151,7 @@ To allow other people to use the extension, build the JavaScript bundle file and
       }
     }
    ```
-## 5. Setting Up Vertex and LLM Backends
+## 5. Setting Up Infrastructure
 The architecture needs the following infrastructure:
 - VertexAI Fine Tuned LLM Model with the Looker App Examples
 - Cloud Function that will call the Vertex AI Tuned Model Endpoint
@@ -166,8 +166,12 @@ Follow the steps below:
   gcloud services enable cloudresourcemanager.googleapis.com
 ```
 
-### 5.1 Deploy the infrastructure using Terraform
-
+### 5.2 Deploy the infrastructure using Terraform
+The architecture needs the following infrastructure:
+- BigQuery Dataset (default name: llm)
+- BigQuery Remote Model pointing to Palm API (llm_model)
+- IAM Service Accounts to create a connection to Looker
+  
 Deploy the terraform script:
 ```
   cd deployment
@@ -175,11 +179,22 @@ Deploy the terraform script:
   terraform apply 
 ```
 
-### 5.2 Execute the Workflow
+### **Optional** Executing the Fine Tuning Model
+Vertex and LLM Backends
+To execute fine tune model there is a sample terraform script provided on the repo.
+
+The architecture needs the following infrastructure:
+- VertexAI Fine Tuned LLM Model with the Looker App Examples
+- Cloud Function that will call the Vertex AI Tuned Model Endpoint
+- BigQuery Datasets, Connections and Remote UDF that will call the Cloud Function
+
+
+TODO: The code have to be refactored to allow for the custom fine tuned model using BQ, Remote UDF and Cloud Function.
+
+#### Execute the Workflow
 
 Inside `gcloud` environment, invoke the Cloud Workflows
 ```
 gcloud workflows execute fine_tuning_model
 ```
 
-### 5.3 Test the environment with a Simple Query
