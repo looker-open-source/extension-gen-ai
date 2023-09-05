@@ -10,11 +10,11 @@
   - [3. Getting Started](#3-getting-started)
   - [4. Developing the Looker Extension Environment](#4-developing-the-looker-extension-environment)
   - [5. Deploying the Looker Extension](#5-deploying-the-looker-extension)
-  - [5. Setting Up Vertex and LLM Backends](#5-setting-up-vertex-and-llm-backends)
+  - [5. Setting Up Infrastructure](#5-setting-up-infrastructure)
     - [5.1 Enable Cloud Resource Manager API](#51-enable-cloud-resource-manager-api)
-    - [5.1 Deploy the infrastructure using Terraform](#51-deploy-the-infrastructure-using-terraform)
-    - [5.2 Execute the Workflow](#52-execute-the-workflow)
-    - [5.3 Test the environment with a Simple Query](#53-test-the-environment-with-a-simple-query)
+    - [5.2 Deploy the infrastructure using Terraform](#52-deploy-the-infrastructure-using-terraform)
+    - [**Optional**: Executing the Fine Tuning Model](#optional-executing-the-fine-tuning-model)
+      - [Execute the Workflow](#execute-the-workflow)
 
 ## 1. Overview
 This repository compiles prescriptive code samples demonstrating how to create a Looker Extension integrating Looker with Vertex AI Large Language Models (LLMs).
@@ -179,7 +179,10 @@ Deploy the terraform script:
   terraform apply 
 ```
 
-### **Optional** Executing the Fine Tuning Model
+---
+
+
+### **Optional**: Executing the Fine Tuning Model
 Vertex and LLM Backends
 To execute fine tune model there is a sample terraform script provided on the repo.
 
