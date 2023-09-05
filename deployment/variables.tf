@@ -1,6 +1,6 @@
 variable "project_id" {
   type = string
-  default = "dataml-latam-argolis"
+  default = "CHANGE-TO-YOUR-PROJECT-ID"
 }
 variable "training_region"{
   type = string
@@ -29,7 +29,7 @@ provider "google" {
 
 variable "org_domain" {
   type = string
-  default = "gricardo.altostrat.com"
+  default = "CHANGE-TO-YOUR-DOMAIN"
 }
 
 variable "dataset_id_name"{
