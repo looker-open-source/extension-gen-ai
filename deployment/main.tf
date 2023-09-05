@@ -138,12 +138,12 @@ resource "google_bigquery_dataset" "dataset" {
 }
 
   resource "google_bigquery_job" "create_bq_model_llm" {
-     job_id     = "create_looker_llm_model"
+     job_id     = "create_looker_llm_model-${random_string.random.result}"
     query {
       query = <<EOF
-CREATE OR REPLACE MODEL ${var.project_id}.${var.dataset_id_name}.llm_model 
-REMOTE WITH CONNECTION ${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result} 
-OPTIONS (REMOTE_SERVICE_TYPE = 'CLOUD_AI_LARGE_LANGUAGE_MODEL_V1');"
+CREATE OR REPLACE MODEL `${var.project_id}.${var.dataset_id_name}.llm_model` 
+REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result}` 
+OPTIONS (REMOTE_SERVICE_TYPE = 'CLOUD_AI_LARGE_LANGUAGE_MODEL_V1')
 EOF     
     }
     depends_on = [google_bigquery_connection.connection, google_bigquery_dataset.dataset, time_sleep.wait_after_apis_activate]    

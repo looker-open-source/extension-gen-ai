@@ -1,6 +1,5 @@
 variable "project_id" {
   type = string
-  default = "CHANGE-TO-YOUR-PROJECT-ID"
 }
 variable "training_region"{
   type = string
@@ -29,7 +28,6 @@ provider "google" {
 
 variable "org_domain" {
   type = string
-  default = "CHANGE-TO-YOUR-DOMAIN"
 }
 
 variable "dataset_id_name"{
