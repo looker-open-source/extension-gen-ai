@@ -196,7 +196,7 @@ export const Dashboard: React.FC = () => {
       </Space>
       <SpaceVertical>
         <Space around> 
-        <Heading fontWeight="semiBold"> Looker GenAI Demo: go/lookerllm - Design: go/lookerllm-design</Heading>                        
+        <Heading fontWeight="semiBold">Looker GenAI Extension</Heading>                        
         </Space>
         <Space around> 
         <Span> v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Span>
@@ -206,14 +206,14 @@ export const Dashboard: React.FC = () => {
           <SpaceVertical>
           {showInstructions? 
           <SpaceVertical>
-          <Span fontSize="x-large">
+          <Span fontSize="large">
           Quick Start:
           </Span>
           <Span fontSize="medium">
-          1. Select the Dashboard by selecting or typing - <b>example: eCommerce Logistics Demo - 26</b>
+          1. Select the Dashboard by selecting or typing
           </Span>
           <Span fontSize="medium">
-          2. Input a question that you want to ask the dashboard - <b>example: How is the status of the business? Give me some insights!</b>
+          2. Input a question that you want to ask the dashboard
           </Span>          
           </SpaceVertical>
           :
