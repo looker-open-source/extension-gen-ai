@@ -100,14 +100,15 @@ export const Settings: React.FC = () => {
             </ComboboxList>
           </Combobox>
 
-          <FieldCheckbox
-            label="Yes - Use Native BQML Method, and No: use Fine tuned model"
+          {/* TODO: implement fine tuned model and option to change  */}
+          {/* <FieldCheckbox
+            label="Yes - Use Native BQML Method - Fine Tuned not implemented"
             checked={usingNativeBQML}
             onChange={() => {
               window.sessionStorage.setItem(storageNativeBQML, usingNativeBQML?"false": "true");
               setUsingNativeBQML(!usingNativeBQML);
             }}
-          />
+          /> */}
 
            <FieldCheckbox
             label="Show Instructions"
