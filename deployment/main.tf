@@ -60,22 +60,6 @@ resource "random_string" "random" {
   upper = false
 }
 
-resource "google_storage_bucket" "bucket-looker-llm" {
-  name          = "looker-ai-llm-training-${random_string.random.result}"
-  location      = "us"
-  uniform_bucket_level_access = true
-  depends_on = [random_string.random, time_sleep.wait_after_apis_activate]
-  force_destroy = true
-}
-
-resource "google_storage_bucket_object" "looker-llm-config" {
- name         = "lookerllmconfig.json"
- source       = "../lookerllmconfig.json"
- content_type = "application/octet-stream"
- bucket       = google_storage_bucket.bucket-looker-llm.id
- depends_on = [google_storage_bucket.bucket-looker-llm, time_sleep.wait_after_apis_activate]
-}
-
 # [START workflows_serviceaccount_create]
 resource "google_service_account" "looker_llm_service_account" {
   account_id   = "looker-llm-sa"
