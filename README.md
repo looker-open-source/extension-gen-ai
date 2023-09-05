@@ -173,6 +173,10 @@ The architecture needs the following infrastructure:
 - IAM Service Accounts to create a connection to Looker
   
 Deploy the terraform script:
+First Edit the `variables.tf`
+Replace the `project_id` and `organization_id` to your own.
+
+Run the following commands:
 ```
   cd deployment
   terraform init
