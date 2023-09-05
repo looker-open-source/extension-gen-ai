@@ -80,6 +80,14 @@ resource "google_project_iam_member" "iam_permission_looker_aiplatform" {
   depends_on = [ time_sleep.wait_after_apis_activate ]
 }
 
+# IAM for connection to be able to execute vertex ai queries through BQ
+resource "google_project_iam_member" "bigquery_connection_remote_model" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = format("serviceAccount:%s", google_bigquery_connection.connection.cloud_resource[0].service_account_id)
+  depends_on = [ time_sleep.wait_after_apis_activate, google_bigquery_connection.connection]
+}
+
 resource "google_project_iam_member" "iam_service_account_act_as" {
   project = var.project_id
   role    = "roles/iam.serviceAccountUser"
@@ -128,7 +136,9 @@ resource "google_bigquery_dataset" "dataset" {
 CREATE OR REPLACE MODEL `${var.project_id}.${var.dataset_id_name}.llm_model` 
 REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result}` 
 OPTIONS (REMOTE_SERVICE_TYPE = 'CLOUD_AI_LARGE_LANGUAGE_MODEL_V1')
-EOF     
+EOF  
+      create_disposition = ""
+      write_disposition = ""
     }
     depends_on = [google_bigquery_connection.connection, google_bigquery_dataset.dataset, time_sleep.wait_after_apis_activate]    
   }
