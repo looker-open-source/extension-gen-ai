@@ -154,12 +154,6 @@ To allow other people to use the extension, build the JavaScript bundle file and
     }
    ```
 ## 5. Setting Up Infrastructure
-The architecture needs the following infrastructure:
-- VertexAI Fine Tuned LLM Model with the Looker App Examples
-- Cloud Function that will call the Vertex AI Tuned Model Endpoint
-- BigQuery Datasets, Connections and Remote UDF that will call the Cloud Function
-  
-All these dependencies will be deployed through Terraform in conjunction with Cloud Workflows for executing the LLM fine tuned training.
 
 Follow the steps below:
 
@@ -175,7 +169,6 @@ The architecture needs the following infrastructure:
 - IAM Service Accounts to create a connection to Looker
   
 Deploy the terraform script:
-
 
 Run the following commands:
 ```

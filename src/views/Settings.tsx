@@ -78,7 +78,7 @@ export const Settings: React.FC = () => {
         </Span>
       </Space>
       <Space around>
-        <Heading fontWeight="semiBold"> Looker GenAI Demo: go/lookerllm - Design: go/lookerllm-design</Heading>
+        <Heading fontWeight="semiBold">Looker GenAI Extension</Heading>
       </Space>
       <Box display="flex" m="large">
           <SpaceVertical>

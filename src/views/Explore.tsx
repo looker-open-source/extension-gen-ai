@@ -273,7 +273,7 @@ export const Explore: React.FC = () => {
       </Space>      
       <SpaceVertical>
         <Space around> 
-        <Heading fontWeight="semiBold"> Looker GenAI Demo: go/lookerllm - Design: go/lookerllm-design</Heading>
+        <Heading fontWeight="semiBold"> Looker GenAI Extension</Heading>
         </Space>
         <Space around> 
         <Span> v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Span>
