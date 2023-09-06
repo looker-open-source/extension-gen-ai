@@ -83,7 +83,7 @@ export class ExploreService {
         SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
         FROM
         ML.GENERATE_TEXT(
-            MODEL llm.llm_model,
+            MODEL ${ConfigReader.BQML_MODEL},
             (
             ${selectPrompt}
             ),
@@ -95,6 +95,18 @@ export class ExploreService {
             1 AS top_k));
         `;
     }
+
+    private async logLookerFilterFields(modelFields: FieldMetadata[], userInput: string, result: LookerExploreDataModel):Promise<string>
+    {
+        const queryToRun = `INSERT INTO ${ConfigReader.EXPLORE_LOGGING}(creation_timestamp, userInput, modelFields, llmResult) VALUES(
+            CURRENT_TIMESTAMP(),
+            '${userInput}',
+            JSON '${JSON.stringify(modelFields)}',
+            JSON '${JSON.stringify(result)}')`;        
+        const results = await this.sql.executeLog(queryToRun);         
+        return results;
+    }
+
 
 
     private async retrieveLookerParametersFromLLM(promptArray:Array<string>)
@@ -118,7 +130,7 @@ export class ExploreService {
          const results = await this.sql.execute<{
              r: string
              status: string
-         }>(queryToRun);
+         }>(queryToRun);         
          return results;
     }
 
@@ -287,6 +299,10 @@ export class ExploreService {
         }> {
         // Call LLM to find the fields
         const exploreData = await this.getExplorePayloadFromLLM(modelFields, userInput);
+        
+        // Don't wait and check if there are errors because its logging to BigQuery DML Best Effort
+        this.logLookerFilterFields(modelFields, userInput, exploreData);
+    
         try {
             const llmQueryResult = await this.sql.createQuery({
                 model: modelName,
@@ -301,7 +317,7 @@ export class ExploreService {
             if (!queryId) {
                 throw new Error('unable to retrieve query id from created query');
             }
-            Logger.info("llmQuery: " + JSON.stringify(exploreData, null, 2));
+            Logger.info("llmQuery: " + JSON.stringify(exploreData, null, 2));            
             return {
                 queryId,
                 modelName,
