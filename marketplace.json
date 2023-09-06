@@ -1,0 +1,21 @@
+{
+  "label": "Looker GenAI",
+  "category_label": "Applications",
+  "branding": {
+    "image_uri": "https://marketplace-api.looker.com/app-icons/genai.png",
+    "tagline": "Use natural language to explore your data, create your dashboards and ask questions on top of the dashboard data.",
+    "brand_color": "#24B25F"
+  },
+  "constants": {
+    "CONNECTION_NAME": {
+      "label": "Connection Name",
+      "value_constraint": "connection"
+    }
+  },
+  "models": [
+    {
+      "name": "extension-api-explorer",
+      "connection_constant": "CONNECTION_NAME"
+    }
+  ]
+}
