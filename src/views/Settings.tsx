@@ -30,7 +30,6 @@ export const Settings: React.FC = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     // Every time it reloads
-    debugger;
     const customPrompt = JSON.parse(window.sessionStorage.getItem(storageCustomPrompt)!)
     const promptService = new PromptTemplateService(customPrompt);
     setCustomPrompt(promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));
