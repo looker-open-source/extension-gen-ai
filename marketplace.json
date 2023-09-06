@@ -14,7 +14,7 @@
   },
   "models": [
     {
-      "name": "extension-api-explorer",
+      "name": "extension-looker-gen-ai",
       "connection_constant": "CONNECTION_NAME"
     }
   ]
