@@ -2,7 +2,7 @@
   "label": "Looker GenAI",
   "category_label": "Applications",
   "branding": {
-    "image_uri": "https://marketplace-api.looker.com/app-icons/genai.png",
+    "image_uri": "https://marketplace-api.looker.com/app-icons/genai.jpg",
     "tagline": "Use natural language to explore your data, create your dashboards and ask questions on top of the dashboard data.",
     "brand_color": "#24B25F"
   },
