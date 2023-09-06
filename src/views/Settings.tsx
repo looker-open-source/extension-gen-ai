@@ -30,11 +30,12 @@ export const Settings: React.FC = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     // Every time it reloads
+    debugger;
     const customPrompt = JSON.parse(window.sessionStorage.getItem(storageCustomPrompt)!)
     const promptService = new PromptTemplateService(customPrompt);
     setCustomPrompt(promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));
     const cStorageNativeBQML = window.sessionStorage.getItem(storageNativeBQML) === "true" || window.sessionStorage.getItem(storageNativeBQML) === null;
-    const cStorageShowInstructions = window.sessionStorage.getItem(storageShowInstructions) === "true" || window.sessionStorage.getItem(storageNativeBQML) === null;
+    const cStorageShowInstructions = window.sessionStorage.getItem(storageShowInstructions) === "true" || window.sessionStorage.getItem(storageShowInstructions) === null;
     const cStorageLogLevel = window.sessionStorage.getItem(storageLogLevel);
     if(cStorageNativeBQML!= null)
     {
