@@ -56,7 +56,8 @@ First, clone the repository to Cloud Shell or your machine
 git clone https://github.com/looker-opensource/looker-ai 
 ```
 Or run directly on your Cloud Shell session:
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%ricardolui%2Flooker-ai-demo&shellonly=true&cloudshell_image=gcr.io/ds-artifacts-cloudshell/deploystack_custom_image)
+
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fricardolui%2Flooker-ai&shellonly=true&cloudshell_image=gcr.io/ds-artifacts-cloudshell/deploystack_custom_image)
 
 ## 4. Setting Up Infrastructure
 
@@ -154,15 +155,15 @@ On the `manifest.lkml` comment the file and put the url to localhost
 
 ## 6.1. Install the dependencies with [Yarn](https://yarnpkg.com/)
 
-    ```sh
-    yarn install
-    ```
+```shell
+yarn install
+```
 
 ## 6.2 Start the development server
 
-    ```sh
-    yarn develop
-    ```
+```shell
+yarn develop
+```
 
     The development server is now running and serving the JavaScript at https://localhost:8080/bundle.js.
 
@@ -171,9 +172,9 @@ On the `manifest.lkml` comment the file and put the url to localhost
   Execute the yarn build to generate the `dist/bundle.js`, and commit to the LookML project
   Make sure to the manifest pointing to local prod file: "`bundle.js`"
 
-    ```sh
-    yarn build
-    ```
+```shell
+yarn build
+```
 
 ---
 ### **Advanced and Optional**: Executing the Fine Tuning Model
@@ -191,7 +192,7 @@ TODO: The code have to be refactored to allow for the custom fine tuned model us
 #### Execute the Workflow
 
 Inside `gcloud` environment, invoke the Cloud Workflows
-```
+```shell
 gcloud workflows execute fine_tuning_model
 ```
 
