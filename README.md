@@ -55,6 +55,8 @@ First, clone the repository to Cloud Shell or your machine
 ```
 git clone https://github.com/looker-opensource/looker-ai 
 ```
+Or run directly on your Cloud Shell session:
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%ricardolui%2Flooker-ai-demo&shellonly=true&cloudshell_image=gcr.io/ds-artifacts-cloudshell/deploystack_custom_image)
 
 ## 4. Setting Up Infrastructure
 
