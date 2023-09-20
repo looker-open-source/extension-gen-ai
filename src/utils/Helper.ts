@@ -34,6 +34,10 @@ export class UtilsHelper {
             .replace(/\n/g, '\\n');
     }
 
+    public static escapeQueryAll(originalString:string): string {
+        return UtilsHelper.escapeSpecialCharacter(UtilsHelper.escapeBreakLine(originalString));
+    }
+
     /**
      * Adds an extra slash to line breaks \n -> \\n
      * @param originalString

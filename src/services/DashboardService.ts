@@ -39,8 +39,8 @@ export class DashboardService {
         this.dashboardService = new LookerDashboardService(lookerSDK, this.sql);        
     }
     
-    static readonly MAX_CHAR_PER_PROMPT: number = 8000*3;
-    static readonly MAX_CHAR_PER_TILE: number = 15000*3;
+    static readonly MAX_CHAR_PER_PROMPT: number = 5000*3;
+    static readonly MAX_CHAR_PER_TILE: number = 5000*3;
     static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 2000*3;
 
     /**
@@ -95,6 +95,51 @@ export class DashboardService {
         };
     }
 
+    public static getSizePerArrayOfTiles(tiles: Array<DashboardTile<unknown>>):number {        
+        let size = 0;
+        tiles.map(tile => {
+            size += JSON.stringify(tile.data).length;            
+        });
+        Logger.debug("size of array: " + size);
+        return size;
+    }
+
+    private breakTilesIntoBatches(dashboardElementData:
+        {
+            title?: string,
+            description?: string,
+            elements: Array<DashboardTile<unknown>>
+        }):Array<Array<DashboardTile<unknown>>>
+    {    
+        
+        const arrayBatchesOfDash:Array<Array<DashboardTile<unknown>>> = [];   
+        // Logic to break the dashboard tiles into batches following the max size of tokens per LLM response
+        for (const element of dashboardElementData.elements) {
+            // Data Length
+            const tileLength = JSON.stringify(element.data).length;
+            let needsToAddElement = true;
+            for(const batchOfDash of arrayBatchesOfDash)
+            {
+                const lengthArrayOfTiles = DashboardService.getSizePerArrayOfTiles(batchOfDash);
+                // Simple logic to fill the batches sequentially
+                if((lengthArrayOfTiles + tileLength) < DashboardService.MAX_CHAR_PER_PROMPT)
+                {
+                    // current array can accept more elements
+                    batchOfDash.push(element);
+                    needsToAddElement = false;
+                    break;
+                }
+            }
+            // Could not add the batch to existing batches
+            if(needsToAddElement)
+            {
+                // Create new batch
+                arrayBatchesOfDash.push([element]);
+            }
+        }
+        return arrayBatchesOfDash;        
+    }
+
     public async shardDashboardData(
         dashboardElementData:
         {
@@ -102,74 +147,46 @@ export class DashboardService {
             description?: string,
             elements: Array<DashboardTile<unknown>>
         } ,
-        question: string): Promise<string> {
+        userInput: string): Promise<string> {
         
-        const arrayTilesNotSummarizable: Array<DashboardTile<unknown>> = [];
-        const arrayTiles: Array<DashboardTile<unknown>> = [];
-        const arrayPromisesSummarizer: Array<Promise<DashboardTile<unknown>>> = [];
-        // Summarize Tiles
-        dashboardElementData.elements.map((dashTile) => {
-            const tileData = dashTile.data;
-            const tileLength = JSON.stringify(tileData).length;            
-            Logger.debug("Tile Length: "+ tileLength);
-            if( tileLength > DashboardService.MAX_CHAR_PER_TILE)
-            {                
-                Logger.trace("Limit of Element Data per Tile to be summarizable");
-                arrayTilesNotSummarizable.push(dashTile);
-            }
-            else if (tileLength> DashboardService.MIN_SUMMARIZE_CHAR_PER_TILE)
-            {
-                // Summarize
-                Logger.trace("Summarize this tile: " + dashTile.title);
-                arrayPromisesSummarizer.push(
-                    this.summarizeTile(dashTile, question,
-                         dashboardElementData.title, dashboardElementData.description));
-            }
-            else
-            {
-                Logger.trace("Sending as IS");
-                arrayTiles.push(dashTile);
-            }
-        });
+        // Break the current dashboard tiles into batches to send to LLM
+        const arrayBatchesOfDash:Array<Array<DashboardTile<unknown>>> = this.breakTilesIntoBatches(dashboardElementData);
         
-        const arraySummarized = await Promise.all(arrayPromisesSummarizer);
-        arrayTiles.concat(arraySummarized);                                
-        const tilesToSend = {
-            title: dashboardElementData.title,
-            description: dashboardElementData.description,
-            elements: arrayTiles
-        }        
-        return  JSON.stringify(tilesToSend);         
-    }
-
-    public async summarizeTile(
-        tile: DashboardTile<unknown>,
-        question: string,
-        title?: string,
-        description?: string        
-    )
-    {
-        const dashBoardContext = title!=null? "Dashboard Title: " + title: "" +
-         description!=null? " Dash Description: "+ description: "";
-
-        const userInput = question;
-        const serializedModelFields = JSON.stringify(tile.data);
-        const tileContext = tile.title!= null? "Tile Title: " + tile.title: "" +
-        tile.description!=null? " Tile Description: " + tile.description: "";
-
-        const promptSumarize = this.getPromptService().fillByType(PromptTemplateTypeEnum.DASH_SUMMARIZE, { dashBoardContext, userInput, serializedModelFields, tileContext});
-        const summaryResult = await this.sendPromptToBigQuery(promptSumarize);
-        try {
-            tile.data = JSON.parse(summaryResult);
-            return tile;
-        }
-        catch (error)
+        const promptArray: Array<string> = [];
+        // For each of the arrays, generate the prompts
+        for (const arrayTiles of arrayBatchesOfDash)
         {
-            Logger.debug(error);
-            throw new Error("unable to summarize: Could not parse JSON from BQ LLM");            
-        }                         
-    }
+            let dict:{ [key: string]: {} } = {};
+            for (const element of arrayTiles) {
+                let index = 0;                
+                const keyName:string = element.title? element.title : element.description? element.description : ""+ index;
+                dict[keyName] = element.data;                
+                index++;
+            }
+            const serializedModelFields:string = JSON.stringify(dict);
+            const tileContext = "Dashboard Title: " + dashboardElementData.title + "Description: " + dashboardElementData.description;
+            const prompt = this.getPromptService().fillByType(PromptTemplateTypeEnum.DASH_SUMMARIZE, {tileContext, serializedModelFields, userInput});
+            promptArray.push(prompt);            
+        }
 
+        const arraySelect: Array<string> = [];
+        promptArray.forEach((promptField) =>{
+             const singleLineString = UtilsHelper.escapeBreakLine(promptField);
+             const subselect = `SELECT '` + singleLineString + `' AS prompt`;                        
+             arraySelect.push(subselect);
+        });
+         // Join all the selects with union all
+        const queryContents = arraySelect.join(" UNION ALL ");
+0
+        if(queryContents == null || queryContents.length == 0)
+        {
+            throw new Error('Could not generate field arrays on Prompt');
+        }
+
+        // Concat strings and send to LLM again
+        return await this.getResultsFromBigQuery(queryContents);
+
+    }
 
     
     /**
@@ -186,18 +203,61 @@ export class DashboardService {
             elements: Array<DashboardTile<unknown>>
         } ,
         question: string): Promise<string> {
-        // Fix some characters that breaks BigQuery Query
+                
         let serializedElementData = JSON.stringify(dashboardElementData);            
         if (serializedElementData.length > DashboardService.MAX_CHAR_PER_PROMPT)
         {
             serializedElementData = await this.shardDashboardData(dashboardElementData, question);
-        }
+        }                        
+        const singleLineString = `Act as an experienced Business Data Analyst and answer the question having into context the following Data: ${serializedElementData} Question: ${question}`;                
         // Clean string to send to BigQuery
-        serializedElementData = serializedElementData.replace(/\'/g, '\\\'');
+        const escapedPrompt =  UtilsHelper.escapeQueryAll(singleLineString);
+        const subselect = `SELECT '` + escapedPrompt + `' AS prompt`;                        
+        Logger.debug("escapedPrompt: " + subselect);
         Logger.debug("Sending Prompt to BigQuery LLM");
-        const singleLineString = `Act as an experienced Business Data Analyst with PHD and answer the question having into context the following Data: ${serializedElementData} Question: ${question}`;                
-        return this.sendPromptToBigQuery(singleLineString);        
+        return this.getResultsFromBigQuery(subselect);    
 
+    }
+
+    
+
+
+    private buildBigQueryLLMQuery(selectPrompt:string)
+    {
+        return `#Looker GenAI Extension - Dashboard - version: ${ConfigReader.CURRENT_VERSION}
+        SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
+        FROM
+        ML.GENERATE_TEXT(
+            MODEL ${ConfigReader.BQML_MODEL},
+            (
+            ${selectPrompt}
+            ),
+            STRUCT(
+            0.05 AS temperature,
+            1024 AS max_output_tokens,
+            0.98 AS top_p,
+            TRUE AS flatten_json_output,
+            1 AS top_k));
+        `;
+    }
+
+
+    public async getResultsFromBigQuery(promptParameter:string): Promise<string>
+    {
+        const queryResults = await this.sendPromptToBigQuery(promptParameter);
+        let result_string = "";        
+        for(const queryResult of queryResults)
+        {
+            const status = queryResult.status;
+            if (status!="" && status!=null) {
+                throw new Error('generated llm result does not contain expected colums');
+            }            
+            else
+            {
+                result_string = result_string.concat(queryResult.r + " \n");
+            }            
+        }        
+        return result_string;
     }
 
     /**
@@ -206,36 +266,14 @@ export class DashboardService {
      * @param promptParameter 
      * @returns 
      */
-    public async sendPromptToBigQuery(promptParameter: string){
+    private async sendPromptToBigQuery(promptParameter: string){
         // Create SQL Query to
-        const query = `SELECT ml_generate_text_llm_result as r, ml_generate_text_status
-        FROM
-        ML.GENERATE_TEXT(
-            MODEL `+ ConfigReader.BQML_MODEL +`,
-            (
-            SELECT '`+ promptParameter + `' AS prompt
-            ),
-            STRUCT(
-            0.2 AS temperature,
-            1024 AS max_output_tokens,
-            0.95 AS top_p,
-            TRUE AS flatten_json_output,
-            40 AS top_k));
-        `;
+        const query = this.buildBigQueryLLMQuery(promptParameter);
         const queryResults = await this.sql.execute<{
             r: string
-            ml_generate_text_status: string
+            status: string
         }>(query);
-        // Create SQL Query to Run
-        var firstResult = UtilsHelper.firstElement(queryResults);
-        if (!firstResult.r) {
-            const generateTextStatus = firstResult.ml_generate_text_status
-            if (!generateTextStatus) {
-                throw new Error('generated llm result does not contain expected colums');
-            }
-            throw new Error('generated llm result contains errors: ' + generateTextStatus);
-        }
-        return firstResult.r;
+        return queryResults;
     }
 }
 
