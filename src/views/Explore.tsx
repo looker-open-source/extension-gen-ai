@@ -58,7 +58,6 @@ export const Explore: React.FC = () => {
   const [message, setMessage] = useState('')
   const [loadingLookerModels, setLoadingLookerModels] = useState<boolean>(false)
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
-  const [lookerModels, setLookerModels] = useState<ILookmlModel[]>([])
   const [errorMessage, setErrorMessage] = useState<string>()
   const [allComboExplores, setAllComboExplores] = useState<ComboboxOptionObject[]>()  
   const [currentComboExplores, setCurrentComboExplores] = useState<ComboboxOptionObject[]>()
@@ -123,11 +122,12 @@ export const Explore: React.FC = () => {
     setErrorMessage(undefined);
     try {
       const req: IRequestAllLookmlModels = {
+        fields : "name, explores"
       }
+  
       const modelsPromise = core40SDK.ok(core40SDK.all_lookml_models(req));
       const promptPromise = promptService.getExplorePrompts();
       const [models, prompts] = await Promise.all([modelsPromise, promptPromise]);  
-      setLookerModels(models);
       setTopPrompts(prompts);
       generateComboExploreFromModels(models);  
       generateCombosForTopPrompts(prompts);
