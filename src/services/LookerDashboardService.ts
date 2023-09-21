@@ -47,7 +47,7 @@ export class LookerDashboardService {
      * @returns
      */
     public async listAll(): Promise<IDashboardBase[]> {
-        const dashboardsResult = await this.lookerSDK.all_dashboards();
+        const dashboardsResult = await this.lookerSDK.all_dashboards("title,id");
         if (!dashboardsResult.ok) {
             throw new Error('unable to fetch all dashboards');
         }

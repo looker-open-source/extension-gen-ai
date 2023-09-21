@@ -80,6 +80,7 @@ export const Dashboard: React.FC = () => {
   }
 
   const loadDashboards = async () => {
+    setLoadingLLM(true);
     setLoadingCombobox(true);
     setErrorMessage(undefined);
     try {
@@ -87,9 +88,11 @@ export const Dashboard: React.FC = () => {
       setLookerDashboards(result);
       generateComboDashboards(result);
       setLoadingCombobox(false);
+      setLoadingLLM(false);
     } catch (error) {
-      setLoadingCombobox(false)
-      setErrorMessage('Error loading looks')
+      setLoadingCombobox(false);
+      setErrorMessage('Error loading looks');
+      setLoadingLLM(false);
     }
   }
 
@@ -260,7 +263,7 @@ export const Dashboard: React.FC = () => {
             <Button onClick={handleClear}>Clear Insights</Button>
           </Space>
           <Dialog isOpen={loadingLLM}>
-            <DialogLayout header="Loading LLM Data to Explore...">
+            <DialogLayout header="Loading LLM Dashboards...">
               <Spinner size={80}>
               </Spinner>
             </DialogLayout>
