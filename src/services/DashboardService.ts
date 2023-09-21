@@ -250,7 +250,8 @@ export class DashboardService {
         {
             const status = queryResult.status;
             if (status!="" && status!=null) {
-                throw new Error('generated llm result does not contain expected colums');
+                // Log instead of breaking the application
+                Logger.error("some of the llm results had an error: " + status);
             }            
             else
             {
