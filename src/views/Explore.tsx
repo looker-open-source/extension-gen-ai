@@ -225,16 +225,20 @@ export const Explore: React.FC = () => {
         {
           for(var field of f_dim_measures)
           {
-            var field_def:FieldMetadata = {
-              // "field_type": "Dimension", this is not needed
-              // "view_name": dimension.view_label,
-              label : field.label!,
-              name: field.name!,
-              // "type": dimension.type,
-              description: field.description!
-              // "sql": dimension.sql,
-            };
-            my_fields.push(field_def);
+            // Hidden is not true
+            if(field.hidden != true)
+            {
+              var field_def:FieldMetadata = {
+                // "field_type": "Dimension", this is not needed
+                // "view_name": dimension.view_label,
+                label : field.label!,
+                name: field.name!,
+                // "type": dimension.type,
+                description: field.description!
+                // "sql": dimension.sql,
+              };
+              my_fields.push(field_def);
+            }            
           }          
         }
         if(!exploreResult.ok)
@@ -269,85 +273,59 @@ export const Explore: React.FC = () => {
   }
 
   
-  return (    
-    <ComponentsProvider>
-      <Space around>
-        <Span fontSize="xxxxxlarge">
-          {message}
-        </Span>        
-      </Space>      
+  return (      
+    <ComponentsProvider>      
       <SpaceVertical>
         <Space around> 
-        <Heading fontWeight="semiBold"> Looker GenAI Extension</Heading>
-        </Space>
-        <Space around> 
-        <Span> v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Span>
-        </Space>
+        <Heading fontWeight="semiBold"> Looker Extension GenAI - v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Heading>
+        </Space>                
       </SpaceVertical>      
-      <Box display="flex" m="large">        
-          <SpaceVertical>
-          {showInstructions? 
-          <SpaceVertical>
-            <Span fontSize="large">
-            Quick Start:                                    
-            </Span>  
+      <Space align="start">        
+        <SpaceVertical align="start" width="500px">                            
             <Span fontSize="medium">
-            1. Select the Explore by selecting or typing.
-            </Span>          
-            <Span fontSize="medium">
-            2. Click on the Text Area and type your question to the Explore - <b>example: What are the top 15 count, language and day. Pivot per day</b>
+              Feedback or bugs, send to: <b>looker-genai-extension@google.com</b>
             </Span>
-            <Span fontSize="medium">
-            3. Wait for the Explore to appear below and add to an dashboard if needed.
-            </Span>                      
-          </SpaceVertical> 
-            : <Span/>
-          }                  
-          <Span fontSize="medium">
-            Any doubts or feedback or bugs, send it to <b>looker-genai-extension@google.com</b>
-          </Span>
-          <Span fontSize="small">
-          Public Documentation on: <a href="https://github.com/looker-open-source/extension-gen-ai" target="_blank">https://github.com/looker-open-source/extension-gen-ai</a>
-          </Span>   
-          <FieldSelect 
-            id="topExamplesId"           
-            label="Top Examples to Try"
-            onChange={selectTopPromptCombo}           
-            options={topPromptsCombos}
-            width={500}
-          />
-
-          <FieldSelect                       
-            isFilterable
-            onFilter={onFilterComboBox}
-            isLoading={loadingLookerModels}
-            label="All Explores"
-            onChange={selectComboExplore}            
-            options={currentComboExplores}
-            width={500}
-            value={selectedModelExplore}
-          />    
-          <FieldTextArea            
-            width="100%"
-            label="Type your question"  
-            value={prompt}
-            onChange={handleChange}
-          />
-          <Space>
-            <Button onClick={handleSend}>Send</Button>                     
-          </Space>        
-          <Dialog isOpen={loadingLLM}>
-            <DialogLayout header="Loading LLM Data to Explore...">
-              <Spinner size={80}>
-              </Spinner>
-            </DialogLayout>            
-            </Dialog>        
-          
-        <EmbedContainer ref={embedCtrRef}>          
-        </EmbedContainer>
-        </SpaceVertical>                                   
-      </Box>
-
+            <Span fontSize="small">
+            Documentation on: <a href="https://github.com/ricardolui/extension-gen-ai" target="_blank">https://github.com/ricardolui/extension-gen-ai</a>
+            </Span>   
+            <FieldSelect 
+              id="topExamplesId"           
+              label="Top Examples to Try"
+              onChange={selectTopPromptCombo}           
+              options={topPromptsCombos}
+              width={500}
+            />
+            <FieldSelect                       
+              isFilterable
+              onFilter={onFilterComboBox}
+              isLoading={loadingLookerModels}
+              label="All Explores"
+              onChange={selectComboExplore}            
+              options={currentComboExplores}
+              width={500}
+              value={selectedModelExplore}
+            />    
+            <FieldTextArea            
+              width={500}
+              label="Type your question"  
+              value={prompt}
+              onChange={handleChange}
+            />
+            <Space>
+              <Button onClick={handleSend}>Send</Button>                     
+            </Space>        
+            <Dialog isOpen={loadingLLM}>
+              <DialogLayout header="Loading LLM Data to Explore...">
+                <Spinner size={80}>
+                </Spinner>
+              </DialogLayout>            
+            </Dialog>
+        </SpaceVertical>                                                                 
+        <Space stretch>
+          <EmbedContainer ref={embedCtrRef}>          
+          </EmbedContainer>
+        </Space>
+      </Space>
     </ComponentsProvider>
   )
 }
