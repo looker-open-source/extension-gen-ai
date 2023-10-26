@@ -16,11 +16,27 @@ import { Settings } from './Settings'
 
 const ObjectContext = createContext<any | null>(null);
 
+const getRoot = () => {
+  const id = 'extension-root'
+  const existingRoot = document.getElementById(id)
+  if (existingRoot) return existingRoot
+  const root = document.createElement('div')
+  root.setAttribute('id', id)
+  root.style.height = '100vh'
+  root.style.display = 'flex'
+  document.body.style.margin = '0'
+  document.body.appendChild(root)
+  return root
+}
 
 // customized chattyTimeout (promises inside extension to 5 min for LLM models)
 export const App = hot(() => (
   <ExtensionProvider chattyTimeout={300000}>
-    <ComponentsProvider>
+    <ComponentsProvider
+      themeCustomizations={{
+        colors: { key: '#1A73E8' },
+        defaults: { externalLabel: false },
+      }}>
       <Tabs2 defaultTabId="explore">
         <Tab2 id="explore" label="Generative Explores" >
           <Explore />

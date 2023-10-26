@@ -197,78 +197,59 @@ export const Dashboard: React.FC = () => {
 
   return (
     <ComponentsProvider>
-      <Space around>
-        <Span fontSize="xxxxxlarge">
-          {message}
-        </Span>
-      </Space>
-      <SpaceVertical>
+     <SpaceVertical>
         <Space around> 
-        <Heading fontWeight="semiBold">Looker GenAI Extension</Heading>                        
-        </Space>
-        <Space around> 
-        <Span> v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Span>
-        </Space>
+        <Heading fontWeight="semiBold"> Looker Extension GenAI - v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Heading>
+        </Space>                
       </SpaceVertical>
-      <Box display="flex" m="large">
-          <SpaceVertical>
-          {showInstructions? 
-          <SpaceVertical>
-          <Span fontSize="large">
-          Quick Start:
-          </Span>
-          <Span fontSize="medium">
-          1. Select the Dashboard by selecting or typing
-          </Span>
-          <Span fontSize="medium">
-          2. Input a question that you want to ask the dashboard
-          </Span>          
-          </SpaceVertical>
-          :
-          <Span/>}
-          <Span fontSize="medium">
-          Any doubts or feedback or bugs, send it to <b>looker-genai-extension@google.com</b>
-          </Span>
-          <Span fontSize="small">
-            Public Documentation on: <a href="https://github.com/looker-open-source/extension-gen-ai" target="_blank">https://github.com/looker-open-source/extension-gen-ai</a>
-          </Span>   
-          <FieldSelect
-            isFilterable
-            onFilter={onFilterComboBox}
-            isLoading={loadingCombobox}
-            label="All Dashboards"
-            onChange={selectCombo}
-            options={currentCombo}
-            width={500}
-          />
-          <FieldTextArea
-            width="100%"
-            label="Type your question"
-            value={prompt}
-            onChange={handleChange}
-            defaultValue={defaultPromptValue}
-          />
-          <Space>
-            <Button onClick={handleSend}>Send</Button>
-            <Button onClick={handleClear}>Clear Insights</Button>
-          </Space>
-          <Dialog isOpen={loadingLLM}>
-            <DialogLayout header="Loading LLM Dashboards...">
-              <Spinner size={80}>
-              </Spinner>
-            </DialogLayout>
-            </Dialog>
-
-          <TextArea
-            disabled
-            placeholder="Insights from LLM Model"
-            value={llmInsights}
-          />
-          <EmbedContainer ref={embedCtrRef}>
+      <Space align="start">        
+        <SpaceVertical align="start" width="500px">                            
+            <Span fontSize="medium">
+              Feedback or bugs, send to: <b>looker-genai-extension@google.com</b>
+            </Span>
+            <Span fontSize="small">
+            Documentation on: <a href="https://github.com/ricardolui/extension-gen-ai" target="_blank">https://github.com/ricardolui/extension-gen-ai</a>
+            </Span>    
+            <FieldSelect
+              isFilterable
+              onFilter={onFilterComboBox}
+              isLoading={loadingCombobox}
+              label="All Dashboards"
+              onChange={selectCombo}
+              options={currentCombo}
+              width={500}
+            />
+            <FieldTextArea
+              width="100%"
+              label="Type your question"
+              value={prompt}
+              onChange={handleChange}
+              defaultValue={defaultPromptValue}
+            />
+            <Space>
+              <Button onClick={handleSend}>Send</Button>
+              <Button onClick={handleClear}>Clear Insights</Button>
+            </Space>
+            <Dialog isOpen={loadingLLM}>
+              <DialogLayout header="Loading LLM Dashboards...">
+                <Spinner size={80}>
+                </Spinner>
+              </DialogLayout>
+            </Dialog>            
+             <SpaceVertical stretch>
+              <TextArea                        
+                placeholder="Insights from LLM Model"
+                value={llmInsights}
+                readOnly
+                height="500px"              
+              />
+              </SpaceVertical>                      
+           </SpaceVertical>                                                                 
+        <Space stretch>
+          <EmbedContainer ref={embedCtrRef}>          
           </EmbedContainer>
-        </SpaceVertical>
-      </Box>
-
+        </Space>
+      </Space>
     </ComponentsProvider>
   )
 }
