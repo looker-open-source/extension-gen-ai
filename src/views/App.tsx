@@ -6,13 +6,14 @@
  * https://opensource.org/licenses/MIT.
  */
 import React, {createContext} from 'react'
-import { ComponentsProvider, Tabs2, Tab2 } from "@looker/components";
+import { ComponentsProvider, Tabs2, Tab2, SpaceVertical, Space, Heading, Span } from "@looker/components";
 import { ExtensionProvider} from '@looker/extension-sdk-react'
 import { hot } from 'react-hot-loader/root'
 
 import { Explore } from './Explore'
 import { Dashboard } from './Dashboard'
 import { Settings } from './Settings'
+import { ConfigReader } from '../services/ConfigReader'
 
 const ObjectContext = createContext<any | null>(null);
 
@@ -37,6 +38,23 @@ export const App = hot(() => (
         colors: { key: '#1A73E8' },
         defaults: { externalLabel: false },
       }}>
+      <SpaceVertical padding="10px">
+        <Space around> 
+        <Heading fontWeight="semiBold"> Looker Extension GenAI - v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Heading>        
+        </Space>
+        <Space paddingLeft="15px" center>
+        <Span fontSize="small">
+          <a href="https://github.com/ricardolui/extension-gen-ai" target="_blank">Documentation</a>
+        </Span>
+        <Span fontSize="small">
+          <a href="https://github.com/ricardolui/extension-gen-ai" target="_blank">Videos and Tutorials</a>
+        </Span>
+        <Span fontSize="small">
+          <a href="mailto:looker-extension-genai@google.com" target="_blank"> Feedback: looker-extension-genai@google.com</a>
+        </Span>        
+        </Space>                
+        
+      </SpaceVertical>      
       <Tabs2 defaultTabId="explore">
         <Tab2 id="explore" label="Generative Explores" >
           <Explore />

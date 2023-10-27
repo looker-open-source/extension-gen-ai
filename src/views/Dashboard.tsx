@@ -196,20 +196,9 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <ComponentsProvider>
-     <SpaceVertical>
-        <Space around> 
-        <Heading fontWeight="semiBold"> Looker Extension GenAI - v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Heading>
-        </Space>                
-      </SpaceVertical>
+    <ComponentsProvider>     
       <Space align="start">        
-        <SpaceVertical align="start" width="500px">                            
-            <Span fontSize="medium">
-              Feedback or bugs, send to: <b>looker-genai-extension@google.com</b>
-            </Span>
-            <Span fontSize="small">
-            Documentation on: <a href="https://github.com/ricardolui/extension-gen-ai" target="_blank">https://github.com/ricardolui/extension-gen-ai</a>
-            </Span>    
+        <SpaceVertical align="start" width="350px" paddingLeft="15px">                                       
             <FieldSelect
               isFilterable
               onFilter={onFilterComboBox}
@@ -217,7 +206,7 @@ export const Dashboard: React.FC = () => {
               label="All Dashboards"
               onChange={selectCombo}
               options={currentCombo}
-              width={500}
+              width="100%"
             />
             <FieldTextArea
               width="100%"

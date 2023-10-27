@@ -20,7 +20,6 @@ export const Settings: React.FC = () => {
   const [message] = useState('')
   const [logLevel, setLogLevel] = useState<string>("info");
   const [usingNativeBQML, setUsingNativeBQML] = useState(true as MixedBoolean)
-  const [showInstructions, setShowInstructions] = useState(true as MixedBoolean)
   const [customPrompt, setCustomPrompt] = useState<string>();  
 
   const storageShowInstructions = "showInstructions";
@@ -49,11 +48,7 @@ export const Settings: React.FC = () => {
     {
       setLogLevel(cStorageLogLevel);
       Logger.setLoggerLevelByName(cStorageLogLevel);
-    }
-    if(cStorageShowInstructions!=null)
-    {
-      setShowInstructions(cStorageShowInstructions);
-    }
+    } 
 
   }, [])
 
@@ -76,23 +71,9 @@ export const Settings: React.FC = () => {
   }
 
   return (
-    <ComponentsProvider>
-      <Space around>
-        <Span fontSize="xxxxxlarge">
-          {message}
-        </Span>
-      </Space>
-      <Space around>
-        <Heading fontWeight="semiBold">Looker GenAI Extension</Heading>
-      </Space>
+    <ComponentsProvider>          
       <Box display="flex" m="large">
-          <SpaceVertical>
-          <Span fontSize="x-large">
-          Extension Settings
-          </Span>
-          <Span fontSize="medium">
-          Any doubts or feedback or bugs, send it to <b>looker-genai-extension@google.com</b>
-          </Span>
+          <SpaceVertical>          
           <Label>Console Log Level</Label>
           <Combobox  width={"300px"} value={logLevel} onChange={handleChangeCombo}>
             <ComboboxInput />
@@ -114,15 +95,6 @@ export const Settings: React.FC = () => {
               setUsingNativeBQML(!usingNativeBQML);
             }}
           /> */}
-
-           <FieldCheckbox
-            label="Show Instructions"
-            checked={showInstructions}
-            onChange={() => {
-              window.sessionStorage.setItem(storageShowInstructions, showInstructions?"false": "true");
-              setShowInstructions(!showInstructions);
-            }}
-          />
 
           <FieldTextArea
             width="100%"
