@@ -274,26 +274,15 @@ export const Explore: React.FC = () => {
 
   
   return (      
-    <ComponentsProvider>      
-      <SpaceVertical>
-        <Space around> 
-        <Heading fontWeight="semiBold"> Looker Extension GenAI - v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Heading>
-        </Space>                
-      </SpaceVertical>      
+    <ComponentsProvider>            
       <Space align="start">        
-        <SpaceVertical align="start" width="500px">                            
-            <Span fontSize="medium">
-              Feedback or bugs, send to: <b>looker-genai-extension@google.com</b>
-            </Span>
-            <Span fontSize="small">
-            Documentation on: <a href="https://github.com/ricardolui/extension-gen-ai" target="_blank">https://github.com/ricardolui/extension-gen-ai</a>
-            </Span>   
+        <SpaceVertical align="start" width="350px" paddingLeft="15px">                                      
             <FieldSelect 
               id="topExamplesId"           
               label="Top Examples to Try"
               onChange={selectTopPromptCombo}           
               options={topPromptsCombos}
-              width={500}
+              width="100%"
             />
             <FieldSelect                       
               isFilterable
@@ -302,11 +291,11 @@ export const Explore: React.FC = () => {
               label="All Explores"
               onChange={selectComboExplore}            
               options={currentComboExplores}
-              width={500}
+              width="100%"
               value={selectedModelExplore}
             />    
             <FieldTextArea            
-              width={500}
+              width="100%"
               label="Type your question"  
               value={prompt}
               onChange={handleChange}
