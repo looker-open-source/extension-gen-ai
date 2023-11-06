@@ -41,14 +41,12 @@ export const Dashboard: React.FC = () => {
   const [llmInsights, setLlmInsights] = useState<string>()
   const [dashboardDivElement, setDashboardDivElement] = useState<HTMLDivElement>()
   const [hostUrl, setHostUrl] = useState<string>()
-  const [showInstructions, setShowInstructions] = useState<boolean>(true);
 
   const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
   const defaultPromptValue = "Can you summarize the following datasets in 10 bullet points?";
 
   useEffect(() => {
-    loadDashboards();
-    setShowInstructions(window.sessionStorage.getItem("showInstructions")==='true' || window.sessionStorage.getItem("showInstructions")==null)
+    loadDashboards();    
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

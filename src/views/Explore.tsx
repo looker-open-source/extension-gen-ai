@@ -59,13 +59,10 @@ export const Explore: React.FC = () => {
   const [topPromptsCombos, setTopPromptsCombos] = useState<ComboboxOptionObject[]>()
   const [topPrompts, setTopPrompts] = useState<PromptModel[]>([])
 
-  const [showInstructions, setShowInstructions] = useState<boolean>(true);
-
   const promptService: PromptService = new PromptService(core40SDK);
 
   useEffect(() => {
     loadExplores();
-    setShowInstructions(window.sessionStorage.getItem("showInstructions")==='true' || window.sessionStorage.getItem("showInstructions")==null)
   ;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -204,8 +201,15 @@ export const Explore: React.FC = () => {
   {    
     handleClearAll();  
     setLoadingLLM(true);
-    Logger.debug("Debug CustomPrompt" +  window.sessionStorage.getItem("customPrompt"));
-    const promptService = new PromptTemplateService(JSON.parse(window.sessionStorage.getItem("customPrompt")!));
+    var promptService = new PromptTemplateService();
+    try {
+      Logger.debug("Debug CustomPrompt on Window Storage" +  window.sessionStorage.getItem("customPrompt"));
+      promptService = new PromptTemplateService(JSON.parse(window.sessionStorage.getItem("customPrompt")!));
+    }
+    catch{
+      Logger.error("Failed to load custom prompt from Session Storage");
+    }
+        
     const generativeExploreService = new ExploreService(core40SDK, promptService);
 
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
