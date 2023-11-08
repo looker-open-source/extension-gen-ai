@@ -5,12 +5,13 @@
  * license that can be found in the LICENSE file or at
  * https://opensource.org/licenses/MIT.
  */
-import { Box, Combobox, ComboboxInput, ComboboxList, ComboboxOption, ComponentsProvider, FieldCheckbox, FieldTextArea, Heading, Label, MaybeComboboxOptionObject, MixedBoolean, Space, SpaceVertical, Span } from '@looker/components'
+import { Box, Button,  Combobox, ComboboxInput, ComboboxList, ComboboxOption, ComponentsProvider, Dialog, DialogLayout, FieldCheckbox, FieldTextArea, Heading, Label, MaybeComboboxOptionObject, MixedBoolean, Space, SpaceVertical, Span, Spinner } from '@looker/components'
 import React, { FormEvent, useContext, useEffect, useState } from 'react'
 import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/PromptTemplateService'
 import { Logger } from '../utils/Logger'
 import { PromptService } from '../services/PromptService'
 import { ExtensionContext } from '@looker/extension-sdk-react'
+import { ConfigReader, ISettings } from '../services/ConfigReader'
 
 
 /**
@@ -19,45 +20,59 @@ import { ExtensionContext } from '@looker/extension-sdk-react'
 export const Settings: React.FC = () => {  
   const [message] = useState('')
   const [logLevel, setLogLevel] = useState<string>("info");
-  const [usingNativeBQML, setUsingNativeBQML] = useState(true as MixedBoolean)
   const [customPrompt, setCustomPrompt] = useState<string>();  
-
-  const storageShowInstructions = "showInstructions";
-  const storageNativeBQML = "usingNativeBQML";
-  const storageLogLevel = "logLevel";
-  const storageCustomPrompt = "customPrompt";
+  const [loadingSettings, setLoadingSettings] = useState<boolean>(false)
+  const [settings, setSettings] = useState<ISettings>();
 
   const { core40SDK } =  useContext(ExtensionContext)
   const promptService: PromptService = new PromptService(core40SDK);
+  const configReader: ConfigReader = new ConfigReader(core40SDK);
+  
   
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     // Every time it reloads
-    const customPrompt = JSON.parse(window.sessionStorage.getItem(storageCustomPrompt)!)
-    const promptService = new PromptTemplateService(customPrompt);
-    setCustomPrompt(promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));
-    const cStorageNativeBQML = window.sessionStorage.getItem(storageNativeBQML) === "true" || window.sessionStorage.getItem(storageNativeBQML) === null;
-    const cStorageShowInstructions = window.sessionStorage.getItem(storageShowInstructions) === "true" || window.sessionStorage.getItem(storageShowInstructions) === null;
-    const cStorageLogLevel = window.sessionStorage.getItem(storageLogLevel);
-    if(cStorageNativeBQML!= null)
-    {
-      setUsingNativeBQML(cStorageNativeBQML);
-    }
-    if(cStorageLogLevel!=null)
-    {
-      setLogLevel(cStorageLogLevel);
-      Logger.setLoggerLevelByName(cStorageLogLevel);
-    } 
-
+    loadSettings();            
   }, [])
+
+  const loadSettings = async () => {
+    setLoadingSettings(true);
+    var configSettings;
+    try
+    {
+      configSettings = await configReader.getSettings()      
+      Logger.info("Settings" + configSettings);
+    }
+    catch {
+      // Load default settings in case of any exception loading from BigQuery
+      Logger.debug("Could not load settings from BigQuery. Setting defaults.");
+      configSettings = {
+        logLevel: "info",
+        customPrompt: JSON.stringify({
+          [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: ""
+        })
+      };
+    }    
+    
+    setSettings(configSettings);
+    Logger.info("Settings loaded: " + JSON.stringify(configSettings));
+    const customPrompt = configSettings.customPrompt!;
+    const customTemplate =  {
+      [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: customPrompt
+    };
+    const promptService = new PromptTemplateService(customTemplate);
+    setCustomPrompt(promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));    
+    setLogLevel(configSettings?.logLevel!);
+    Logger.setLoggerLevelByName(configSettings?.logLevel!);   
+    setLoadingSettings(false);      
+  }
 
   const handleChangePrompt = (e: FormEvent<HTMLTextAreaElement>) => {
     setCustomPrompt(e.currentTarget.value);
     const tempCustomPrompt: { [key in PromptTemplateTypeEnum]?: string } = {
       [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: e.currentTarget.value
-    }
-    window.sessionStorage.setItem(storageCustomPrompt, JSON.stringify(tempCustomPrompt));
+    }    
   }
 
   const handleChangeCombo= (comboboxComponent: MaybeComboboxOptionObject) => {
@@ -65,10 +80,28 @@ export const Settings: React.FC = () => {
       throw new Error('missing combobox componenet');
     }
     Logger.setLoggerLevelByName(comboboxComponent.value);
-    window.sessionStorage.setItem(storageLogLevel, comboboxComponent.value);
     setLogLevel(comboboxComponent.value);
     Logger.debug(comboboxComponent.value);
   }
+
+  const handleSaveUserSettings = () =>
+  {
+    setLoadingSettings(true);
+    configReader.updateSettings({
+      logLevel: logLevel,
+      customPrompt: JSON.stringify(customPrompt)
+    });
+    setLoadingSettings(false);
+  }
+
+  const handleResetDefaultSettings = () =>
+  {
+    setLoadingSettings(true);
+    configReader.resetDefaultSettings();
+    loadSettings();
+    setLoadingSettings(false);
+  }
+
 
   return (
     <ComponentsProvider>          
@@ -86,16 +119,6 @@ export const Settings: React.FC = () => {
             </ComboboxList>
           </Combobox>
 
-          {/* TODO: implement fine tuned model and option to change  */}
-          {/* <FieldCheckbox
-            label="Yes - Use Native BQML Method - Fine Tuned not implemented"
-            checked={usingNativeBQML}
-            onChange={() => {
-              window.sessionStorage.setItem(storageNativeBQML, usingNativeBQML?"false": "true");
-              setUsingNativeBQML(!usingNativeBQML);
-            }}
-          /> */}
-
           <FieldTextArea
             width="100%"
             height="500px"
@@ -103,6 +126,16 @@ export const Settings: React.FC = () => {
             value={customPrompt}
             onChange={handleChangePrompt}
           />
+          <Space>
+            <Button onClick={handleSaveUserSettings}>Save</Button>                     
+            <Button color='neutral' onClick={handleResetDefaultSettings}>Reset to Default</Button>                     
+          </Space>
+          <Dialog isOpen={loadingSettings}>
+              <DialogLayout header="Loading Settings...">
+                <Spinner size={80}>
+                </Spinner>
+              </DialogLayout>            
+            </Dialog>          
         </SpaceVertical>
       </Box>
 

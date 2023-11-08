@@ -27,7 +27,7 @@ export class LookerSQLService {
     {
         if(this.connectionName == "")
         {
-            // TODO: try to get dynamically the looker-genai modelName
+            // TODO: try to get dynamically the looker-genai modelName    
             let response = await this.lookerSDK.ok(this.lookerSDK.lookml_model('looker-genai'));
             if(response.allowed_db_connection_names!=null && response.allowed_db_connection_names.length > 0)
             {
