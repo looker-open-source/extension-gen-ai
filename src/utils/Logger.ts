@@ -17,7 +17,11 @@ export enum LoggerLevelEnum {
 }
 
 export class Logger {
-    private static minLevel: LoggerLevelEnum;
+
+    /**
+     * Minimum log level to be logged.
+     */
+    private static minLevel: LoggerLevelEnum = LoggerLevelEnum.Trace;
 
     public static setLoggerLevelByNumber(levelIndex: number){
         const levels: string[] = UtilsHelper.enumToArray(LoggerLevelEnum);

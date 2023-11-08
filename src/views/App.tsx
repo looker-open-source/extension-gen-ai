@@ -62,7 +62,7 @@ export const App = hot(() => (
         <Tab2 id="dashboards" label="Generative Insights on Dashboards">
         <Dashboard/>
         </Tab2>
-        <Tab2 id="settings" label="Extension Settings">
+        <Tab2 id="settings" label="Developer Settings">
         <Settings/>
         </Tab2>
       </Tabs2>

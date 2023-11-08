@@ -53,11 +53,11 @@ User chooses a Looker Dashboard and asks questions using natural language. In th
 ## 3. Getting Started
 First, clone the repository to Cloud Shell or your machine
 ```
-git clone https://github.com/looker-opensource/looker-ai 
+git clone https://github.com/looker-open-source/extension-gen-ai
 ```
 Or run directly on your Cloud Shell session:
 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fricardolui%2Fextension-gen-ai&shellonly=true&cloudshell_image=gcr.io/ds-artifacts-cloudshell/deploystack_custom_image)
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Flooker-open-source%2Fextension-gen-ai&shellonly=true&cloudshell_image=gcr.io/ds-artifacts-cloudshell/deploystack_custom_image)
 
 *Don't forget to trust the deploystack_custom_image image
 
