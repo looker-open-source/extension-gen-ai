@@ -48,7 +48,7 @@ export class DashboardService {
      * @returns
      */
     public async listAll(): Promise<IDashboardBase[]> {
-        return await this.dashboardService.listAll();
+        return this.dashboardService.listAll();
     }
 
     /**

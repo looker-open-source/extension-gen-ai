@@ -12,60 +12,38 @@ import { Logger } from '../utils/Logger'
 import { PromptService } from '../services/PromptService'
 import { ExtensionContext } from '@looker/extension-sdk-react'
 import { ConfigReader, ISettings } from '../services/ConfigReader'
-
+import { StateContextType } from '../@types/settings'
+import { StateContext } from '../context/settingsContext'
+import { custom } from 'joi'  
 
 /**
  * Settings
  */
 export const Settings: React.FC = () => {  
-  const [message] = useState('')
-  const [logLevel, setLogLevel] = useState<string>("info");
-  const [customPrompt, setCustomPrompt] = useState<string>();  
+  const [message] = useState('')  
   const [loadingSettings, setLoadingSettings] = useState<boolean>(false)
   const [settings, setSettings] = useState<ISettings>();
 
   const { core40SDK } =  useContext(ExtensionContext)
   const promptService: PromptService = new PromptService(core40SDK);
   const configReader: ConfigReader = new ConfigReader(core40SDK);
+  const [logLevel, setLogLevel] = useState<string>("info");
+  const [customPrompt, setCustomPrompt] = useState<string>("");
+  const { configSettings, saveSettings, resetSettings } = React.useContext(StateContext) as StateContextType;
   
   
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     // Every time it reloads
-    loadSettings();            
+    loadSettings(configSettings);    
   }, [])
 
-  const loadSettings = async () => {
-    setLoadingSettings(true);
-    var configSettings;
-    try
-    {
-      configSettings = await configReader.getSettings()      
-      Logger.info("Settings" + configSettings);
-    }
-    catch {
-      // Load default settings in case of any exception loading from BigQuery
-      Logger.debug("Could not load settings from BigQuery. Setting defaults.");
-      configSettings = {
-        logLevel: "info",
-        customPrompt: JSON.stringify({
-          [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: ""
-        })
-      };
-    }    
-    
-    setSettings(configSettings);
-    Logger.info("Settings loaded: " + JSON.stringify(configSettings));
-    const customPrompt = configSettings.customPrompt!;
-    const customTemplate =  {
-      [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: customPrompt
-    };
-    const promptService = new PromptTemplateService(customTemplate);
-    setCustomPrompt(promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));    
-    setLogLevel(configSettings?.logLevel!);
-    Logger.setLoggerLevelByName(configSettings?.logLevel!);   
-    setLoadingSettings(false);      
+  const loadSettings = (config:ISettings) => {
+    setSettings(config);
+    setLogLevel(config?.logLevel!);
+    setCustomPrompt(config?.customPrompt!);    
+    Logger.setLoggerLevelByName(config?.logLevel!);    
   }
 
   const handleChangePrompt = (e: FormEvent<HTMLTextAreaElement>) => {
@@ -75,31 +53,30 @@ export const Settings: React.FC = () => {
     }    
   }
 
+
   const handleChangeCombo= (comboboxComponent: MaybeComboboxOptionObject) => {
     if (!comboboxComponent) {
       throw new Error('missing combobox componenet');
     }
     Logger.setLoggerLevelByName(comboboxComponent.value);
-    setLogLevel(comboboxComponent.value);
+    setLogLevel(comboboxComponent.value);    
     Logger.debug(comboboxComponent.value);
   }
 
   const handleSaveUserSettings = () =>
-  {
-    setLoadingSettings(true);
-    configReader.updateSettings({
+  {    
+    Logger.debug("Current custom Prompt: "+ customPrompt);
+    saveSettings({
+      userId: configSettings.userId,
       logLevel: logLevel,
-      customPrompt: JSON.stringify(customPrompt)
-    });
-    setLoadingSettings(false);
+      customPrompt: customPrompt
+    });       
   }
 
-  const handleResetDefaultSettings = () =>
-  {
-    setLoadingSettings(true);
-    configReader.resetDefaultSettings();
-    loadSettings();
-    setLoadingSettings(false);
+  const handleResetDefaultSettings = async () =>
+  {        
+    const resetConfig = await resetSettings();
+    loadSettings(resetConfig);   
   }
 
 
@@ -128,7 +105,7 @@ export const Settings: React.FC = () => {
           />
           <Space>
             <Button onClick={handleSaveUserSettings}>Save</Button>                     
-            <Button color='neutral' onClick={handleResetDefaultSettings}>Reset to Default</Button>                     
+            <Button id="resetDefaultSettingsButton" color='neutral' onClick={handleResetDefaultSettings}>Reset to Default</Button>                     
           </Space>
           <Dialog isOpen={loadingSettings}>
               <DialogLayout header="Loading Settings...">

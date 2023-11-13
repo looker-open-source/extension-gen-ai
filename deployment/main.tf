@@ -202,6 +202,23 @@ EOF
 }
 
 
+resource "google_bigquery_table" "table_settings" {
+  dataset_id = google_bigquery_dataset.dataset.dataset_id
+  table_id   = "settings"  
+  deletion_protection = false
+  schema              = <<EOF
+[{
+	"name": "config",
+	"type": "JSON"
+}, {
+	"name": "userId",
+	"type": "STRING"
+}]
+EOF
+  depends_on = [time_sleep.wait_after_apis_activate]
+}
+
+
 
 
 
