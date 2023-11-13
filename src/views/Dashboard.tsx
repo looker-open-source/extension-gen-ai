@@ -209,6 +209,7 @@ export const Dashboard: React.FC = () => {
                 placeholder="Insights from LLM Model"
                 value={llmInsights}
                 readOnly
+                height="400px"
               />
               </SpaceVertical>                      
            </SpaceVertical>                                                                 
