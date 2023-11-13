@@ -19,6 +19,8 @@ import { EmbedContainer } from './EmbedContainer'
 import { DashboardService } from '../services/DashboardService'
 import { Logger } from '../utils/Logger'
 import { ConfigReader } from '../services/ConfigReader'
+import { StateContext } from '../context/settingsContext'
+import { StateContextType } from '../@types/settings'
 
 /**
  * Ask a Question to a Dashboard using LLM Models
@@ -45,41 +47,20 @@ export const Dashboard: React.FC = () => {
   const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
   const defaultPromptValue = "Can you summarize the following datasets in 10 bullet points?";
 
+  const { dashboardCombo } = React.useContext(StateContext) as StateContextType;
+
   useEffect(() => {
     loadDashboards();    
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function generateComboDashboards(listDashs: IDashboardBase[]) {
-    // sort the dashboards on the combo
-    const listSortedDashs = listDashs.sort((a:IDashboardBase,b:IDashboardBase) => (a.title!=null&&b.title!=null)?a.title.localeCompare(b.title):0);
-    const comboObjects: ComboboxOptionObject[] = listSortedDashs
-      .map(({ title, id }) => ({
-          label: [title, id].join(' - '),
-          value: [title, id].join('.')
-      }));
-    // set Initial Combo Explore and All
-    setAllCombo(comboObjects);
-    setCurrentCombo(comboObjects);
+  function loadDashboards() {
+    Logger.info("Loading Dashboards"); 
+    setAllCombo(dashboardCombo);
+    setCurrentCombo(dashboardCombo);
     setPrompt(defaultPromptValue);
   }
 
-  const loadDashboards = async () => {
-    setLoadingLLM(true);
-    setLoadingCombobox(true);
-    setErrorMessage(undefined);
-    try {
-      const result = await generativeDashboardService.listAll();
-      setLookerDashboards(result);
-      generateComboDashboards(result);
-      setLoadingCombobox(false);
-      setLoadingLLM(false);
-    } catch (error) {
-      setLoadingCombobox(false);
-      setErrorMessage('Error loading looks');
-      setLoadingLLM(false);
-    }
-  }
 
   const selectCombo = ((selectedValue: string) => {
     const splittedArray = selectedValue.split(".");

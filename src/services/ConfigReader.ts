@@ -11,6 +11,7 @@ import { LookerSQLService } from "./LookerSQLService";
 import { Logger } from "../utils/Logger";
 
 export interface ISettings {
+    userId: string;
     logLevel: string;
     customPrompt: string;
 }
@@ -56,10 +57,12 @@ export class ConfigReader {
     {   
         await this.setUserId();        
         const queryToRun = `#Looker GenAI Extension - version: ${ConfigReader.CURRENT_VERSION} - getConfig
-SELECT JSON_VALUE(settings[0]["logLevel"]) as logLevel,
-JSON_VALUE(settings[0]["customPrompt"]) as customPrompt
-FROM ${ConfigReader.SETTINGS_TABLE} WHERE userId = "${this.userId}" OR userId IS NULL ORDER BY COALESCE(userId,"-1") DESC LIMIT 1`;
-        const results = await this.sql.execute<ISettings>(queryToRun);                 
+SELECT "${this.userId}" as userId,
+JSON_VALUE(settings[0]["logLevel"]) as logLevel,
+JSON_VALUE(settings[0]["customPrompt"]) as customPrompt,
+COALESCE(userId, "-1") as priority
+FROM ${ConfigReader.SETTINGS_TABLE} WHERE userId = "${this.userId}" OR userId IS NULL ORDER BY priority DESC LIMIT 1`;
+        const results = await this.sql.execute<ISettings>(queryToRun);                         
         return results[0];
     }
 
@@ -75,7 +78,9 @@ FROM ${ConfigReader.SETTINGS_TABLE} WHERE userId = "${this.userId}" OR userId IS
 BEGIN
 DELETE FROM ${ConfigReader.SETTINGS_TABLE} WHERE userId = "${this.userId}";
 INSERT INTO ${ConfigReader.SETTINGS_TABLE} (config, userId)
-VALUES(JSON_OBJECT('logLevel', "${updatedSettings.logLevel}", 'customPrompt', ${updatedSettings.customPrompt}), "${this.userId}");
+VALUES(JSON_OBJECT('logLevel', "${updatedSettings.logLevel}", 'customPrompt', """
+${updatedSettings.customPrompt}
+"""), "${this.userId}");
 END`;        
         const results = await this.sql.executeLog(queryToRun);
         Logger.debug("Updated settings: "+ results);                                

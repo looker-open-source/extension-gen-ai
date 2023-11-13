@@ -32,11 +32,13 @@ import { Box, Heading } from '@looker/components'
 import { EmbedContainer } from './EmbedContainer'
 import { ExploreEvent, LookerEmbedSDK} from '@looker/embed-sdk'
 import { ExploreService, FieldMetadata } from '../services/ExploreService'
-import { PromptTemplateService } from '../services/PromptTemplateService'
+import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/PromptTemplateService'
 import { Logger } from '../utils/Logger'
-import { ConfigReader } from '../services/ConfigReader'
+import { ConfigReader, ISettings } from '../services/ConfigReader'
 import { PromptService } from '../services/PromptService'
 import PromptModel from '../models/PromptModel'
+import { StateContext } from '../context/settingsContext'
+import { StateContextType } from '../@types/settings'
 /**
  * Looker GenAI - Explore Component
  */
@@ -45,49 +47,28 @@ export const Explore: React.FC = () => {
   const [message, setMessage] = useState('')
   const [loadingLookerModels, setLoadingLookerModels] = useState<boolean>(false)
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
-  const [errorMessage, setErrorMessage] = useState<string>()
-  const [allComboExplores, setAllComboExplores] = useState<ComboboxOptionObject[]>()  
-  const [currentComboExplores, setCurrentComboExplores] = useState<ComboboxOptionObject[]>()
-  const [selectedModelExplore, setSelectedModelExplore] = useState<string>()
+  const [errorMessage, setErrorMessage] = useState<string>()  
   const [currentModelName, setCurrentModelName] = useState<string>()
-  const [currentExploreName, setCurrentExploreName] = useState<string>()
-  const [prompt, setPrompt] = useState<string>()
+  const [currentExploreName, setCurrentExploreName] = useState<string>()  
   const [currentExploreId, setCurrentExploreId] = useState<string>()
   const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
   const [hostUrl, setHostUrl] = useState<string>()
 
-  const [topPromptsCombos, setTopPromptsCombos] = useState<ComboboxOptionObject[]>()
-  const [topPrompts, setTopPrompts] = useState<PromptModel[]>([])
+  const [topPromptsCombos, setTopPromptsCombos] = useState<ComboboxOptionObject[]>()  
+  const { configSettings, exploreComboPromptExamples, explorePromptExamples, exploreComboModels,
+    exploreCurrentComboModels,selectedModelExplore ,setExploreCurrentComboModels,
+    setSelectedModelExplore, prompt, setPrompt } = React.useContext(StateContext) as StateContextType;
+
 
   const promptService: PromptService = new PromptService(core40SDK);
 
+
   useEffect(() => {
-    loadExplores();
-  ;
+    loadExplores();  
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function generateComboExploreFromModels(listModels: ILookmlModel[]) {
-    const sortedModels = listModels.sort((a:ILookmlModel,b:ILookmlModel) => (a.name!=null&&b.name!=null)?a.name.localeCompare(b.name):0)
-
-    var allValues:ComboboxOptionObject[] = [];
-    sortedModels.forEach(model => {
-      model.explores?.forEach(explore => {
-        if( model!=null && explore!=null)
-        {          
-          const exp = {
-            label: model.name + " - " + explore.name,
-            value: model.name + "." + explore.name  
-          };
-          // @ts-ignore
-          allValues.push(exp);
-        }        
-      })
-    });
-    // set Initial Combo Explore and All
-    setAllComboExplores(allValues);
-    setCurrentComboExplores(allValues);    
-  }
+ 
 
   function generateCombosForTopPrompts(prompts: Array<PromptModel>) {
     var allValues:ComboboxOptionObject[] = [];
@@ -100,27 +81,10 @@ export const Explore: React.FC = () => {
     setTopPromptsCombos(allValues);
   }
 
-  const loadExplores = async () => {    
-    setLoadingLLM(true);
-    setLoadingLookerModels(true);
-    setErrorMessage(undefined);
-    try {
-      const req: IRequestAllLookmlModels = {
-        fields : "name, explores"
-      }
-  
-      const modelsPromise = core40SDK.ok(core40SDK.all_lookml_models(req));
-      const promptPromise = promptService.getExplorePrompts();
-      const [models, prompts] = await Promise.all([modelsPromise, promptPromise]);  
-      setTopPrompts(prompts);
-      generateComboExploreFromModels(models);  
-      generateCombosForTopPrompts(prompts);
-      setLoadingLookerModels(false);
-      setLoadingLLM(false);
-    } catch (error) {
-      setLoadingLookerModels(false)
-      setErrorMessage('Error loading looks')
-    }
+  const loadExplores = async () => { 
+    Logger.debug("Loading Explores");
+    setExploreCurrentComboModels(exploreComboModels);    
+    setErrorMessage(undefined);    
   }
 
 
@@ -138,7 +102,7 @@ export const Explore: React.FC = () => {
 
   const selectTopPromptCombo = ((selectedValue: string) => {    
     selectComboExplore(selectedValue);
-    topPrompts.forEach(topPrompt => {
+    explorePromptExamples.forEach(topPrompt => {
       if(topPrompt.modelExplore === selectedValue)
       {
         setPrompt(topPrompt.prompt);        
@@ -148,8 +112,9 @@ export const Explore: React.FC = () => {
 
   
   const onFilterComboBox = ((filteredTerm: string) => {
+    
     Logger.info("Filtering");
-    setCurrentComboExplores(allComboExplores?.filter(explore => explore.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
+    setExploreCurrentComboModels(exploreComboModels?.filter(explore => explore.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
   });
 
   const selectCurrentExploreName = (exploreName: string) => {
@@ -197,14 +162,18 @@ export const Explore: React.FC = () => {
   }, [])
 
   // Method that triggers sending the message to the workflow
-  const handleSend = () =>
+  const handleSend = async () =>
   {    
     handleClearAll();  
     setLoadingLLM(true);
     var promptService = new PromptTemplateService();
-    try {
-      Logger.debug("Debug CustomPrompt on Window Storage" +  window.sessionStorage.getItem("customPrompt"));
-      promptService = new PromptTemplateService(JSON.parse(window.sessionStorage.getItem("customPrompt")!));
+    try {      
+      
+      const customPrompt = configSettings.customPrompt!;
+      const customTemplate =  {
+        [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: customPrompt
+      };
+      promptService = new PromptTemplateService(customTemplate);
     }
     catch{
       Logger.error("Failed to load custom prompt from Session Storage");
@@ -285,16 +254,15 @@ export const Explore: React.FC = () => {
               id="topExamplesId"           
               label="Top Examples to Try"
               onChange={selectTopPromptCombo}           
-              options={topPromptsCombos}
+              options={exploreComboPromptExamples}
               width="100%"
             />
             <FieldSelect                       
               isFilterable
               onFilter={onFilterComboBox}
-              isLoading={loadingLookerModels}
               label="All Explores"
               onChange={selectComboExplore}            
-              options={currentComboExplores}
+              options={exploreCurrentComboModels}
               width="100%"
               value={selectedModelExplore}
             />    

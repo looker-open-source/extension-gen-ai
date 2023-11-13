@@ -14,6 +14,7 @@ import { Explore } from './Explore'
 import { Dashboard } from './Dashboard'
 import { Settings } from './Settings'
 import { ConfigReader } from '../services/ConfigReader'
+import StateProvider from '../context/settingsContext';
 
 const ObjectContext = createContext<any | null>(null);
 
@@ -38,16 +39,17 @@ export const App = hot(() => (
         colors: { key: '#1A73E8' },
         defaults: { externalLabel: false },
       }}>
+      <StateProvider>
       <SpaceVertical padding="10px">
         <Space around> 
         <Heading fontWeight="semiBold"> Looker Extension GenAI - v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Heading>        
         </Space>
         <Space paddingLeft="15px" center>
         <Span fontSize="small">
-          <a href="https://github.com/ricardolui/extension-gen-ai" target="_blank">Documentation</a>
+          <a href="https://github.com/looker-open-source/extension-gen-ai" target="_blank">Documentation</a>
         </Span>
         <Span fontSize="small">
-          <a href="https://github.com/ricardolui/extension-gen-ai" target="_blank">Videos and Tutorials</a>
+          <a href="https://github.com/looker-open-source/extension-gen-ai" target="_blank">Videos and Tutorials</a>
         </Span>
         <Span fontSize="small">
           <a href="mailto:looker-extension-genai@google.com" target="_blank"> Feedback: looker-extension-genai@google.com</a>
@@ -66,6 +68,7 @@ export const App = hot(() => (
         <Settings/>
         </Tab2>
       </Tabs2>
+      </StateProvider>
     </ComponentsProvider>
   </ExtensionProvider>
 ))
