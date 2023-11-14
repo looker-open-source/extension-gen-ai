@@ -1,5 +1,10 @@
-// Copyright 2023 Google LLC
-
+/**
+ * Copyright 2023 Google LLC
+ *
+ * Use of this source code is governed by an MIT-style
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/MIT.
+ */
 import { Box, Button, ComboboxCallback, ComboboxOptionObject, ComponentsProvider, Dialog,
    DialogLayout, FieldSelect, FieldTextArea, TextArea, Heading, MaybeComboboxOptionObject,
     Space, SpaceVertical, Span, Spinner } from '@looker/components'
@@ -14,6 +19,8 @@ import { EmbedContainer } from './EmbedContainer'
 import { DashboardService } from '../services/DashboardService'
 import { Logger } from '../utils/Logger'
 import { ConfigReader } from '../services/ConfigReader'
+import { StateContext } from '../context/settingsContext'
+import { StateContextType } from '../@types/settings'
 
 /**
  * Ask a Question to a Dashboard using LLM Models
@@ -36,44 +43,24 @@ export const Dashboard: React.FC = () => {
   const [llmInsights, setLlmInsights] = useState<string>()
   const [dashboardDivElement, setDashboardDivElement] = useState<HTMLDivElement>()
   const [hostUrl, setHostUrl] = useState<string>()
-  const [showInstructions, setShowInstructions] = useState<boolean>(true);
 
   const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
   const defaultPromptValue = "Can you summarize the following datasets in 10 bullet points?";
 
+  const { dashboardCombo } = React.useContext(StateContext) as StateContextType;
+
   useEffect(() => {
-    loadDashboards();
-    setShowInstructions(window.sessionStorage.getItem("showInstructions")==='true' || window.sessionStorage.getItem("showInstructions")==null)
+    loadDashboards();    
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function generateComboDashboards(listDashs: IDashboardBase[]) {
-    // sort the dashboards on the combo
-    const listSortedDashs = listDashs.sort((a:IDashboardBase,b:IDashboardBase) => (a.title!=null&&b.title!=null)?a.title.localeCompare(b.title):0);
-    const comboObjects: ComboboxOptionObject[] = listSortedDashs
-      .map(({ title, id }) => ({
-          label: [title, id].join(' - '),
-          value: [title, id].join('.')
-      }));
-    // set Initial Combo Explore and All
-    setAllCombo(comboObjects);
-    setCurrentCombo(comboObjects);
+  function loadDashboards() {
+    Logger.info("Loading Dashboards"); 
+    setAllCombo(dashboardCombo);
+    setCurrentCombo(dashboardCombo);
     setPrompt(defaultPromptValue);
   }
 
-  const loadDashboards = async () => {
-    setLoadingCombobox(true);
-    setErrorMessage(undefined);
-    try {
-      const result = await generativeDashboardService.listAll();
-      setLookerDashboards(result);
-      generateComboDashboards(result);
-      setLoadingCombobox(false);
-    } catch (error) {
-      setLoadingCombobox(false)
-      setErrorMessage('Error loading looks')
-    }
-  }
 
   const selectCombo = ((selectedValue: string) => {
     const splittedArray = selectedValue.split(".");
@@ -188,76 +175,49 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <ComponentsProvider>
-      <Space around>
-        <Span fontSize="xxxxxlarge">
-          {message}
-        </Span>
-      </Space>
-      <SpaceVertical>
-        <Space around> 
-        <Heading fontWeight="semiBold">Looker GenAI Extension</Heading>                        
-        </Space>
-        <Space around> 
-        <Span> v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Span>
-        </Space>
-      </SpaceVertical>
-      <Box display="flex" m="large">
-          <SpaceVertical>
-          {showInstructions? 
-          <SpaceVertical>
-          <Span fontSize="large">
-          Quick Start:
-          </Span>
-          <Span fontSize="medium">
-          1. Select the Dashboard by selecting or typing
-          </Span>
-          <Span fontSize="medium">
-          2. Input a question that you want to ask the dashboard
-          </Span>          
-          </SpaceVertical>
-          :
-          <Span/>}
-          <Span fontSize="medium">
-          Any doubts or feedback or bugs, send it to <b>looker-genai-extension@google.com</b>
-          </Span>
-          <FieldSelect
-            isFilterable
-            onFilter={onFilterComboBox}
-            isLoading={loadingCombobox}
-            label="All Dashboards"
-            onChange={selectCombo}
-            options={currentCombo}
-            width={500}
-          />
-          <FieldTextArea
-            width="100%"
-            label="Type your question"
-            value={prompt}
-            onChange={handleChange}
-            defaultValue={defaultPromptValue}
-          />
-          <Space>
-            <Button onClick={handleSend}>Send</Button>
-            <Button onClick={handleClear}>Clear Insights</Button>
-          </Space>
-          <Dialog isOpen={loadingLLM}>
-            <DialogLayout header="Loading LLM Data to Explore...">
-              <Spinner size={80}>
-              </Spinner>
-            </DialogLayout>
-            </Dialog>
-
-          <TextArea
-            disabled
-            placeholder="Insights from LLM Model"
-            value={llmInsights}
-          />
-          <EmbedContainer ref={embedCtrRef}>
+    <ComponentsProvider>     
+      <Space align="start">        
+        <SpaceVertical align="start" width="350px" paddingLeft="15px">                                       
+            <FieldSelect
+              isFilterable
+              onFilter={onFilterComboBox}
+              isLoading={loadingCombobox}
+              label="All Dashboards"
+              onChange={selectCombo}
+              options={currentCombo}
+              width="100%"
+            />
+            <FieldTextArea
+              width="100%"
+              label="Type your question"
+              value={prompt}
+              onChange={handleChange}
+              defaultValue={defaultPromptValue}
+            />
+            <Space>
+              <Button onClick={handleSend}>Send</Button>
+              <Button onClick={handleClear}>Clear Insights</Button>
+            </Space>
+            <Dialog isOpen={loadingLLM}>
+              <DialogLayout header="Loading LLM Dashboards...">
+                <Spinner size={80}>
+                </Spinner>
+              </DialogLayout>
+            </Dialog>            
+             <SpaceVertical stretch>
+              <TextArea                        
+                placeholder="Insights from LLM Model"
+                value={llmInsights}
+                readOnly
+                height="400px"
+              />
+              </SpaceVertical>                      
+           </SpaceVertical>                                                                 
+        <Space stretch>
+          <EmbedContainer ref={embedCtrRef}>          
           </EmbedContainer>
-        </SpaceVertical>
-      </Box>
-
+        </Space>
+      </Space>
     </ComponentsProvider>
   )
 }

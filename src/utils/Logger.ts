@@ -1,3 +1,11 @@
+/**
+ * Copyright 2023 Google LLC
+ *
+ * Use of this source code is governed by an MIT-style
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/MIT.
+ */
+
 import { UtilsHelper } from "./Helper";
 
 export enum LoggerLevelEnum {
@@ -9,7 +17,11 @@ export enum LoggerLevelEnum {
 }
 
 export class Logger {
-    private static minLevel: LoggerLevelEnum;
+
+    /**
+     * Minimum log level to be logged.
+     */
+    private static minLevel: LoggerLevelEnum = LoggerLevelEnum.Trace;
 
     public static setLoggerLevelByNumber(levelIndex: number){
         const levels: string[] = UtilsHelper.enumToArray(LoggerLevelEnum);

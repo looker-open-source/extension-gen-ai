@@ -1,3 +1,11 @@
+/**
+ * Copyright 2023 Google LLC
+ *
+ * Use of this source code is governed by an MIT-style
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/MIT.
+ */
+
 import { UtilsHelper } from "../utils/Helper";
 
 export enum PromptTemplateTypeEnum {
@@ -80,14 +88,10 @@ Return the JSON with only the fields needed to answer following Question.
 The ouput format is a valid JSON: {"field_names": [], "filters":{}, "pivots": [], "sorts": []}
 Question: {{userInput}}`,
 
-        [PromptTemplateTypeEnum.DASH_SUMMARIZE]:`Dashboard Context: {{dashboardContext}}
+        [PromptTemplateTypeEnum.DASH_SUMMARIZE]:`Act as an experienced Data Analyst, reading a Dashboard with a Tile Context, the Input Data and answer the Question below. 
 Tile Context: {{tileContext}}
 InputData: {{serializedModelFields}}
 Question: {{userInput}}
-
-Based on the Question, Summarize the InputData in a relevant way to help answer this Question.
-Calculate any necessary metrics such as Average, Min, Max, etc.
-The ouput should be JSON.
 `
     };
     

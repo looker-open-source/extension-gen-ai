@@ -4,23 +4,26 @@
   - [2. Solutions architecture overview](#2-solutions-architecture-overview)
     - [2.1 Data Exploration](#21-data-exploration)
       - [Workflow for Data Exploration with BQML Remote Models](#workflow-for-data-exploration-with-bqml-remote-models)
-    - [Workflow for Data Exploration with Custom Fine Tune Model (Optional Path)](#workflow-for-data-exploration-with-custom-fine-tune-model-optional-path)
+      - [Workflow for Data Exploration with Custom Fine Tune Model (Optional Path to be implemented)](#workflow-for-data-exploration-with-custom-fine-tune-model-optional-path-to-be-implemented)
     - [2.2 Business Insights](#22-business-insights)
       - [Workflow for Business Insights](#workflow-for-business-insights)
   - [3. Getting Started](#3-getting-started)
-  - [4. Developing the Looker Extension Environment](#4-developing-the-looker-extension-environment)
+  - [4. Setting Up Infrastructure](#4-setting-up-infrastructure)
+    - [4.1 Enable Cloud Resource Manager API](#41-enable-cloud-resource-manager-api)
+    - [4.2 Deploy the infrastructure using Terraform](#42-deploy-the-infrastructure-using-terraform)
   - [5. Deploying the Looker Extension](#5-deploying-the-looker-extension)
-  - [5. Setting Up Vertex and LLM Backends](#5-setting-up-vertex-and-llm-backends)
-    - [5.1 Enable Cloud Resource Manager API](#51-enable-cloud-resource-manager-api)
-    - [5.1 Deploy the infrastructure using Terraform](#51-deploy-the-infrastructure-using-terraform)
-    - [5.2 Execute the Workflow](#52-execute-the-workflow)
-    - [5.3 Test the environment with a Simple Query](#53-test-the-environment-with-a-simple-query)
+  - [6. Developing the Looker Extension Environment](#6-developing-the-looker-extension-environment)
+  - [6.1. Install the dependencies with Yarn](#61-install-the-dependencies-with-yarn)
+  - [6.2 Start the development server](#62-start-the-development-server)
+  - [6.3 Build for production](#63-build-for-production)
+    - [**Advanced and Optional**: Executing the Fine Tuning Model](#advanced-and-optional-executing-the-fine-tuning-model)
+      - [Execute the Workflow](#execute-the-workflow)
 
 ## 1. Overview
 This repository compiles prescriptive code samples demonstrating how to create a Looker Extension integrating Looker with Vertex AI Large Language Models (LLMs).
 
 Looker GenAI is an extension created to showcase interactivity between Looker and LLM with 2 main applications:
-1.  Data Exploration using NLP and GenAI (ask a looker explore). Using Natural Language to ask your data about specific things. The LLM Model will try to find the right fields, filters and pivots to explore the data.
+1.  Data Exploration using NLP and GenAI (ask a looker explore). Using Natural Language to ask your data about specific things. The LLM Model will try to find the right fields, filters, sorts, pivots and limits to explore the data.
 2.  Business Insights on top of Dashboards. With this feature, we ingest all the data from the selected Dashboard as a context and can ask the LLM model a question based on the context provided
 
 ## 2. Solutions architecture overview
@@ -36,9 +39,9 @@ The current default implementation uses the native integration between BigQuery 
 
 ![Workflow](/images/looker-extension-workflow-data-exploration.png)
 
-### Workflow for Data Exploration with Custom Fine Tune Model (Optional Path)
+#### Workflow for Data Exploration with Custom Fine Tune Model (Optional Path to be implemented)
 Optionally, users can train their own custom fine tune model, giving more examples to make it more accurate than the default model.
-If users want to follow this path, on this repo there is a Terraform Deployment Example on how to achieve that using Cloud Workflows to orchestrate the creation of the Fine Tuned Model, the Cloud Function and BigQuery UDF calling the Cloud Function.
+If users want to follow this path, on this repo there is a Terraform Deployment Example on how to achieve that using Cloud Workflows to orchestrate the creation of the Fine Tuned Model, the Cloud Function and BigQuery UDF calling the Cloud Function. Users needs to adapt the code and SQL queries to do the execution using the fine tuned model.
 
 ![Workflow](/images/looker-extension-workflow-data-exploration-fine-tuned-model.png)
 
@@ -50,35 +53,47 @@ User chooses a Looker Dashboard and asks questions using natural language. In th
 ## 3. Getting Started
 First, clone the repository to Cloud Shell or your machine
 ```
-git clone https://github.com/looker-opensource/looker-ai
+git clone https://github.com/looker-open-source/extension-gen-ai
+```
+Or run directly on your Cloud Shell session:
+
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Flooker-open-source%2Fextension-gen-ai&shellonly=true&cloudshell_image=gcr.io/ds-artifacts-cloudshell/deploystack_custom_image)
+
+*Don't forget to trust the deploystack_custom_image image
+
+## 4. Setting Up Infrastructure
+
+Follow the steps below inside cloud shell with the GCP project to deploy the infrastructure needed
+
+### 4.1 Enable Cloud Resource Manager API
+```
+  gcloud services enable cloudresourcemanager.googleapis.com
 ```
 
-Then follow instructions for [4. Developing the Extension](#3-getting-started-for-development-environment) or [5. Deploying the Extension](#4-deploying-the-extension)
+### 4.2 Deploy the infrastructure using Terraform
+The architecture for the extension needs the following infrastructure in a GCP Project:
+- BigQuery Dataset (default name: llm)
+- BigQuery Remote Model pointing to Palm API (llm_model)
+- IAM Service Accounts to create a connection to Looker
+- IAM permission for BQ connection to connect to Vertex AI
+  
+Deploy the terraform script:
+
+Run the following commands:
+```
+  cd deployment
+  terraform init
+  terraform apply -var="project_id=YOUR_PROJECT_ID"  
+```
+
+While your terraform is executing, follow instructions for [5. Deploying the Looker Extension](#5-deploying-the-looker-extension) or [6.Developing and Extending the Extension](#6-deploying-the-extension)
 
 
-## 4. Developing the Looker Extension Environment
+## 5. Deploying the Looker Extension
 
-1. Install the dependencies with [Yarn](https://yarnpkg.com/).
+The Extension will be available directly through Marketplace or through a manual deployment described below:
 
-    ```sh
-    yarn install
-    ```
-
-2. Build the project
-
-    ```sh
-    yarn build
-    ```
-
-3. Start the development server
-
-    ```sh
-    yarn develop
-    ```
-
-    The development server is now running and serving the JavaScript at https://localhost:8080/bundle.js.
-
-4. Now log in to Looker and create a new project.
+1. Log in to Looker and create a new project named `looker-genai`.
 
     Depending on the version of Looker, a new project can be created under:
 
@@ -87,17 +102,45 @@ Then follow instructions for [4. Developing the Extension](#3-getting-started-fo
 
     Select "Blank Project" as the "Starting Point". This creates a new LookML project with no files.
 
-5. Create a `manifest` file
+2. In this github repository, there is a folder named `looker-project-structure`, containing 3 files:
+  - `manifest.lkml`
+  - `looker-genai.model`
+  - `bundle.js`
+  
+    Drag and drop all the 3 files to the project folder.
 
-   Either drag and upload the `manifest.lkml` file in this directory into your Looker project, or create a `manifest.lkml` with the same content. Change the  `label` or `url` as needed.
+3. Change the `looker-genai.model` to include the looker connection to BigQuery that will do.
 
-   ```
+    In this step you can create a new connection and use the service account generated from the terraform or use an existing Connection from Looker. If you use an existing connection, make sure to give the right **IAM permission** to the service account, so it can query and use the newly created connection and model.
+   
+4. Connect the new project to Git.
+
+    Create a new repository on GitHub or a similar service, and follow the instructions to [connect your project to Git](https://docs.looker.com/data-modeling/getting-started/setting-up-git-connection) or setup a bare repository.
+
+5. Commit the changes and deploy them to production through the Project UI.
+   
+6. Make sure that the project has permission to use this connection. 
+  - **Develop** => **Projects** => **Configure** ==> Select ONLY the connection that will be used to connect to BigQuery for the Extension LLM application
+   
+7. Manually go the GCP Project, and make sure that the service account with the connection has permission to use the new created connection on the new llm dataset. 
+   
+8. Test the Extension. Open the Web Developer Console on the Browser to see errors or debug. Verify on your GCP project that the queries are coming to BigQuery and executing properly.
+   
+9. If you have any doubts, questions, feel free to e-mail: looker-genai-extension@google.com. We also have a debug table in BigQuery called explore_logs which you can export to CSV and send to us.
+
+
+---
+## 6. Developing the Looker Extension Environment
+
+You can follow all the steps from Deploying the extension.
+On the `manifest.lkml` comment the file and put the url to localhost
+
+ ```
     project_name: "looker-genai"
     application: looker-genai {
         label: "Looker GenAI Extension"
-        # for development: url: "https://localhost:8080/bundle.js"
-        # production
-        file: "bundle.js"
+        url: "https://localhost:8080/bundle.js"
+        # Comment production file: "bundle.js"
         entitlements: {
           use_embeds: yes
           use_form_submit: yes
@@ -110,76 +153,49 @@ Then follow instructions for [4. Developing the Extension](#3-getting-started-fo
     }
    ```
 
-6. Create a `model` LookML file in your project.
 
-   Typically, the model is named the same as the extension project. The model is used to control access to the extension.
 
-   - [Configure the model you created](https://docs.looker.com/data-modeling/getting-started/create-projects#configuring_a_model) so that it has access to some connection (any connection).
+## 6.1. Install the dependencies with [Yarn](https://yarnpkg.com/)
 
-7. Connect the new project to Git.
+```shell
+yarn install
+```
 
-   - Create a new repository on GitHub or a similar service, and follow the instructions to [connect your project to Git](https://docs.looker.com/data-modeling/getting-started/setting-up-git-connection)
+## 6.2 Start the development server
 
-8. Commit the changes and deploy them to production through the Project UI.
+```shell
+yarn develop
+```
 
-9. Reload the page and click the `Browse` dropdown menu. You should see the extension label in the list.
+    The development server is now running and serving the JavaScript at https://localhost:8080/bundle.js.
 
-   - The extension will load the JavaScript from the `url` you provided in the `application` definition. By default, this is `https://localhost:8080/bundle.js`. If you change the port your server runs on in the `package.json`, you will need to also update it in the `manifest.lkml`.
-   - Reloading the extension page will bring in any new code changes from the extension template.
+## 6.3 Build for production
 
-## 5. Deploying the Looker Extension
+  Execute the yarn build to generate the `dist/bundle.js`, and commit to the LookML project
+  Make sure to the manifest pointing to local prod file: "`bundle.js`"
 
-To allow other people to use the extension, build the JavaScript bundle file and directly include it in the project.
+```shell
+yarn build
+```
 
-1. Build the extension with `yarn build` in the extension project directory on your development machine.
-2. Drag and drop the generated `dist/bundle.js` file into the Looker project interface
-3. Modify your `manifest.lkml` to use `file` instead of `url`:
+---
+### **Advanced and Optional**: Executing the Fine Tuning Model
+Vertex and LLM Backends
+To execute fine tune model there is a sample terraform script provided on the repo.
 
-   ```
-    project_name: "looker-genai-prod"
-    application: looker-genai-prod {
-      label: "looker-genai-prod"
-      url: "bundle.js"    
-      entitlements: {
-        use_embeds: yes
-        use_form_submit: yes
-        use_iframes: yes
-        external_api_urls: ["https://localhost:8080","http://localhost:8080"]
-        core_api_methods: ["run_inline_query", "me", "all_looks", "run_look", "all_lookml_models", "run_sql_query", "create_sql_query",
-          "lookml_model_explore", "create_query", "use_iframes", "use_embeds",  "use_form_submit",
-          "all_dashboards", "dashboard_dashboard_elements", "run_query", "dashboard"] #Add more entitlements here as you develop new functionality
-      }
-    }
-   ```
-## 5. Setting Up Vertex and LLM Backends
 The architecture needs the following infrastructure:
 - VertexAI Fine Tuned LLM Model with the Looker App Examples
 - Cloud Function that will call the Vertex AI Tuned Model Endpoint
 - BigQuery Datasets, Connections and Remote UDF that will call the Cloud Function
-  
-All these dependencies will be deployed through Terraform in conjunction with Cloud Workflows for executing the LLM fine tuned training.
 
-Follow the steps below:
 
-### 5.1 Enable Cloud Resource Manager API
-```
-  gcloud services enable cloudresourcemanager.googleapis.com
-```
+TODO: The code have to be refactored to allow for the custom fine tuned model using BQ, Remote UDF and Cloud Function.
 
-### 5.1 Deploy the infrastructure using Terraform
-
-Deploy the terraform script:
-```
-  cd deployment
-  terraform init
-  terraform apply 
-```
-
-### 5.2 Execute the Workflow
+#### Execute the Workflow
 
 Inside `gcloud` environment, invoke the Cloud Workflows
-```
+```shell
 gcloud workflows execute fine_tuning_model
 ```
 
-### 5.3 Test the environment with a Simple Query
+Refactor the SQL endpoints to use the new SQL syntax to use UDFs and BigQuery (Can check earlier commits on the repo)

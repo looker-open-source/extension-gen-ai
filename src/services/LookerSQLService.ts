@@ -1,5 +1,14 @@
+/**
+ * Copyright 2023 Google LLC
+ *
+ * Use of this source code is governed by an MIT-style
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/MIT.
+ */
+
 import { IRequestRunQuery, ISqlQueryCreate, IWriteQuery, Looker40SDK, sql_query } from "@looker/sdk";
 import {ITransportSettings} from "@looker/sdk-rtl";
+import { Logger } from "../utils/Logger";
 
 export class LookerSQLService {
     private lookerSDK: Looker40SDK;
@@ -14,16 +23,11 @@ export class LookerSQLService {
         timeout: 600000
     };
 
-    /**
-     * Executes a Query and fetches results using LookerSDK
-     * @param query
-     * @returns
-     */
-    public async execute<T>(query: string): Promise<Array<T>> {
-
+    private async getCurrentConnectionName(): Promise<string>
+    {
         if(this.connectionName == "")
         {
-            // TODO: try to get dynamically the looker-genai modelName
+            // TODO: try to get dynamically the looker-genai modelName    
             let response = await this.lookerSDK.ok(this.lookerSDK.lookml_model('looker-genai'));
             if(response.allowed_db_connection_names!=null && response.allowed_db_connection_names.length > 0)
             {
@@ -33,12 +37,40 @@ export class LookerSQLService {
             {
                 throw new Error("Problem getting the Dynamic DB connection to Run Queries");
             }
-        }        
+        } 
+        return this.connectionName; 
+    }
+
+    public async executeLog(query: string): Promise<string> {
+              
         const queryCreate: ISqlQueryCreate = {
-            connection_name: this.connectionName,
+            connection_name: await this.getCurrentConnectionName(),
             sql: query,
+        }        
+        const result = await this.lookerSDK.create_sql_query(queryCreate, LookerSQLService.transportTimeoutCustom);        
+        if (!result.ok) {
+            Logger.debug('unable to execute Log: ' + query);
+            return "error - not able to execute Log";
         }
-        
+        if (!result.value.slug) {
+            Logger.debug('Invalid Log Results. Missing slug');
+            return "error - no slug";
+        }
+        const slug: string = result.value.slug;
+        return await this.runLogSlug(slug);
+    }
+
+    /**
+     * Executes a Query and fetches results using LookerSDK
+     * @param query
+     * @returns
+     */
+    public async execute<T>(query: string): Promise<Array<T>> {
+               
+        const queryCreate: ISqlQueryCreate = {
+            connection_name: await this.getCurrentConnectionName(),
+            sql: query,
+        }        
         const result = await this.lookerSDK.create_sql_query(queryCreate, LookerSQLService.transportTimeoutCustom);        
         if (!result.ok) {
             throw new Error('unable to create SQL query: ' + query);
@@ -84,6 +116,21 @@ export class LookerSQLService {
         }
         return result.value as unknown as Array<T>;
     }
+
+    /**
+     * Retrieves a Query result calling LookerSDK using slug
+     * @param slug
+     * @returns
+     */
+    private async runLogSlug(slug: string):Promise<string>
+    {        
+        const result = await this.lookerSDK.run_sql_query(slug, "txt", undefined,LookerSQLService.transportTimeoutCustom);
+        if (!result.ok) {
+            Logger.error('unable to run Log slug query');            
+        }
+        return "";
+    }
+
 
     /**
      * Creates a new WriteQuery calling LookerSDK

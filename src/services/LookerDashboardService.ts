@@ -1,3 +1,11 @@
+/**
+ * Copyright 2023 Google LLC
+ *
+ * Use of this source code is governed by an MIT-style
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/MIT.
+ */
+
 import { IDashboard, IDashboardBase, IDashboardElement, Looker40SDK } from "@looker/sdk";
 import { LookerSQLService } from "./LookerSQLService";
 import { Logger } from "../utils/Logger"
@@ -26,7 +34,7 @@ export class LookerDashboardService {
      * @returns
      */
     public async listAll(): Promise<IDashboardBase[]> {
-        const dashboardsResult = await this.lookerSDK.all_dashboards();
+        const dashboardsResult = await this.lookerSDK.all_dashboards("title,id");
         if (!dashboardsResult.ok) {
             throw new Error('unable to fetch all dashboards');
         }
