@@ -9,6 +9,7 @@ export interface ISettings {
 }
 export type StateContextType = {
   configSettings: ISettings;
+  
   saveSettings: (set: ISettings) => Promise<void>;
   resetSettings: () => Promise<ISettings>;  
   setExploreCurrentComboModels: (models: ComboboxOptionObject[]) => void;
@@ -21,4 +22,5 @@ export type StateContextType = {
   selectedModelExplore:string;
   dashboardCombo: ComboboxOptionObject[];
   prompt:string;
+  userId: string;
 };
