@@ -1,93 +1,89 @@
-// Copyright 2023 Google LLC
-
-import { Box, Combobox, ComboboxInput, ComboboxList, ComboboxOption, ComponentsProvider, FieldCheckbox, FieldTextArea, Heading, Label, MaybeComboboxOptionObject, MixedBoolean, Space, SpaceVertical, Span } from '@looker/components'
+/**
+ * Copyright 2023 Google LLC
+ *
+ * Use of this source code is governed by an MIT-style
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/MIT.
+ */
+import { Box, Button,  Combobox, ComboboxInput, ComboboxList, ComboboxOption, ComponentsProvider, Dialog, DialogLayout, FieldCheckbox, FieldTextArea, Heading, Label, MaybeComboboxOptionObject, MixedBoolean, Space, SpaceVertical, Span, Spinner } from '@looker/components'
 import React, { FormEvent, useContext, useEffect, useState } from 'react'
 import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/PromptTemplateService'
 import { Logger } from '../utils/Logger'
 import { PromptService } from '../services/PromptService'
 import { ExtensionContext } from '@looker/extension-sdk-react'
-
+import { ConfigReader, ISettings } from '../services/ConfigReader'
+import { StateContextType } from '../@types/settings'
+import { StateContext } from '../context/settingsContext'
+import { custom } from 'joi'  
 
 /**
  * Settings
  */
 export const Settings: React.FC = () => {  
-  const [message] = useState('')
-  const [logLevel, setLogLevel] = useState<string>("info");
-  const [usingNativeBQML, setUsingNativeBQML] = useState(true as MixedBoolean)
-  const [showInstructions, setShowInstructions] = useState(true as MixedBoolean)
-  const [customPrompt, setCustomPrompt] = useState<string>();  
-
-  const storageShowInstructions = "showInstructions";
-  const storageNativeBQML = "usingNativeBQML";
-  const storageLogLevel = "logLevel";
-  const storageCustomPrompt = "customPrompt";
+  const [message] = useState('')  
+  const [loadingSettings, setLoadingSettings] = useState<boolean>(false)
+  const [settings, setSettings] = useState<ISettings>();
 
   const { core40SDK } =  useContext(ExtensionContext)
   const promptService: PromptService = new PromptService(core40SDK);
+  const configReader: ConfigReader = new ConfigReader(core40SDK);
+  const [logLevel, setLogLevel] = useState<string>("info");
+  const [customPrompt, setCustomPrompt] = useState<string>("");
+  const { configSettings, saveSettings, resetSettings } = React.useContext(StateContext) as StateContextType;
+  
   
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     // Every time it reloads
-    const customPrompt = JSON.parse(window.sessionStorage.getItem(storageCustomPrompt)!)
-    const promptService = new PromptTemplateService(customPrompt);
-    setCustomPrompt(promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS));
-    const cStorageNativeBQML = window.sessionStorage.getItem(storageNativeBQML) === "true" || window.sessionStorage.getItem(storageNativeBQML) === null;
-    const cStorageShowInstructions = window.sessionStorage.getItem(storageShowInstructions) === "true" || window.sessionStorage.getItem(storageNativeBQML) === null;
-    const cStorageLogLevel = window.sessionStorage.getItem(storageLogLevel);
-    if(cStorageNativeBQML!= null)
-    {
-      setUsingNativeBQML(cStorageNativeBQML);
-    }
-    if(cStorageLogLevel!=null)
-    {
-      setLogLevel(cStorageLogLevel);
-      Logger.setLoggerLevelByName(cStorageLogLevel);
-    }
-    if(cStorageShowInstructions!=null)
-    {
-      setShowInstructions(cStorageShowInstructions);
-    }
-
+    loadSettings(configSettings);    
   }, [])
+
+  const loadSettings = (config:ISettings) => {
+    setSettings(config);
+    setLogLevel(config?.logLevel!);
+    setCustomPrompt(config?.customPrompt!);    
+    Logger.setLoggerLevelByName(config?.logLevel!);    
+  }
 
   const handleChangePrompt = (e: FormEvent<HTMLTextAreaElement>) => {
     setCustomPrompt(e.currentTarget.value);
     const tempCustomPrompt: { [key in PromptTemplateTypeEnum]?: string } = {
       [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: e.currentTarget.value
-    }
-    window.sessionStorage.setItem(storageCustomPrompt, JSON.stringify(tempCustomPrompt));
+    }    
   }
+
 
   const handleChangeCombo= (comboboxComponent: MaybeComboboxOptionObject) => {
     if (!comboboxComponent) {
       throw new Error('missing combobox componenet');
     }
     Logger.setLoggerLevelByName(comboboxComponent.value);
-    window.sessionStorage.setItem(storageLogLevel, comboboxComponent.value);
-    setLogLevel(comboboxComponent.value);
+    setLogLevel(comboboxComponent.value);    
     Logger.debug(comboboxComponent.value);
   }
 
+  const handleSaveUserSettings = () =>
+  {    
+    Logger.debug("Current custom Prompt: "+ customPrompt);
+    saveSettings({
+      userId: configSettings.userId,
+      logLevel: logLevel,
+      customPrompt: customPrompt
+    });       
+  }
+
+  const handleResetDefaultSettings = async () =>
+  {        
+    const resetConfig = await resetSettings();
+    loadSettings(resetConfig);   
+  }
+
+
   return (
-    <ComponentsProvider>
-      <Space around>
-        <Span fontSize="xxxxxlarge">
-          {message}
-        </Span>
-      </Space>
-      <Space around>
-        <Heading fontWeight="semiBold"> Looker GenAI Demo: go/lookerllm - Design: go/lookerllm-design</Heading>
-      </Space>
+    <ComponentsProvider>          
       <Box display="flex" m="large">
-          <SpaceVertical>
-          <Span fontSize="x-large">
-          Extension Settings
-          </Span>
-          <Span fontSize="medium">
-          Any doubts or feedback or bugs, send it to <b>looker-genai-extension@google.com</b>
-          </Span>
+          <SpaceVertical>          
           <Label>Console Log Level</Label>
           <Combobox  width={"300px"} value={logLevel} onChange={handleChangeCombo}>
             <ComboboxInput />
@@ -100,24 +96,6 @@ export const Settings: React.FC = () => {
             </ComboboxList>
           </Combobox>
 
-          <FieldCheckbox
-            label="Yes - Use Native BQML Method, and No: use Fine tuned model"
-            checked={usingNativeBQML}
-            onChange={() => {
-              window.sessionStorage.setItem(storageNativeBQML, usingNativeBQML?"false": "true");
-              setUsingNativeBQML(!usingNativeBQML);
-            }}
-          />
-
-           <FieldCheckbox
-            label="Show Instructions"
-            checked={showInstructions}
-            onChange={() => {
-              window.sessionStorage.setItem(storageShowInstructions, showInstructions?"false": "true");
-              setShowInstructions(!showInstructions);
-            }}
-          />
-
           <FieldTextArea
             width="100%"
             height="500px"
@@ -125,6 +103,16 @@ export const Settings: React.FC = () => {
             value={customPrompt}
             onChange={handleChangePrompt}
           />
+          <Space>
+            <Button onClick={handleSaveUserSettings}>Save</Button>                     
+            <Button id="resetDefaultSettingsButton" color='neutral' onClick={handleResetDefaultSettings}>Reset to Default</Button>                     
+          </Space>
+          <Dialog isOpen={loadingSettings}>
+              <DialogLayout header="Loading Settings...">
+                <Spinner size={80}>
+                </Spinner>
+              </DialogLayout>            
+            </Dialog>          
         </SpaceVertical>
       </Box>
 

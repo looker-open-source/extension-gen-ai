@@ -1,3 +1,11 @@
+/**
+ * Copyright 2023 Google LLC
+ *
+ * Use of this source code is governed by an MIT-style
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/MIT.
+ */
+
 export interface IDictionary<T> {
     [key: string]: T;
 }
@@ -11,6 +19,10 @@ export class UtilsHelper {
     public static escapeBreakLine(originalString: string): string {
         return originalString
             .replace(/\n/g, '\\n');
+    }
+
+    public static escapeQueryAll(originalString:string): string {
+        return UtilsHelper.escapeSpecialCharacter(UtilsHelper.escapeBreakLine(originalString));
     }
 
     /**
