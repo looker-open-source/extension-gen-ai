@@ -20,8 +20,8 @@ export interface ISettings {
 
 
 export class ConfigReader {
-    public static readonly CURRENT_VERSION = "1.8";
-    public static readonly LAST_UPDATED = "11/14/2023";
+    public static readonly CURRENT_VERSION = "1.9";
+    public static readonly LAST_UPDATED = "11/16/2023";
     public static readonly BQML_MODEL = "llm.llm_model";
     public static readonly EXPLORE_LOGGING = "llm.explore_logging";
     public static readonly SETTINGS_TABLE = "llm.settings";
@@ -49,8 +49,8 @@ export class ConfigReader {
         {        
             const queryToRun = `#Looker GenAI Extension - version: ${ConfigReader.CURRENT_VERSION} - getConfig
     SELECT "${userId}" as userId,
-    JSON_VALUE(settings[0]["logLevel"]) as logLevel,
-    JSON_VALUE(settings[0]["customPrompt"]) as customPrompt,
+    JSON_VALUE(config["logLevel"]) as logLevel,
+    JSON_VALUE(config["customPrompt"]) as customPrompt,
     COALESCE(userId, "-1") as priority
     FROM ${ConfigReader.SETTINGS_TABLE} WHERE userId = "${userId}" OR userId IS NULL ORDER BY priority DESC LIMIT 1`;
             const results = await this.sql.execute<ISettings>(queryToRun);                         
@@ -74,9 +74,7 @@ export class ConfigReader {
             BEGIN
             DELETE FROM ${ConfigReader.SETTINGS_TABLE} WHERE userId = "${userId}";
             INSERT INTO ${ConfigReader.SETTINGS_TABLE} (config, userId)
-            VALUES(JSON_OBJECT('logLevel', "${updatedSettings.logLevel}", 'customPrompt', """
-            ${updatedSettings.customPrompt}
-            """), "${userId}");
+            VALUES(JSON_OBJECT('logLevel', "${updatedSettings.logLevel}", 'customPrompt', """${updatedSettings.customPrompt}"""), "${userId}");
             END`;        
             const results = await this.sql.executeLog(queryToRun);
             Logger.info("Settings saved sucessfully: "+ results);             

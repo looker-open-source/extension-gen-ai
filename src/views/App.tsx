@@ -42,7 +42,7 @@ export const App = hot(() => (
       <StateProvider>
       <SpaceVertical padding="10px">
         <Space around> 
-        <Heading fontWeight="semiBold"> Looker Extension GenAI - v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Heading>        
+        <Heading fontWeight="semiBold">Looker Extension GenAI - v:{ConfigReader.CURRENT_VERSION} - updated:{ConfigReader.LAST_UPDATED}</Heading>        
         </Space>
         <Space paddingLeft="15px" center>
         <Span fontSize="small">
@@ -52,10 +52,9 @@ export const App = hot(() => (
           <a href="https://github.com/looker-open-source/extension-gen-ai" target="_blank">Videos and Tutorials</a>
         </Span>
         <Span fontSize="small">
-          <a href="mailto:looker-extension-genai@google.com" target="_blank"> Feedback: looker-extension-genai@google.com</a>
-        </Span>        
-        </Space>                
-        
+          <a href="mailto:looker-extension-genai@google.com" target="_blank">Feedback: looker-extension-genai@google.com</a>
+        </Span>
+        </Space>                        
       </SpaceVertical>      
       <Tabs2 defaultTabId="explore">
         <Tab2 id="explore" label="Generative Explores" >

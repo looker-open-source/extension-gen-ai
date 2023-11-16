@@ -53,20 +53,21 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   // load overall states
   const loadState = async () => {
     setIsLoading(true);
-    const settingsPromise: Promise<ISettings> = loadSettings();
+    
     const lookerElementsPromise  = loadLookerElements();
-    const [settings, lookerElements] = await Promise.all([settingsPromise, lookerElementsPromise]);
+    const [lookerElements] = await Promise.all([lookerElementsPromise]);
   
     //Create Combo objects for Explores
-    loadComboExplore(lookerElements[0], lookerElements[1]);
-    // Create settings
-    setConfigSettings(settings);
-    Logger.debug("settings loaded: " + settings.logLevel);
+    loadComboExplore(lookerElements[0], lookerElements[1]);    
     //Create combo for Dashboards
     generateComboDashboards(lookerElements[2]);
     // set user id
     setUserId(lookerElements[3].id!);
-  
+    
+    const settings = await loadSettings(lookerElements[3].id!);
+    setConfigSettings(settings);
+     // Create settings
+    Logger.debug("settings loaded: " + settings.logLevel);
     setIsLoading(false);
     // loadDashboardCombo();
     setIsMounted(true);
@@ -134,8 +135,8 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   }
 
 
-  const loadSettings: () => Promise<ISettings> = async () =>  {    
-    const conf = await configReader.getSettings(userId)!;
+  const loadSettings: (userIdFromConfig: string) => Promise<ISettings> = async (userIdFromConfig: string) =>  {    
+    const conf = await configReader.getSettings(userIdFromConfig)!;
     setConfigSettings(conf);    
     return conf;
   }
@@ -143,7 +144,7 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   const resetSettings: () => Promise<ISettings> = async () => {    
     setIsLoading(true);
     await configReader.resetDefaultSettings(userId);
-    const config = await loadSettings();
+    const config = await loadSettings(userId);
     setIsLoading(false);  
     return config;
   }
