@@ -48,11 +48,7 @@ export const Settings: React.FC = () => {
 
   const handleChangePrompt = (e: FormEvent<HTMLTextAreaElement>) => {
     setCustomPrompt(e.currentTarget.value);
-    const tempCustomPrompt: { [key in PromptTemplateTypeEnum]?: string } = {
-      [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: e.currentTarget.value
-    }    
   }
-
 
   const handleChangeCombo= (comboboxComponent: MaybeComboboxOptionObject) => {
     if (!comboboxComponent) {

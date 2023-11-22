@@ -4,9 +4,9 @@ import { StateContextType, ISettings } from '../@types/settings';
 import { ExtensionContext } from '@looker/extension-sdk-react';
 import { ConfigReader } from '../services/ConfigReader';
 import { setConfig } from 'react-hot-loader';
-import { ComboboxOptionObject, Dialog, DialogLayout, Spinner } from '@looker/components';
+import { ComboboxOptionObject, Dialog, DialogLayout, Space, Spinner } from '@looker/components';
 import { PromptService } from '../services/PromptService';
-import { IDashboardBase, ILookmlModel, IRequestAllLookmlModels } from '@looker/sdk';
+import { IDashboardBase, ILookmlModel, IRequestAllLookmlModels, IUser } from '@looker/sdk';
 import PromptModel from '../models/PromptModel';
 import { DashboardService } from '../services/DashboardService';
 import { Logger } from '../utils/Logger';
@@ -30,6 +30,7 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   const [explorePromptExamples, setExplorePromptExamples ] = useState<PromptModel[]>([]);
   const [selectedModelExplore, setSelectedModelExplore] = useState<string>("");
   const [prompt, setPrompt] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
  
   // Dashboards
   const [dashboardCombo, setDashboardCombo ] = useState<ComboboxOptionObject[]>([]);
@@ -44,7 +45,7 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   // save settings
   const saveSettings = async (set: ISettings) => {
     setIsLoading(true);        
-    await configReader.updateSettings(set);
+    await configReader.updateSettings(set, userId);
     setConfigSettings(set);    
     setIsLoading(false);
   }
@@ -52,31 +53,36 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   // load overall states
   const loadState = async () => {
     setIsLoading(true);
-    const settingsPromise: Promise<ISettings> = loadSettings();
+    
     const lookerElementsPromise  = loadLookerElements();
-    const [settings, lookerElements] = await Promise.all([settingsPromise, lookerElementsPromise]);
+    const [lookerElements] = await Promise.all([lookerElementsPromise]);
   
     //Create Combo objects for Explores
-    loadComboExplore(lookerElements[0], lookerElements[1]);
-    // Create settings
-    setConfigSettings(settings);
-    Logger.debug("settings loaded: " + settings.logLevel);
+    loadComboExplore(lookerElements[0], lookerElements[1]);    
     //Create combo for Dashboards
     generateComboDashboards(lookerElements[2]);
+    // set user id
+    setUserId(lookerElements[3].id!);
+    
+    const settings = await loadSettings(lookerElements[3].id!);
+    setConfigSettings(settings);
+     // Create settings
+    Logger.debug("settings loaded: " + settings.logLevel);
     setIsLoading(false);
     // loadDashboardCombo();
     setIsMounted(true);
   }
 
-  const loadLookerElements = async (): Promise<[ILookmlModel[], PromptModel[], IDashboardBase[]]> => {
+  const loadLookerElements = async (): Promise<[ILookmlModel[], PromptModel[], IDashboardBase[], IUser]> => {
 
     const req: IRequestAllLookmlModels = {
       fields : "name, explores"
     }
     const modelsPromise = core40SDK.ok(core40SDK.all_lookml_models(req));
     const promptPromise = promptService.getExplorePrompts();
+    const userIdPromise = core40SDK.ok(core40SDK.me());         
     const dashboardPromise = dashboardService.listAll();
-    return Promise.all([modelsPromise ,promptPromise, dashboardPromise]);    
+    return Promise.all([modelsPromise ,promptPromise, dashboardPromise, userIdPromise]);    
   }
 
 
@@ -129,16 +135,16 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   }
 
 
-  const loadSettings: () => Promise<ISettings> = async () =>  {    
-    const conf = await configReader.getSettings()!;
+  const loadSettings: (userIdFromConfig: string) => Promise<ISettings> = async (userIdFromConfig: string) =>  {    
+    const conf = await configReader.getSettings(userIdFromConfig)!;
     setConfigSettings(conf);    
     return conf;
   }
   
   const resetSettings: () => Promise<ISettings> = async () => {    
     setIsLoading(true);
-    await configReader.resetDefaultSettings();
-    const config = await loadSettings();
+    await configReader.resetDefaultSettings(userId);
+    const config = await loadSettings(userId);
     setIsLoading(false);  
     return config;
   }
@@ -148,12 +154,14 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
     setExploreCurrentComboModels, setSelectedModelExplore, exploreComboModels,
     explorePromptExamples, exploreComboPromptExamples, exploreCurrentComboModels, 
     selectedModelExplore, prompt, setPrompt,
-    dashboardCombo}}>
+    dashboardCombo, userId}}>
       {isMounted && children}
-      <Dialog isOpen={isLoading}>
-        <DialogLayout header="Loading State...">
+      <Dialog isOpen={isLoading} width={350} >
+        <DialogLayout header="Loading Extension...">
+          <Space>
           <Spinner size={80}>
           </Spinner>
+          </Space>
         </DialogLayout>            
       </Dialog>
     </StateContext.Provider>

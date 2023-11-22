@@ -83,7 +83,8 @@ export const Explore: React.FC = () => {
 
   const loadExplores = async () => { 
     Logger.debug("Loading Explores");
-    setExploreCurrentComboModels(exploreComboModels);    
+    setExploreCurrentComboModels(exploreComboModels);
+    selectComboExplore(selectedModelExplore);
     setErrorMessage(undefined);    
   }
 
