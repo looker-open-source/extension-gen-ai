@@ -251,6 +251,9 @@ Q: "How many orders were created in the past 7 days"
 Q: "What are the top 10 languages?"
 {"field_names": ["wiki100_m.language","wiki100_m.count"], "filters":{}, "sorts": []}
 
+Q: "What are the total count with title containing "test"?
+{"field_names": ["wiki100_m.count"], "filters":{"wiki100_m.language": "%test%"}, "sorts": []}
+
 Q: "What are the states that had the most orders, filter state: California, Nevada, Washinton, Oregon"
 {"field_names": ["orders.count"], "filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}, "sorts": []}
 """
