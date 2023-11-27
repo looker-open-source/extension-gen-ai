@@ -39,9 +39,9 @@ export class DashboardService {
         this.dashboardService = new LookerDashboardService(lookerSDK, this.sql);        
     }
     
-    static readonly MAX_CHAR_PER_PROMPT: number = 5000*3;
-    static readonly MAX_CHAR_PER_TILE: number = 5000*3;
-    static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 2000*3;
+    static readonly MAX_CHAR_PER_PROMPT: number = 20000*3;
+    static readonly MAX_CHAR_PER_TILE: number = 20000*3;
+    static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 8000*3;
 
     /**
      * Lists all available dashboards
@@ -218,8 +218,6 @@ export class DashboardService {
         return this.getResultsFromBigQuery(subselect);    
 
     }
-
-    
 
 
     private buildBigQueryLLMQuery(selectPrompt:string)

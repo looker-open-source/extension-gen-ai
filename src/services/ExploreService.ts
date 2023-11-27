@@ -34,7 +34,7 @@ export class ExploreService {
 
     //    Method that breaks the exploreFields into chunks based on the max number of tokens
     private breakFieldsPerToken(modelFields: FieldMetadata[]): Array<FieldMetadata[]>{
-        const FIXED_BREAK_PER_QUANTITY=200;
+        const FIXED_BREAK_PER_QUANTITY=800;
         const generatedPromptsArray = new Array<FieldMetadata[]>;
         var totalLength = modelFields.length;
         // divide by n elements
@@ -175,9 +175,11 @@ export class ExploreService {
                 // throw new Error('LLM result does not contain a valid JSON');
             }
         }
-        // call LLM to ask for Limits
-        const limitFromLLM = await this.findLimitsFromLLM(userInput);
-        const pivotsFromLLM = await this.findPivotsFromLLM(userInput, mergedResults.field_names);
+        // call LLM to ask for Limits and Pivots
+        const limitFromLLMPromise = this.findLimitsFromLLM(userInput);
+        const pivotsFromLLMPromise = this.findPivotsFromLLM(userInput, mergedResults.field_names);
+        const [limitFromLLM, pivotsFromLLM] = await Promise.all([limitFromLLMPromise, pivotsFromLLMPromise]);
+        
         if (pivotsFromLLM) {
             mergedResults.pivots = pivotsFromLLM;
         }
