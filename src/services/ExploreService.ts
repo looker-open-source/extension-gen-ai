@@ -14,6 +14,7 @@ import { LookerSQLService } from "./LookerSQLService";
 import { PromptTemplateService, PromptTemplateTypeEnum } from "./PromptTemplateService";
 import { Logger } from "../utils/Logger"
 import { ConfigReader } from "./ConfigReader";
+import { slice } from "lodash";
 
 export interface FieldMetadata{
     label: string;
@@ -24,8 +25,13 @@ export interface FieldMetadata{
 
 
 export class ExploreService {
+    
     private sql: LookerSQLService;
     private promptService: PromptTemplateService;
+
+    static readonly FIXED_BREAK_PER_QUANTITY=800;
+    static readonly MAX_CHAR_PER_PROMPT= 70000;
+
 
     public constructor(lookerSDK: Looker40SDK, promptService: PromptTemplateService) {
         this.sql = new LookerSQLService(lookerSDK);
@@ -34,13 +40,12 @@ export class ExploreService {
 
     //    Method that breaks the exploreFields into chunks based on the max number of tokens
     private breakFieldsPerToken(modelFields: FieldMetadata[]): Array<FieldMetadata[]>{
-        const FIXED_BREAK_PER_QUANTITY=800;
         const generatedPromptsArray = new Array<FieldMetadata[]>;
         var totalLength = modelFields.length;
         // divide by n elements
-        var maxInteractions = totalLength/FIXED_BREAK_PER_QUANTITY;
+        var maxInteractions = totalLength/ExploreService.FIXED_BREAK_PER_QUANTITY;
         for(let i=0; i < maxInteractions; i++){
-            generatedPromptsArray.push(modelFields.slice(i*FIXED_BREAK_PER_QUANTITY, (i+1)*FIXED_BREAK_PER_QUANTITY));
+            generatedPromptsArray.push(modelFields.slice(i*ExploreService.FIXED_BREAK_PER_QUANTITY, (i+1)*ExploreService.FIXED_BREAK_PER_QUANTITY));
         }
         return generatedPromptsArray;
     }
@@ -50,7 +55,7 @@ export class ExploreService {
         modelFields: FieldMetadata[],
         userInput: string,
         promptTypeEnum: PromptTemplateTypeEnum,
-        potentialFields?:string, 
+        potentialFields?:string,
         mergedResults?:string):Array<string> {        
 
         const shardedPrompts:Array<string> = [];        
@@ -66,13 +71,12 @@ export class ExploreService {
                     shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput, potentialFields}));
                 }                
                 break;
-            case PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED:
+            case PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED:            
                 if(mergedResults!=null && userInput!=null)
-                    {
-                        shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput, mergedResults}));
-                    }
-                break;
-
+                {
+                    shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput, mergedResults}));
+                }
+                break;                        
             default:
                 const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
                 for(const fieldGroup of generatedPromptsArray){
@@ -176,17 +180,17 @@ export class ExploreService {
             }
         }
         // call LLM to ask for Limits and Pivots
-        const limitFromLLMPromise = this.findLimitsFromLLM(userInput);
-        const pivotsFromLLMPromise = this.findPivotsFromLLM(userInput, mergedResults.field_names);
-        const [limitFromLLM, pivotsFromLLM] = await Promise.all([limitFromLLMPromise, pivotsFromLLMPromise]);
+        // const limitFromLLMPromise = this.findLimitsFromLLM(userInput);
+        const pivotsFromLLM = await this.findPivotsFromLLM(userInput, mergedResults.field_names);
+        // const [limitFromLLM, pivotsFromLLM] = await Promise.all([limitFromLLMPromise, pivotsFromLLMPromise]);
         
         if (pivotsFromLLM) {
             mergedResults.pivots = pivotsFromLLM;
         }
-        // replace limit
-        if (limitFromLLM) {
-            mergedResults.limit = limitFromLLM;
-        }
+        // // replace limit
+        // if (limitFromLLM) {
+        //     mergedResults.limit = limitFromLLM;
+        // }
         // Only execute merged from LLM logic if needed
         if(llmChunkedResults.length > 1)
         {
@@ -303,6 +307,7 @@ export class ExploreService {
         userInput: string,
         modelName: string,
         viewName: string): Promise<{
+            clientId: string,
             queryId: string,
             modelName: string,
             view: string,
@@ -323,12 +328,14 @@ export class ExploreService {
                 sorts: exploreData.sorts,
                 limit: exploreData.limit,
             })
-            const queryId = llmQueryResult.value.client_id;
+            const clientId = llmQueryResult.value.client_id!;
+            const queryId = llmQueryResult.value.id;
             if (!queryId) {
                 throw new Error('unable to retrieve query id from created query');
             }
             Logger.info("llmQuery: " + JSON.stringify(exploreData, null, 2));            
             return {
+                clientId,
                 queryId,
                 modelName,
                 view: viewName,
@@ -337,5 +344,63 @@ export class ExploreService {
             Logger.error("LLM does not contain valid JSON: ");
             throw new Error('LLM result does not contain a valid JSON');
         }
+    }
+
+
+    private buildExploreOutputQuery(selectPrompt:string)
+    {        
+        const queryPrompt = `SELECT '` + UtilsHelper.escapeBreakLine(selectPrompt) + `' AS prompt`;   
+        return `#Looker GenAI Extension - ExploreOutput - version: ${ConfigReader.CURRENT_VERSION}
+        SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
+        FROM
+        ML.GENERATE_TEXT(
+            MODEL ${ConfigReader.BQML_MODEL},
+            (
+                ${queryPrompt}
+            ),
+            STRUCT(
+            0.05 AS temperature,
+            1024 AS max_output_tokens,
+            0.98 AS top_p,
+            TRUE AS flatten_json_output,
+            1 AS top_k));
+        `;
+    }
+
+
+    public async answerQuestionWithData(prompt: string, queryId: string): Promise<string> {                        
+        const userInput = prompt;        
+        Logger.info("Getting the raw data from the explore");            
+        let elementData: Array<any> = await this.sql.executeByQueryId(queryId);
+        // max number of elements to pass to dashboard
+        let totalChars = 0;
+        let limitData = elementData;
+        for (let i = 0; i < elementData.length; i++) {
+            totalChars += JSON.stringify(elementData[i]).length;
+            if (totalChars > ExploreService.MAX_CHAR_PER_PROMPT) {
+                limitData = elementData.slice(0, i);
+                break;
+            }            
+        }
+        const serializedModelFields = JSON.stringify(limitData);
+        Logger.info("Generate Prompt passing the data");
+        const promptToRun = this.promptService.fillByType(PromptTemplateTypeEnum.EXPLORATION_OUTPUT, { serializedModelFields, userInput});
+        const queryToRun = this.buildExploreOutputQuery(promptToRun);
+        const results = await this.sql.execute<{
+            r: string
+            status: string
+        }>(queryToRun); 
+        
+        let result_string = "";        
+        for(const queryResult of results)
+        {
+            const status = queryResult.status;
+            if (status!="" && status!=null) {
+                // Log instead of breaking the application                
+                throw new Error("some of the llm results had an error: " + status);
+            }                        
+            result_string = result_string.concat(queryResult.r + " \n");            
+        }        
+        return result_string;
     }
 }
