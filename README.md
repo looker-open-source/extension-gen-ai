@@ -12,6 +12,8 @@
     - [4.1 Enable Cloud Resource Manager API](#41-enable-cloud-resource-manager-api)
     - [4.2 Deploy the infrastructure using Terraform](#42-deploy-the-infrastructure-using-terraform)
   - [5. Deploying the Looker Extension](#5-deploying-the-looker-extension)
+  - [6. Using and Configuring the Extension](#6-using-and-configuring-the-extension)
+    - [6.1. Saving Example Prompts](#61-saving-example-prompts)
   - [6. Developing the Looker Extension Environment](#6-developing-the-looker-extension-environment)
   - [6.1. Install the dependencies with Yarn](#61-install-the-dependencies-with-yarn)
   - [6.2 Start the development server](#62-start-the-development-server)
@@ -130,6 +132,14 @@ The Extension will be available directly through Marketplace or through a manual
 
 
 ---
+## 6. Using and Configuring the Extension
+
+### 6.1. Saving Example Prompts
+```
+INSERT INTO `llm.explore_prompts` 
+VALUES("Top 3 brands in sales", "What are the top 3 brands that had the most sales price in the last 4 months?", "thelook.order_items", "explore")
+```
+
 ## 6. Developing the Looker Extension Environment
 
 You can follow all the steps from Deploying the extension.
