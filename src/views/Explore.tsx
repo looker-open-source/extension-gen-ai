@@ -17,7 +17,8 @@ import {
   FieldSelect, 
   ComboboxOptionObject,
   ComboboxCallback,
-  MaybeComboboxOptionObject
+  MaybeComboboxOptionObject,
+  TextArea
 } from '@looker/components'
 import { Dialog, DialogLayout} from '@looker/components'
 import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
@@ -53,7 +54,8 @@ export const Explore: React.FC = () => {
   const [currentExploreId, setCurrentExploreId] = useState<string>()
   const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
   const [hostUrl, setHostUrl] = useState<string>()
-
+  const [llmInsights, setLlmInsights] = useState<string>()
+  
   const [topPromptsCombos, setTopPromptsCombos] = useState<ComboboxOptionObject[]>()  
   const { configSettings, exploreComboPromptExamples, explorePromptExamples, exploreComboModels,
     exploreCurrentComboModels,selectedModelExplore ,setExploreCurrentComboModels,
@@ -67,19 +69,6 @@ export const Explore: React.FC = () => {
     loadExplores();  
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
- 
-
-  function generateCombosForTopPrompts(prompts: Array<PromptModel>) {
-    var allValues:ComboboxOptionObject[] = [];
-    prompts.forEach(promptModel => {
-      allValues.push({
-        label: promptModel.description,
-        value: promptModel.modelExplore
-      });                
-    });
-    setTopPromptsCombos(allValues);
-  }
 
   const loadExplores = async () => { 
     Logger.debug("Loading Explores");
@@ -104,10 +93,11 @@ export const Explore: React.FC = () => {
     setSelectedModelExplore(selectedValue);
   });
 
-  const selectTopPromptCombo = ((selectedValue: string) => {    
-    selectComboExplore(selectedValue);
+  const selectTopPromptCombo = ((selectedValue: string) => {  
+    const comboExploreArray = selectedValue.split("@@@");    
+    selectComboExplore(comboExploreArray[0]);
     explorePromptExamples.forEach(topPrompt => {
-      if(topPrompt.modelExplore === selectedValue)
+      if(topPrompt.prompt === comboExploreArray[1])
       {
         setPrompt(topPrompt.prompt);        
       }
@@ -144,6 +134,7 @@ export const Explore: React.FC = () => {
         exploreDivElement?.removeChild(exploreDivElement.lastChild!);  
       }
     }
+    setLlmInsights("");
   }
 
 
@@ -227,11 +218,11 @@ export const Explore: React.FC = () => {
           throw new Error('missing user prompt, unable to create query');
         }                
         Logger.info("3. Generate Prompts and Send to BigQuery");
-        const { modelName, queryId, view } = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!);
+        const { clientId,  queryId, modelName, view } = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!);
         // Update the Explore with New QueryId
         LookerEmbedSDK.init(hostUrl!);
         Logger.debug("explore not null: " + currentExploreId);
-        LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?qid=${queryId}`)
+        LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?qid=${clientId}`)
           .appendTo(exploreDivElement!)         
           .build()          
           .connect()                    
@@ -241,6 +232,18 @@ export const Explore: React.FC = () => {
             setLoadingLLM(false);
           });
         setLoadingLLM(false);
+        // After loading is complete,
+        // Try to see if I can answer the question in text format the same way as dashboard and getting data from the queryId
+        Logger.debug("Async try to set the LLM Insight after explore is on");        
+        try
+        {
+          const insight = await generativeExploreService.answerQuestionWithData(prompt, queryId);
+          setLlmInsights(insight);
+        }
+        catch(error)
+        {
+          Logger.error("Failed to get LLM Insight Output ", error);
+        }        
       })
     }
     else
@@ -278,7 +281,15 @@ export const Explore: React.FC = () => {
             />
             <Space>
               <Button onClick={handleSend}>Send</Button>                     
-            </Space>        
+            </Space>
+            <SpaceVertical stretch>
+              <TextArea                        
+                placeholder="[Experimental] LLM Text Answer"
+                value={llmInsights}
+                readOnly
+                height="200px"
+              />
+              </SpaceVertical>         
             <Dialog isOpen={loadingLLM}>
               <DialogLayout header="Loading LLM Data to Explore...">
                 <Spinner size={80}>

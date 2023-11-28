@@ -109,7 +109,7 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
     prompts.forEach(promptModel => {
       allValues.push({
         label: promptModel.description,
-        value: promptModel.modelExplore
+        value: promptModel.modelExplore + "@@@" + promptModel.prompt
       });                
     });
     return allValues;
