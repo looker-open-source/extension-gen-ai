@@ -172,7 +172,7 @@ export class DashboardService {
         const arraySelect: Array<string> = [];
         promptArray.forEach((promptField) =>{
              const singleLineString = UtilsHelper.escapeBreakLine(promptField);
-             const subselect = `SELECT '` + singleLineString + `' AS prompt`;                        
+             var subselect = UtilsHelper.getQueryFromPrompt(singleLineString);                          
              arraySelect.push(subselect);
         });
          // Join all the selects with union all
@@ -211,8 +211,12 @@ export class DashboardService {
         }                        
         const singleLineString = `Act as an experienced Business Data Analyst and answer the question having into context the following Data: ${serializedElementData} Question: ${question}`;                
         // Clean string to send to BigQuery
-        const escapedPrompt =  UtilsHelper.escapeQueryAll(singleLineString);
-        const subselect = `SELECT '` + escapedPrompt + `' AS prompt`;                        
+        const escapedPrompt =  UtilsHelper.escapeQueryAll(singleLineString);        
+        var subselect = `SELECT '` + escapedPrompt + `' AS prompt`;
+        if(ConfigReader.USE_REMOTE_UDF)
+        {
+            subselect = `SELECT llm.bq_vertex_remote('` + escapedPrompt + `') AS r, '' AS status `;
+        }                        
         Logger.debug("escapedPrompt: " + subselect);
         Logger.debug("Sending Prompt to BigQuery LLM");
         return this.getResultsFromBigQuery(subselect);    
@@ -222,6 +226,11 @@ export class DashboardService {
 
     private buildBigQueryLLMQuery(selectPrompt:string)
     {
+        if(ConfigReader.USE_REMOTE_UDF)
+        {
+            return `#Looker GenAI Extension UDF - Dashboard - version: ${ConfigReader.CURRENT_VERSION}           
+            ${selectPrompt}`;
+        }
         return `#Looker GenAI Extension - Dashboard - version: ${ConfigReader.CURRENT_VERSION}
         SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
         FROM
