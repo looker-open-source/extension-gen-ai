@@ -38,7 +38,8 @@ module "project-services" {
     "storage.googleapis.com",
     "workflows.googleapis.com",
     "aiplatform.googleapis.com",
-    "compute.googleapis.com"
+    "compute.googleapis.com",
+    "run.googleapis.com"
   ]
 }
 
@@ -84,6 +85,14 @@ resource "google_project_iam_member" "iam_permission_looker_aiplatform" {
 resource "google_project_iam_member" "bigquery_connection_remote_model" {
   project    = var.project_id
   role       = "roles/aiplatform.user"
+  member     = format("serviceAccount:%s", google_bigquery_connection.connection.cloud_resource[0].service_account_id)
+  depends_on = [time_sleep.wait_after_apis_activate, google_bigquery_connection.connection]
+}
+
+# IAM for connection to be able to execute vertex ai queries through BQ
+resource "google_project_iam_member" "bigquery_connection_invoke_function" {
+  project    = var.project_id
+  role       = "roles/run.invoker"
   member     = format("serviceAccount:%s", google_bigquery_connection.connection.cloud_resource[0].service_account_id)
   depends_on = [time_sleep.wait_after_apis_activate, google_bigquery_connection.connection]
 }
@@ -275,8 +284,68 @@ EOF
 }
 
 
+resource "google_storage_bucket" "bucket-llm" {
+  name          = "looker-extension-genai-${random_string.random.result}"
+  location      = "us"
+  uniform_bucket_level_access = true
+  depends_on = [random_string.random, time_sleep.wait_after_apis_activate]
+  force_destroy = true
+}
 
+# Generate the File to upload go GCS for Cloud Function
+data "archive_file" "default" {
+  type        = "zip"
+  output_path = "/tmp/function-source.zip"
+  source_dir  = "../cloud-function-remote/src"
+}
 
+# Bucket with source code for Cloud Function
+resource "google_storage_bucket_object" "functions_bq_remote_udf" {
+  name   = "bq_remote_function.zip"
+  bucket = google_storage_bucket.bucket-llm.name
+  source =  data.archive_file.default.output_path
+  depends_on = [ data.archive_file.default , time_sleep.wait_after_apis_activate]
+}
 
+resource "google_cloudfunctions2_function" "functions_bq_remote_udf" {
+  name = "looker-extension-genai-bq-remote-${random_string.random.result}"
+  location = "us-central1"
+  description = "Cloud Function to connect BigQuery UDF to Vertex AI text-bison"
 
+  build_config {
+    runtime = "python311"
+    entry_point = "bq_vertex_remote"  # Set the entry point     
+    source {
+      storage_source {
+        bucket = google_storage_bucket.bucket-llm.name
+        object = google_storage_bucket_object.functions_bq_remote_udf.name
+      }
+    }
+  }
+
+  service_config {
+    max_instance_count  = 10
+    min_instance_count = 1
+    available_memory    = "256M"
+    timeout_seconds     = 60
+    ingress_settings = "ALLOW_INTERNAL_ONLY"
+    service_account_email = google_service_account.looker_llm_service_account.email
+  }
+  depends_on = [google_storage_bucket_object.functions_bq_remote_udf, google_storage_bucket.bucket-llm, time_sleep.wait_after_apis_activate]  
+}
+
+resource "google_bigquery_job" "create_bq_remote_udf" {
+  job_id = "create_looker_bq_remote_udf-${random_string.random.result}"
+  query {
+    query              = <<EOF
+CREATE OR REPLACE FUNCTION 
+`${var.project_id}`.llm.bq_vertex_remote(prompt STRING) RETURNS STRING
+REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result}` 
+OPTIONS (endpoint = '${google_cloudfunctions2_function.functions_bq_remote_udf.url}')
+EOF  
+    create_disposition = ""
+    write_disposition  = ""
+  }
+  depends_on = [google_bigquery_connection.connection, google_bigquery_dataset.dataset, time_sleep.wait_after_apis_activate, google_cloudfunctions2_function.functions_bq_remote_udf]
+}
 

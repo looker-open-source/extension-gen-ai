@@ -20,12 +20,14 @@ export interface ISettings {
 
 
 export class ConfigReader {
-    public static readonly CURRENT_VERSION = "2.2";
-    public static readonly LAST_UPDATED = "11/28/2023";
+    public static readonly CURRENT_VERSION = "2.3";
+    public static readonly LAST_UPDATED = "11/29/2023";
     public static readonly BQML_MODEL = "llm.llm_model";
     public static readonly EXPLORE_LOGGING = "llm.explore_logging";
     public static readonly SETTINGS_TABLE = "llm.settings";
+    public static readonly EXPLORE_MODELS = "llm.looker_explores";
     public static readonly DEFAULT_USER_ID = "defaultUser";
+    public static readonly USE_REMOTE_UDF = true;
 
     private sql: LookerSQLService;
     private lookerSDK: Looker40SDK;
