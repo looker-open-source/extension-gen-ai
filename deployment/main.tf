@@ -89,13 +89,7 @@ resource "google_project_iam_member" "bigquery_connection_remote_model" {
   depends_on = [time_sleep.wait_after_apis_activate, google_bigquery_connection.connection]
 }
 
-# IAM for connection to be able to execute vertex ai queries through BQ
-resource "google_project_iam_member" "bigquery_connection_invoke_function" {
-  project    = var.project_id
-  role       = "roles/run.invoker"
-  member     = format("serviceAccount:%s", google_bigquery_connection.connection.cloud_resource[0].service_account_id)
-  depends_on = [time_sleep.wait_after_apis_activate, google_bigquery_connection.connection]
-}
+
 
 resource "google_project_iam_member" "iam_service_account_act_as" {
   project    = var.project_id
@@ -324,10 +318,10 @@ resource "google_cloudfunctions2_function" "functions_bq_remote_udf" {
   }
 
   service_config {
-    max_instance_count  = 10
-    min_instance_count = 1
-    available_memory    = "256M"
-    timeout_seconds     = 60
+    max_instance_count  = 20
+    min_instance_count = 2
+    available_memory    = "512M"    
+    timeout_seconds     = 120
     ingress_settings = "ALLOW_INTERNAL_ONLY"
     service_account_email = google_service_account.looker_llm_service_account.email
   }
@@ -349,3 +343,10 @@ EOF
   depends_on = [google_bigquery_connection.connection, google_bigquery_dataset.dataset, time_sleep.wait_after_apis_activate, google_cloudfunctions2_function.functions_bq_remote_udf]
 }
 
+# IAM for connection to be able to execute vertex ai queries through BQ
+resource "google_project_iam_member" "bigquery_connection_invoke_function" {
+  project    = var.project_id
+  role       = "roles/run.invoker"
+  member     = format("serviceAccount:%s", google_bigquery_connection.connection.cloud_resource[0].service_account_id)
+  depends_on = [time_sleep.wait_after_apis_activate, google_bigquery_connection.connection]
+}

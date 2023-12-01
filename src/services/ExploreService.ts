@@ -134,7 +134,6 @@ export class ExploreService {
 
     private async retrieveLookerParametersFromLLM(promptArray:Array<string>)
     {
-        Logger.info("Retrieving useNativeBQ: " + this.useNativeBQ);
         const arraySelect: Array<string> = [];
         promptArray.forEach((promptField) =>{
              const singleLineString = UtilsHelper.escapeBreakLine(promptField);                   
