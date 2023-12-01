@@ -10,12 +10,8 @@ import { Looker40SDK } from "@looker/sdk";
 import { LookerSQLService } from "./LookerSQLService";
 import { Logger } from "../utils/Logger";
 import { PromptTemplateService, PromptTemplateTypeEnum } from "./PromptTemplateService";
+import { ISettings } from "../@types/settings";
 
-export interface ISettings {
-    userId: string;
-    logLevel: string;
-    customPrompt: string;
-}
 
 
 
@@ -27,7 +23,7 @@ export class ConfigReader {
     public static readonly SETTINGS_TABLE = "llm.settings";
     public static readonly EXPLORE_MODELS = "llm.looker_explores";
     public static readonly DEFAULT_USER_ID = "defaultUser";
-    public static readonly USE_REMOTE_UDF = true;
+    public static readonly DEFAULT_MODEL_SIZE = "32";
 
     private sql: LookerSQLService;
     private lookerSDK: Looker40SDK;
@@ -51,16 +47,18 @@ export class ConfigReader {
         {        
             const queryToRun = `#Looker GenAI Extension - version: ${ConfigReader.CURRENT_VERSION} - getConfig
     SELECT "${userId}" as userId,
-    JSON_VALUE(config["logLevel"]) as logLevel,
+    COALESCE(JSON_VALUE(config["logLevel"]), "info") as logLevel,
+    COALESCE(JSON_VALUE(config["llmModelSize"]), "${ConfigReader.DEFAULT_MODEL_SIZE}") as llmModelSize,
     JSON_VALUE(config["customPrompt"]) as customPrompt,
-    COALESCE(userId, "-1") as priority
+    COALESCE(userId, "-1") as priority, 
+    COALESCE(JSON_VALUE(config["useNativeBQ"]), "true") as useNativeBQ
     FROM ${ConfigReader.SETTINGS_TABLE} WHERE userId = "${userId}" OR userId IS NULL ORDER BY priority DESC LIMIT 1`;
             const results = await this.sql.execute<ISettings>(queryToRun);                         
             return results[0];
         }
         catch(err){
             Logger.error("Could not get custom settings from BigQuery, make sure the table and data exists in the tableReference llm.settings, loading default: "+ err);
-            return {userId: userId, logLevel: "info", customPrompt: this.promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS)};            
+            return {userId: userId, logLevel: "info", useNativeBQ: "true", llmModelSize: ConfigReader.DEFAULT_MODEL_SIZE, customPrompt: this.promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS)};            
         }
     }
 
@@ -72,11 +70,12 @@ export class ConfigReader {
     public async updateSettings(updatedSettings:ISettings, userId: string)
     {
         try{
-            const queryToRun = `#Looker GenAI Extension - version: ${ConfigReader.CURRENT_VERSION} - updateUserSettings
+            const queryToRun = `#Looker ExtGenAI updateUserSettings - v: ${ConfigReader.CURRENT_VERSION}
             BEGIN
             DELETE FROM ${ConfigReader.SETTINGS_TABLE} WHERE userId = "${userId}";
             INSERT INTO ${ConfigReader.SETTINGS_TABLE} (config, userId)
-            VALUES(JSON_OBJECT('logLevel', "${updatedSettings.logLevel}", 'customPrompt', """${updatedSettings.customPrompt}"""), "${userId}");
+            VALUES(JSON_OBJECT('logLevel', "${updatedSettings.logLevel}", 'llmModelSize', "${updatedSettings.llmModelSize}",
+            'useNativeBQ', ${updatedSettings.useNativeBQ}, 'customPrompt', """${updatedSettings.customPrompt}"""), "${userId}");
             END`;        
             const results = await this.sql.executeLog(queryToRun);
             Logger.info("Settings saved sucessfully: "+ results);             
@@ -91,7 +90,7 @@ export class ConfigReader {
     public async resetDefaultSettings(userId: string)
     {
         try{
-            const queryToRun = `#Looker GenAI Extension - version: ${ConfigReader.CURRENT_VERSION} - resetUserSettings
+            const queryToRun = `#Looker ExtGenAI resetUserSettings - v: ${ConfigReader.CURRENT_VERSION} 
             DELETE FROM ${ConfigReader.SETTINGS_TABLE}         
             WHERE userId = "${userId}"`;        
             const results = await this.sql.executeLog(queryToRun);
@@ -100,8 +99,7 @@ export class ConfigReader {
         catch(error)
         {
             Logger.error("Could not reset settings on BigQuery");
-        }  
-        
+        }          
     }
 
 }   

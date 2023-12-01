@@ -47,7 +47,7 @@ export const Dashboard: React.FC = () => {
   const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
   const defaultPromptValue = "Can you summarize the following datasets in 10 bullet points?";
 
-  const { dashboardCombo } = React.useContext(StateContext) as StateContextType;
+  const { dashboardCombo, checkUseNativeBQ } = React.useContext(StateContext) as StateContextType;
 
   useEffect(() => {
     loadDashboards();    
@@ -157,7 +157,7 @@ export const Dashboard: React.FC = () => {
     setLoadingLLM(true);
     try {
       const dashboardElementsData = await generativeDashboardService.getDashboardDataById(currentDashId);
-      const promptResult = await generativeDashboardService.sendPrompt(dashboardElementsData, prompt)
+      const promptResult = await generativeDashboardService.sendPrompt(dashboardElementsData, prompt, checkUseNativeBQ)
       // update interface with results
       setLlmInsights(promptResult)
     } catch (error) {

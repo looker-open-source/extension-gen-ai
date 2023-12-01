@@ -34,9 +34,10 @@ export class DashboardService {
     private dashboardService: LookerDashboardService;    
     private promptService: PromptTemplateService|null = null;
 
-    public constructor(lookerSDK: Looker40SDK) {
+    public constructor(lookerSDK: Looker40SDK)
+    {
         this.sql = new LookerSQLService(lookerSDK);
-        this.dashboardService = new LookerDashboardService(lookerSDK, this.sql);        
+        this.dashboardService = new LookerDashboardService(lookerSDK, this.sql);                
     }
     
     static readonly MAX_CHAR_PER_PROMPT: number = 20000*3;
@@ -147,7 +148,7 @@ export class DashboardService {
             description?: string,
             elements: Array<DashboardTile<unknown>>
         } ,
-        userInput: string): Promise<string> {
+        userInput: string, useNativeBQ: boolean): Promise<string> {
         
         // Break the current dashboard tiles into batches to send to LLM
         const arrayBatchesOfDash:Array<Array<DashboardTile<unknown>>> = this.breakTilesIntoBatches(dashboardElementData);
@@ -172,7 +173,7 @@ export class DashboardService {
         const arraySelect: Array<string> = [];
         promptArray.forEach((promptField) =>{
              const singleLineString = UtilsHelper.escapeBreakLine(promptField);
-             var subselect = UtilsHelper.getQueryFromPrompt(singleLineString);                          
+             var subselect = UtilsHelper.getQueryFromPrompt(singleLineString, useNativeBQ);                          
              arraySelect.push(subselect);
         });
          // Join all the selects with union all
@@ -184,7 +185,7 @@ export class DashboardService {
         }
 
         // Concat strings and send to LLM again
-        return await this.getResultsFromBigQuery(queryContents);
+        return await this.getResultsFromBigQuery(queryContents, useNativeBQ);
 
     }
 
@@ -202,31 +203,31 @@ export class DashboardService {
             description?: string,
             elements: Array<DashboardTile<unknown>>
         } ,
-        question: string): Promise<string> {
+        question: string, useNativeBQ:boolean): Promise<string> {
                 
         let serializedElementData = JSON.stringify(dashboardElementData);            
         if (serializedElementData.length > DashboardService.MAX_CHAR_PER_PROMPT)
         {
-            serializedElementData = await this.shardDashboardData(dashboardElementData, question);
+            serializedElementData = await this.shardDashboardData(dashboardElementData, question, useNativeBQ);
         }                        
         const singleLineString = `Act as an experienced Business Data Analyst and answer the question having into context the following Data: ${serializedElementData} Question: ${question}`;                
         // Clean string to send to BigQuery
         const escapedPrompt =  UtilsHelper.escapeQueryAll(singleLineString);        
         var subselect = `SELECT '` + escapedPrompt + `' AS prompt`;
-        if(ConfigReader.USE_REMOTE_UDF)
+        if(!useNativeBQ)
         {
             subselect = `SELECT llm.bq_vertex_remote('` + escapedPrompt + `') AS r, '' AS status `;
         }                        
         Logger.debug("escapedPrompt: " + subselect);
         Logger.debug("Sending Prompt to BigQuery LLM");
-        return this.getResultsFromBigQuery(subselect);    
+        return this.getResultsFromBigQuery(subselect, useNativeBQ);    
 
     }
 
 
-    private buildBigQueryLLMQuery(selectPrompt:string)
+    private buildBigQueryLLMQuery(selectPrompt:string, useNativeBQ:boolean)
     {
-        if(ConfigReader.USE_REMOTE_UDF)
+        if(useNativeBQ == false)
         {
             return `#Looker GenAI Extension UDF - Dashboard - version: ${ConfigReader.CURRENT_VERSION}           
             ${selectPrompt}`;
@@ -249,9 +250,9 @@ export class DashboardService {
     }
 
 
-    public async getResultsFromBigQuery(promptParameter:string): Promise<string>
+    public async getResultsFromBigQuery(promptParameter:string, useNativeBQ:boolean): Promise<string>
     {
-        const queryResults = await this.sendPromptToBigQuery(promptParameter);
+        const queryResults = await this.sendPromptToBigQuery(promptParameter, useNativeBQ);
         let result_string = "";        
         for(const queryResult of queryResults)
         {
@@ -274,9 +275,9 @@ export class DashboardService {
      * @param promptParameter 
      * @returns 
      */
-    private async sendPromptToBigQuery(promptParameter: string){
+    private async sendPromptToBigQuery(promptParameter: string, useNativeBQ:boolean){
         // Create SQL Query to
-        const query = this.buildBigQueryLLMQuery(promptParameter);
+        const query = this.buildBigQueryLLMQuery(promptParameter, useNativeBQ);
         const queryResults = await this.sql.execute<{
             r: string
             status: string
