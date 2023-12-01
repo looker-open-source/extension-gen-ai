@@ -78,11 +78,11 @@ export class UtilsHelper {
             .map(key => enumerator[key]);
     }
 
-    public static getQueryFromPrompt(singleLineString: string)
+    public static getQueryFromPrompt(singleLineString: string, useNativeBQ: boolean)
     {
         var subselect = "";
-        if(ConfigReader.USE_REMOTE_UDF)
-        {
+        if(useNativeBQ == false)
+        {            
             subselect = `SELECT llm.bq_vertex_remote('` + singleLineString + `') AS r, '' AS status `;                        
         }
         else

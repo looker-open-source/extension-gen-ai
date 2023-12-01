@@ -11,8 +11,7 @@ import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/Promp
 import { Logger } from '../utils/Logger'
 import { PromptService } from '../services/PromptService'
 import { ExtensionContext } from '@looker/extension-sdk-react'
-import { ConfigReader, ISettings } from '../services/ConfigReader'
-import { StateContextType } from '../@types/settings'
+import { ISettings, StateContextType } from '../@types/settings'
 import { StateContext } from '../context/settingsContext'
 import { custom } from 'joi'  
 
@@ -29,7 +28,7 @@ export const Settings: React.FC = () => {
   const configReader: ConfigReader = new ConfigReader(core40SDK);
   const [logLevel, setLogLevel] = useState<string>("info");
   const [customPrompt, setCustomPrompt] = useState<string>("");
-  const { configSettings, saveSettings, resetSettings } = React.useContext(StateContext) as StateContextType;
+  const { configSettings, saveSettings, resetSettings , llmModelSize, setLlmModelSize, checkUseNativeBQ, setCheckUseNativeBQ} = React.useContext(StateContext) as StateContextType;
   
   
 
@@ -59,13 +58,30 @@ export const Settings: React.FC = () => {
     Logger.debug(comboboxComponent.value);
   }
 
+
+  const handleChangeModelSize= (comboboxComponent: MaybeComboboxOptionObject) => {
+    if (!comboboxComponent) {
+      throw new Error('missing combobox componenet');
+    }    
+    setLlmModelSize(comboboxComponent.value);
+    Logger.debug("Model Size: "+ comboboxComponent.value);
+  }
+
+  const handleChangeUseNativeBQ = () => {
+    setCheckUseNativeBQ(!checkUseNativeBQ);
+    Logger.debug("Use Native BQ: "+ !checkUseNativeBQ);
+  }
+
+
   const handleSaveUserSettings = () =>
   {    
     Logger.debug("Current custom Prompt: "+ customPrompt);
     saveSettings({
       userId: configSettings.userId,
       logLevel: logLevel,
-      customPrompt: customPrompt
+      llmModelSize: llmModelSize,
+      customPrompt: customPrompt,
+      useNativeBQ: checkUseNativeBQ.toString()
     });       
   }
 
@@ -91,6 +107,18 @@ export const Settings: React.FC = () => {
               <ComboboxOption value="error" />
             </ComboboxList>
           </Combobox>
+          <Label>LLM Model Size</Label>
+          <Combobox width={"300px"} value={llmModelSize} onChange={handleChangeModelSize}>
+            <ComboboxInput />
+            <ComboboxList>
+              <ComboboxOption value="8"/>
+              <ComboboxOption value="32" />
+            </ComboboxList>
+          </Combobox>
+          <FieldCheckbox
+          label="Yes - Use Native BQML.GENERATE_TEXT"
+          checked={checkUseNativeBQ} 
+          onChange={handleChangeUseNativeBQ}/>
 
           <FieldTextArea
             width="100%"

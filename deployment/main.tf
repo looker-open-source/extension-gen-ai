@@ -233,7 +233,7 @@ resource "google_bigquery_job" "insert_default_settings" {
   query {
     query              = <<EOF
 INSERT INTO `${var.project_id}.${var.dataset_id_name}.settings`(config, userId)
-VALUES(JSON_OBJECT('logLevel', "trace", 'customPrompt', 
+VALUES(JSON_OBJECT('logLevel', "info", 'llmModelSize', '32', 'useNativeBQ', "true", 'customPrompt', 
 """
 Context: {{serializedModelFields}}
 Question: {{userInput}}
