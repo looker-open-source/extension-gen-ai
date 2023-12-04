@@ -35,7 +35,7 @@ import { ExploreEvent, LookerEmbedSDK} from '@looker/embed-sdk'
 import { ExploreService, FieldMetadata } from '../services/ExploreService'
 import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/PromptTemplateService'
 import { Logger } from '../utils/Logger'
-import { ConfigReader, ISettings } from '../services/ConfigReader'
+import { ConfigReader } from '../services/ConfigReader'
 import { PromptService } from '../services/PromptService'
 import PromptModel from '../models/PromptModel'
 import { StateContext } from '../context/settingsContext'
@@ -59,7 +59,8 @@ export const Explore: React.FC = () => {
   const [topPromptsCombos, setTopPromptsCombos] = useState<ComboboxOptionObject[]>()  
   const { configSettings, exploreComboPromptExamples, explorePromptExamples, exploreComboModels,
     exploreCurrentComboModels,selectedModelExplore ,setExploreCurrentComboModels,
-    setSelectedModelExplore, prompt, setPrompt } = React.useContext(StateContext) as StateContextType;
+    setSelectedModelExplore, prompt, setPrompt, llmModelSize,
+    checkUseNativeBQ } = React.useContext(StateContext) as StateContextType;
 
 
   const promptService: PromptService = new PromptService(core40SDK);
@@ -158,7 +159,8 @@ export const Explore: React.FC = () => {
 
   // Method that triggers sending the message to the workflow
   const handleSend = async () =>
-  {    
+  { 
+    const startTime = performance.now();
     handleClearAll();  
     setLoadingLLM(true);
     var promptService = new PromptTemplateService();
@@ -174,7 +176,7 @@ export const Explore: React.FC = () => {
       Logger.error("Failed to load custom prompt from Session Storage");
     }
         
-    const generativeExploreService = new ExploreService(core40SDK, promptService);
+    const generativeExploreService = new ExploreService(core40SDK, promptService, llmModelSize, checkUseNativeBQ);
 
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
     Logger.info("1. Get the Metadata from Looker from the selected Explorer");    
@@ -201,7 +203,7 @@ export const Explore: React.FC = () => {
                 // "view_name": dimension.view_label,
                 label : field.label!,
                 name: field.name!,
-                // "type": dimension.type,
+                type: field.type!,
                 description: field.description!
                 // "sql": dimension.sql,
               };
@@ -218,7 +220,7 @@ export const Explore: React.FC = () => {
           throw new Error('missing user prompt, unable to create query');
         }                
         Logger.info("3. Generate Prompts and Send to BigQuery");
-        const { clientId,  queryId, modelName, view } = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!);
+        const { clientId,  queryId, modelName, view } = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!, llmModelSize);
         // Update the Explore with New QueryId
         LookerEmbedSDK.init(hostUrl!);
         Logger.debug("explore not null: " + currentExploreId);
@@ -232,6 +234,11 @@ export const Explore: React.FC = () => {
             setLoadingLLM(false);
           });
         setLoadingLLM(false);
+
+        // Do something that takes time
+        const endTime = performance.now();
+        const elapsedTime = (endTime - startTime)/1000;
+        Logger.info(`Elapsed to render explore: ${elapsedTime} s`);
         // After loading is complete,
         // Try to see if I can answer the question in text format the same way as dashboard and getting data from the queryId
         Logger.debug("Async try to set the LLM Insight after explore is on");        

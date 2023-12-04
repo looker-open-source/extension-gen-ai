@@ -14,14 +14,13 @@ import { Logger } from '../utils/Logger';
 export const StateContext = React.createContext<StateContextType | null>(null);
 
 const StateProvider: React.FC<React.ReactNode> = ({ children }) => {    
-
   
   const { core40SDK } =  React.useContext(ExtensionContext);
   const configReader: ConfigReader = new ConfigReader(core40SDK);
   const promptService = new PromptService(core40SDK);
   const dashboardService = new DashboardService(core40SDK);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [configSettings, setConfigSettings] = useState<ISettings>({"userId":"", "customPrompt": "default", "logLevel": "info"});
+  const [configSettings, setConfigSettings] = useState<ISettings>({"userId":"", "llmModelSize": "32", "customPrompt": "default", "logLevel": "info", "useNativeBQ": "true"});
   
   // Explores
   const [exploreComboModels, setExploreComboModels] = useState<ComboboxOptionObject[]>([]);
@@ -31,11 +30,12 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   const [selectedModelExplore, setSelectedModelExplore] = useState<string>("");
   const [prompt, setPrompt] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
+  const [llmModelSize, setLlmModelSize] = useState<string>(ConfigReader.DEFAULT_MODEL_SIZE);
+  const [checkUseNativeBQ, setCheckUseNativeBQ] = useState<boolean>(true);
  
   // Dashboards
   const [dashboardCombo, setDashboardCombo ] = useState<ComboboxOptionObject[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-
 
 
   React.useEffect(() => {    
@@ -65,9 +65,9 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
     setUserId(lookerElements[3].id!);
     
     const settings = await loadSettings(lookerElements[3].id!);
-    setConfigSettings(settings);
      // Create settings
     Logger.debug("settings loaded: " + settings.logLevel);
+    Logger.debug("settings loaded - modelSize: " + settings.llmModelSize);
     setIsLoading(false);
     // loadDashboardCombo();
     setIsMounted(true);
@@ -86,8 +86,7 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   }
 
 
-  function loadComboExplore(models: ILookmlModel[], prompts: PromptModel[]) {
-    
+  function loadComboExplore(models: ILookmlModel[], prompts: PromptModel[]) {    
     setExploreComboModels(generateComboExploreFromModels(models));    
     setExplorePromptExamples(prompts);
     setExploreComboPromptExamples(generateCombosForTopPrompts(prompts));
@@ -137,7 +136,10 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
 
   const loadSettings: (userIdFromConfig: string) => Promise<ISettings> = async (userIdFromConfig: string) =>  {    
     const conf = await configReader.getSettings(userIdFromConfig)!;
-    setConfigSettings(conf);    
+    setConfigSettings(conf);  
+    Logger.setLoggerLevelByName(conf?.logLevel!);  
+    setLlmModelSize(conf?.llmModelSize!);     
+    setCheckUseNativeBQ(conf?.useNativeBQ! == "true"? true: false);    
     return conf;
   }
   
@@ -153,8 +155,8 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
     <StateContext.Provider value={{configSettings, saveSettings,resetSettings, 
     setExploreCurrentComboModels, setSelectedModelExplore, exploreComboModels,
     explorePromptExamples, exploreComboPromptExamples, exploreCurrentComboModels, 
-    selectedModelExplore, prompt, setPrompt,
-    dashboardCombo, userId}}>
+    selectedModelExplore, prompt, setPrompt, llmModelSize, setLlmModelSize,
+    dashboardCombo, userId, checkUseNativeBQ, setCheckUseNativeBQ}}>
       {isMounted && children}
       <Dialog isOpen={isLoading} width={350} >
         <DialogLayout header="Loading Extension...">

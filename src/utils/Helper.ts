@@ -6,6 +6,8 @@
  * https://opensource.org/licenses/MIT.
  */
 
+import { ConfigReader } from "../services/ConfigReader";
+
 export interface IDictionary<T> {
     [key: string]: T;
 }
@@ -74,5 +76,19 @@ export class UtilsHelper {
         return Object.keys(enumerator)
             .filter(this.isNumber)
             .map(key => enumerator[key]);
+    }
+
+    public static getQueryFromPrompt(singleLineString: string, useNativeBQ: boolean)
+    {
+        var subselect = "";
+        if(useNativeBQ == false)
+        {            
+            subselect = `SELECT llm.bq_vertex_remote('` + singleLineString + `') AS r, '' AS status `;                        
+        }
+        else
+        {
+           subselect = `SELECT '` + singleLineString + `' AS prompt`;                        
+        } 
+        return subselect;
     }
 }
