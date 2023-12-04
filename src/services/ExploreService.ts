@@ -15,12 +15,13 @@ import { PromptTemplateService, PromptTemplateTypeEnum } from "./PromptTemplateS
 import { Logger } from "../utils/Logger"
 import { ConfigReader } from "./ConfigReader";
 import { slice } from "lodash";
+import { sub } from "date-fns";
 
 export interface FieldMetadata{
     label: string;
     name: string;
     description: string;
-    // type: string;
+    type: string;
 }
 
 
@@ -28,24 +29,30 @@ export class ExploreService {
     
     private sql: LookerSQLService;
     private promptService: PromptTemplateService;
+    private llmModelSize: number;
+    private useNativeBQ: boolean;
+    private MAX_CHAR_PER_PROMPT: number;    
+    private FIXED_BREAK_PER_QUANTITY: number;    
 
-    static readonly FIXED_BREAK_PER_QUANTITY=800;
-    static readonly MAX_CHAR_PER_PROMPT= 70000;
-
-
-    public constructor(lookerSDK: Looker40SDK, promptService: PromptTemplateService) {
+    public constructor(lookerSDK: Looker40SDK, promptService: PromptTemplateService, llmModelSize:string, useNativeBQ:boolean) {
         this.sql = new LookerSQLService(lookerSDK);
         this.promptService = promptService;
+        this.llmModelSize = parseInt(llmModelSize);
+        this.MAX_CHAR_PER_PROMPT = this.llmModelSize * 2500;
+        this.FIXED_BREAK_PER_QUANTITY = this.llmModelSize * 25;
+        this.useNativeBQ = useNativeBQ;
     }
 
     //    Method that breaks the exploreFields into chunks based on the max number of tokens
     private breakFieldsPerToken(modelFields: FieldMetadata[]): Array<FieldMetadata[]>{
         const generatedPromptsArray = new Array<FieldMetadata[]>;
-        var totalLength = modelFields.length;
+        // get the total length of the json array
+        var totalLength = JSON.stringify(modelFields).length;
         // divide by n elements
-        var maxInteractions = totalLength/ExploreService.FIXED_BREAK_PER_QUANTITY;
+        var maxInteractions = totalLength/this.MAX_CHAR_PER_PROMPT;
+        Logger.debug("Max Interactions: " +  maxInteractions + " totalLength: " + totalLength);
         for(let i=0; i < maxInteractions; i++){
-            generatedPromptsArray.push(modelFields.slice(i*ExploreService.FIXED_BREAK_PER_QUANTITY, (i+1)*ExploreService.FIXED_BREAK_PER_QUANTITY));
+            generatedPromptsArray.push(modelFields.slice(i*this.FIXED_BREAK_PER_QUANTITY, (i+1)*this.FIXED_BREAK_PER_QUANTITY));
         }
         return generatedPromptsArray;
     }
@@ -89,9 +96,14 @@ export class ExploreService {
         return shardedPrompts;
     }
 
-    private buildBigQueryLLMQuery(selectPrompt:string)
+    private buildBigQueryLLMWithType(selectPrompt:string, type:string)
     {
-        return `#Looker GenAI Extension - version: ${ConfigReader.CURRENT_VERSION}
+        if(this.useNativeBQ == false)
+        {
+            return `#Looker Ext GenAI UDF - ${type} - v: ${ConfigReader.CURRENT_VERSION}           
+            ${selectPrompt}`;
+        }
+        return `#Looker Ext GenAI - ${type} - v: ${ConfigReader.CURRENT_VERSION}
         SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
         FROM
         ML.GENERATE_TEXT(
@@ -120,14 +132,12 @@ export class ExploreService {
     }
 
 
-
     private async retrieveLookerParametersFromLLM(promptArray:Array<string>)
     {
         const arraySelect: Array<string> = [];
         promptArray.forEach((promptField) =>{
-             const singleLineString = UtilsHelper.escapeBreakLine(promptField);
-             const subselect = `SELECT '` + singleLineString + `' AS prompt`;                        
-             arraySelect.push(subselect);
+             const singleLineString = UtilsHelper.escapeBreakLine(promptField);                   
+             arraySelect.push(UtilsHelper.getQueryFromPrompt(singleLineString, this.useNativeBQ));
         });
          // Join all the selects with union all
         const queryContents = arraySelect.join(" UNION ALL ");
@@ -137,7 +147,7 @@ export class ExploreService {
             throw new Error('Could not generate field arrays on Prompt');
         }
          // query to run
-         const queryToRun = this.buildBigQueryLLMQuery(queryContents);
+         const queryToRun = this.buildBigQueryLLMWithType(queryContents, "Explore");
          Logger.debug("Query to Run: " + queryToRun);                 
          const results = await this.sql.execute<{
              r: string
@@ -220,32 +230,6 @@ export class ExploreService {
         return false;
     }
 
-
-    private async findLimitsFromLLM(
-        userInput: string): Promise<string>
-    {
-        // Generate Prompt returns an array, gets the first for the LIMIT
-        const promptLimit = this.generatePrompt([], userInput, PromptTemplateTypeEnum.LIMITS);
-        const results  = await this.retrieveLookerParametersFromLLM(promptLimit);
-        const limitResult = UtilsHelper.firstElement(results).r;
-        // validate the result
-        try {
-            var limitInt = parseInt(limitResult);
-            if(limitInt > 0 && limitInt <= 500)
-            {
-                return limitResult;
-            }
-            else
-            {
-                // throw new Error("Limit not returning correct due to prompt, going to default");
-                return "500";
-            }
-        }
-        catch (err) {
-            // throw new Error("Limit not returning correct due to prompt, going to default");
-            return "500";
-        }
-    }
     private async findPivotsFromLLM( 
         userInput: string,
         potentialFields: Array<string>
@@ -306,7 +290,8 @@ export class ExploreService {
         modelFields: FieldMetadata[],
         userInput: string,
         modelName: string,
-        viewName: string): Promise<{
+        viewName: string, 
+        llmModelSize: string): Promise<{
             clientId: string,
             queryId: string,
             modelName: string,
@@ -346,28 +331,6 @@ export class ExploreService {
         }
     }
 
-
-    private buildExploreOutputQuery(selectPrompt:string)
-    {        
-        const queryPrompt = `SELECT '` + UtilsHelper.escapeBreakLine(selectPrompt) + `' AS prompt`;   
-        return `#Looker GenAI Extension - ExploreOutput - version: ${ConfigReader.CURRENT_VERSION}
-        SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
-        FROM
-        ML.GENERATE_TEXT(
-            MODEL ${ConfigReader.BQML_MODEL},
-            (
-                ${queryPrompt}
-            ),
-            STRUCT(
-            0.05 AS temperature,
-            1024 AS max_output_tokens,
-            0.98 AS top_p,
-            TRUE AS flatten_json_output,
-            1 AS top_k));
-        `;
-    }
-
-
     public async answerQuestionWithData(prompt: string, queryId: string): Promise<string> {                        
         const userInput = prompt;        
         Logger.info("Getting the raw data from the explore");            
@@ -377,7 +340,7 @@ export class ExploreService {
         let limitData = elementData;
         for (let i = 0; i < elementData.length; i++) {
             totalChars += JSON.stringify(elementData[i]).length;
-            if (totalChars > ExploreService.MAX_CHAR_PER_PROMPT) {
+            if (totalChars > this.MAX_CHAR_PER_PROMPT) {
                 limitData = elementData.slice(0, i);
                 break;
             }            
@@ -385,7 +348,8 @@ export class ExploreService {
         const serializedModelFields = JSON.stringify(limitData);
         Logger.info("Generate Prompt passing the data");
         const promptToRun = this.promptService.fillByType(PromptTemplateTypeEnum.EXPLORATION_OUTPUT, { serializedModelFields, userInput});
-        const queryToRun = this.buildExploreOutputQuery(promptToRun);
+        var queryPrompt = UtilsHelper.getQueryFromPrompt(UtilsHelper.escapeBreakLine(promptToRun), this.useNativeBQ);
+        const queryToRun = this.buildBigQueryLLMWithType(queryPrompt, "Output");
         const results = await this.sql.execute<{
             r: string
             status: string

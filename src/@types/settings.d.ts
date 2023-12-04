@@ -6,10 +6,11 @@ export interface ISettings {
     userId: string;
     logLevel: string;
     customPrompt: string;
+    llmModelSize: string;
+    useNativeBQ: string;
 }
 export type StateContextType = {
-  configSettings: ISettings;
-  
+  configSettings: ISettings;  
   saveSettings: (set: ISettings) => Promise<void>;
   resetSettings: () => Promise<ISettings>;  
   setExploreCurrentComboModels: (models: ComboboxOptionObject[]) => void;
@@ -23,4 +24,8 @@ export type StateContextType = {
   dashboardCombo: ComboboxOptionObject[];
   prompt:string;
   userId: string;
+  setLlmModelSize:(size:string) => void;
+  llmModelSize:string;
+  setCheckUseNativeBQ:(useNativeBQ:boolean) => void;
+  checkUseNativeBQ:boolean;
 };
