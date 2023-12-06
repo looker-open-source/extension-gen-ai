@@ -120,13 +120,15 @@ export class ExploreService {
         `;
     }
 
-    private async logLookerFilterFields(modelFields: FieldMetadata[], userInput: string, result: LookerExploreDataModel):Promise<string>
+    public async logLookerFilterFields(modelFields: FieldMetadata[], userInput: string, result: LookerExploreDataModel, thumbsUpDownNone: number):Promise<string>
     {
-        const queryToRun = `INSERT INTO ${ConfigReader.EXPLORE_LOGGING}(creation_timestamp, userInput, modelFields, llmResult) VALUES(
+        const queryToRun = `INSERT INTO ${ConfigReader.EXPLORE_LOGGING}(creation_timestamp, userInput, modelFields, llmResult, thumbsUpDown) VALUES(
             CURRENT_TIMESTAMP(),
             '${userInput}',
             JSON '${JSON.stringify(modelFields)}',
-            JSON '${JSON.stringify(result)}')`;        
+            JSON '${JSON.stringify(result)}',
+            ${thumbsUpDownNone}
+            )`;        
         const results = await this.sql.executeLog(queryToRun);         
         return results;
     }
@@ -286,6 +288,8 @@ export class ExploreService {
         }
     }
 
+    
+
     public async generatePromptSendToBigQuery(
         modelFields: FieldMetadata[],
         userInput: string,
@@ -296,12 +300,10 @@ export class ExploreService {
             queryId: string,
             modelName: string,
             view: string,
+            exploreData: LookerExploreDataModel
         }> {
         // Call LLM to find the fields
         const exploreData = await this.getExplorePayloadFromLLM(modelFields, userInput);
-        
-        // Don't wait and check if there are errors because its logging to BigQuery DML Best Effort
-        this.logLookerFilterFields(modelFields, userInput, exploreData);
     
         try {
             const llmQueryResult = await this.sql.createQuery({
@@ -324,6 +326,7 @@ export class ExploreService {
                 queryId,
                 modelName,
                 view: viewName,
+                exploreData
             }
         } catch (err) {
             Logger.error("LLM does not contain valid JSON: ");

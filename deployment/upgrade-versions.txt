@@ -1,0 +1,2 @@
+#From 2.4 to 2.5 - include column thumbsUpDown
+ALTER TABLE llm.explore_logging ADD COLUMN thumbsUpDown INT64;
