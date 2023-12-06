@@ -199,7 +199,12 @@ resource "google_bigquery_table" "table_explore_logging" {
 }, {
 	"name": "creation_timestamp",
 	"type": "TIMESTAMP"
-}]
+},
+{
+	"name": "thumbsUpDownNone",
+	"type": "INT64"
+} 
+]
 EOF
   depends_on = [time_sleep.wait_after_apis_activate]
 }

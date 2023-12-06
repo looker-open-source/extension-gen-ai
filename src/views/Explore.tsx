@@ -6,6 +6,7 @@
  * https://opensource.org/licenses/MIT.
  */
 import React, { useContext, useEffect, useState , FormEvent, useCallback} from 'react'
+import * as Icons from '@styled-icons/material';
 import { 
   Button, 
   ComponentsProvider,
@@ -18,7 +19,8 @@ import {
   ComboboxOptionObject,
   ComboboxCallback,
   MaybeComboboxOptionObject,
-  TextArea
+  TextArea,
+  IconButton
 } from '@looker/components'
 import { Dialog, DialogLayout} from '@looker/components'
 import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
@@ -40,6 +42,8 @@ import { PromptService } from '../services/PromptService'
 import PromptModel from '../models/PromptModel'
 import { StateContext } from '../context/settingsContext'
 import { StateContextType } from '../@types/settings'
+import LookerExploreDataModel from '../models/LookerExploreData';
+import { boolean } from 'joi';
 /**
  * Looker GenAI - Explore Component
  */
@@ -65,6 +69,10 @@ export const Explore: React.FC = () => {
 
   const promptService: PromptService = new PromptService(core40SDK);
 
+  const [currentFields, setCurrentFields] = useState<FieldMetadata[]>();
+  const [currentExploreData, setCurrentExploreData] = useState<LookerExploreDataModel>();
+  const [generativeExploreService, setGenerativeExploreService] = useState<ExploreService>();
+
 
   useEffect(() => {
     loadExplores();  
@@ -78,7 +86,23 @@ export const Explore: React.FC = () => {
     {
       selectComboExplore(selectedModelExplore);
     }
-    setErrorMessage(undefined);    
+    setErrorMessage(undefined);
+    
+    var promptService = new PromptTemplateService();
+    try {      
+      
+      const customPrompt = configSettings.customPrompt!;
+      const customTemplate =  {
+        [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: customPrompt
+      };
+      promptService = new PromptTemplateService(customTemplate);
+    }
+    catch{
+      Logger.error("Failed to load custom prompt from Session Storage");
+    }
+        
+    setGenerativeExploreService(new ExploreService(core40SDK, promptService, llmModelSize, checkUseNativeBQ));
+
   }
 
 
@@ -121,11 +145,7 @@ export const Explore: React.FC = () => {
     // Removes the first child    )
     exploreDivElement?.removeChild(exploreDivElement.firstChild!);
   }
-
-  const handleClearBottom = () => {    
-    // Removes the first child
-    exploreDivElement?.removeChild(exploreDivElement.lastChild!);
-  }
+  
   const handleClearAll = () => {    
     // Removes the first child
     if(exploreDivElement!=null && exploreDivElement.children!=null)
@@ -157,26 +177,50 @@ export const Explore: React.FC = () => {
     setExploreDivElement(el);           
   }, [])
 
+  function handleThumbs(upDown: boolean) {
+    if(generativeExploreService == null)
+    {
+      Logger.error("GenerativeExploreService is null");
+    }
+    if(currentExploreData == null)
+    {
+      Logger.error("currentExploreData is null");
+    }
+    if(currentFields == null)
+    {
+      Logger.error("currentFields is null");
+    }    
+    generativeExploreService!.logLookerFilterFields(currentFields!, prompt, currentExploreData!, upDown?1:0);    
+  }
+
+  // Method that triggers sending the message to the workflow
+  const handleThumbsUp = async () =>
+  {     
+    handleThumbs(true);
+  }
+
+
+  // Method that triggers sending the message to the workflow
+  const handleThumbsDown = async () =>
+  { 
+    handleThumbs(false);
+  }
+
+  // Method that triggers sending the message to the workflow
+  const onExploreRunComplete = async () =>
+  { 
+    debugger;   
+    Logger.info("onExploreRunComplete");     
+  }
+
+  
   // Method that triggers sending the message to the workflow
   const handleSend = async () =>
   { 
     const startTime = performance.now();
     handleClearAll();  
     setLoadingLLM(true);
-    var promptService = new PromptTemplateService();
-    try {      
-      
-      const customPrompt = configSettings.customPrompt!;
-      const customTemplate =  {
-        [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: customPrompt
-      };
-      promptService = new PromptTemplateService(customTemplate);
-    }
-    catch{
-      Logger.error("Failed to load custom prompt from Session Storage");
-    }
-        
-    const generativeExploreService = new ExploreService(core40SDK, promptService, llmModelSize, checkUseNativeBQ);
+    
 
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
     Logger.info("1. Get the Metadata from Looker from the selected Explorer");    
@@ -211,6 +255,8 @@ export const Explore: React.FC = () => {
             }            
           }          
         }
+        setCurrentFields(my_fields);
+        // 3. Generate Prompts and Send to BigQuery
         if(!exploreResult.ok)
         {
           throw new Error("Missing value from explore result");
@@ -220,21 +266,26 @@ export const Explore: React.FC = () => {
           throw new Error('missing user prompt, unable to create query');
         }                
         Logger.info("3. Generate Prompts and Send to BigQuery");
-        const { clientId,  queryId, modelName, view } = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!, llmModelSize);
-        // Update the Explore with New QueryId
+        const { clientId,  queryId, modelName, view, exploreData} = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!, llmModelSize);
+        // Update the Explore with New QueryId      
         LookerEmbedSDK.init(hostUrl!);
         Logger.debug("explore not null: " + currentExploreId);
-        LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?qid=${clientId}`)
-          .appendTo(exploreDivElement!)         
+        const embedExplore = LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?embed_domain=${hostUrl}&qid=${clientId}`)
+          .appendTo(exploreDivElement!)                   
+          .on('explore:run:complete', onExploreRunComplete)
           .build()          
           .connect()                    
-          .then()          
+          .then()                    
           .catch((error: Error) => {
             Logger.error('Connection error', error);
             setLoadingLLM(false);
           });
-        setLoadingLLM(false);
 
+        setCurrentExploreData(exploreData);
+        setLoadingLLM(false);
+        // Log Default Result 
+        generativeExploreService.logLookerFilterFields(currentFields!, prompt, exploreData, 0);
+        
         // Do something that takes time
         const endTime = performance.now();
         const elapsedTime = (endTime - startTime)/1000;
@@ -287,7 +338,9 @@ export const Explore: React.FC = () => {
               onChange={handleChange}
             />
             <Space>
-              <Button onClick={handleSend}>Send</Button>                     
+              <Button onClick={handleSend}>Send</Button>
+              <IconButton icon={<Icons.ThumbUp/>}  label="Up" onClick={handleThumbsUp}/>
+              <IconButton icon={<Icons.ThumbDown/>}  label="Down" onClick={handleThumbsDown}/>                             
             </Space>
             <SpaceVertical stretch>
               <TextArea                        
