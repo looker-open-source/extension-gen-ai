@@ -17,6 +17,13 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+terraform {
+  backend "gcs" {    
+    bucket = "looker-gen-ai-tf-state-{PROJECTID}"    
+  }
+}
+
+
 module "project-services" {
   source                      = "terraform-google-modules/project-factory/google//modules/project_services"
   version                     = "14.2.1"
@@ -47,6 +54,14 @@ resource "time_sleep" "wait_after_apis_activate" {
   depends_on      = [module.project-services]
   create_duration = "300s"
 }
+
+# data "terraform_remote_state" "remote-state" {
+#   backend = "gcs"
+#   config = {
+#     bucket  = "looker-gen-ai-tf-state-${var.project_id}"
+#     prefix  = "prod"
+#   }
+# }
 
 
 data "google_project" "project" {}
@@ -125,7 +140,7 @@ resource "google_bigquery_dataset" "dataset" {
 ## This creates a cloud resource connection.
 ## Note: The cloud resource nested object has only one output only field - serviceAccountId.
 resource "google_bigquery_connection" "connection" {
-  connection_id = "${var.bq_remote_connection_name}-${random_string.random.result}"
+  connection_id = "${var.bq_remote_connection_name}"
   project       = var.project_id
   location      = var.bq_region
   cloud_resource {}
@@ -284,10 +299,10 @@ EOF
 
 
 resource "google_storage_bucket" "bucket-llm" {
-  name          = "looker-extension-genai-${random_string.random.result}"
+  name          = "looker-genai-${data.google_project.project.project_id}"
   location      = "us"
   uniform_bucket_level_access = true
-  depends_on = [random_string.random, time_sleep.wait_after_apis_activate]
+  depends_on = [time_sleep.wait_after_apis_activate]
   force_destroy = true
 }
 
