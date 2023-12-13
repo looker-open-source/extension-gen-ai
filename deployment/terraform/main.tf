@@ -19,7 +19,7 @@
 
 terraform {
   backend "gcs" {    
-    bucket = "looker-gen-ai-tf-state-{PROJECTID}"    
+    bucket = "{STATE_BUCKET_NAME}" # this gets replaced by .deploystack/scripts/preinit.sh
   }
 }
 
