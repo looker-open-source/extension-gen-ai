@@ -1,0 +1,16 @@
+---
+title: Looker GenAI Extension
+name: looker-genai-extension
+duration: 5
+documentation_link: https://github.com/looker-open-source/extension-gen-ai/
+collect_project: true
+collect_region: true
+region_default: us-central1
+collect_zone: false
+products:
+  - info: Required permissions
+    product: Cloud IAM
+  - info: Database - BQ for VertexAI integration
+    product: BigQuery
+  - info: Bucket - Stores last terraform state
+    product: Cloud Storage
