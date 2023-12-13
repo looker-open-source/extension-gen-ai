@@ -1,2 +1,2 @@
 functions-framework==3.*
-google-cloud-aiplatform>=1.36
+google-cloud-aiplatform>=1.38
