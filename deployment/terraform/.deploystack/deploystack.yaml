@@ -1,0 +1,16 @@
+---
+title: Looker GenAI Extension
+name: looker-genai-extension
+duration: 5
+documentation_link: https://github.com/looker-open-source/extension-gen-ai/
+collect_project: true
+collect_region: false
+collect_zone: false
+path_terraform: deployment
+products:
+  - info: ""
+    product: Cloud IAM
+  - info: ""
+    product: BigQuery
+  - info: "terraform state bucket"
+    product: Cloud Storage
