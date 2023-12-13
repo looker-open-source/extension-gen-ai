@@ -65,7 +65,7 @@ def bq_vertex_remote(request):
           end_time = time()
           elapsed_time = end_time - start_time
           print("Elapsed time: " + str(elapsed_time))
-          return_value.append(genai_responses.candidates[0].content.parts[0].text)          
+          return_value.append(genai_responses)          
         else:
             #   error, receiving more 
             print("Receiving more than one element or null")
