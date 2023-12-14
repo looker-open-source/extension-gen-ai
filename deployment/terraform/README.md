@@ -8,7 +8,7 @@ These instructions will guide you through the process of installing the `extensi
 Open Cloud Shell and clone the `extension-gen-ai` deployment files:
 
 ```sh
-cloudshell_open --repo_url "https://github.com/looker-open-source/extension-gen-ai" --git_branch "feature/tf-state-bucket" --page "shell" --open_workspace "deployment/terraform" --force_new_clone
+cloudshell_open --repo_url "https://github.com/looker-open-source/extension-gen-ai" --page "shell" --open_workspace "deployment/terraform" --force_new_clone
 ```
 
 ### 2. Set project ID
