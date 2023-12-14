@@ -260,6 +260,9 @@ Question: {{userInput}}
 6. field_names only contains a list of field_names with the format "table.field"
 7. limit is string and default value is "500" if empty.
 8. Filters have the syntax from Looker
+9. When filtering applying a contains, use the syntax "%word%".
+10.Produce a valid complete JSON.
+
 
 JSON output format has only the following keys
 {
@@ -287,6 +290,9 @@ Q: "What are the states that had the most orders, filter state: California, Neva
 
 Q: "What are the top 7 brands that had the most sales price in the last 4 months?"
 {"field_names": [ "products.brand", "order_items.total_sale_price" ], "filters": { "order_items.created_date": "4 months" }, "pivots": [], "sorts": ["order_items.total_sale_price desc"], "limit": "7"}
+
+Q: "What are the total views with title containing test in the past 4 years"
+{"field_names":[ "wikipedia_v3_partition.total_views" ], "filters": { "wikipedia_v3_partition.title": "%test%","wikipedia_v3_partition.datehour_year": "4 years ago"},"pivots": [], "sorts": [], "limit": "500"}
 
 """
 ), null);
