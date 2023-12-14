@@ -100,7 +100,7 @@ Return the JSON with only the fields needed to answer following Question.
 The ouput format is a valid JSON: {"field_names": [], "filters":{}, "pivots": [], "sorts": []}
 Question: {{userInput}}`,
 
-[PromptTemplateTypeEnum.EXPLORATION_OUTPUT]:`Act as an experienced Data Analyst, receiving the raw data the Input Data and try to answer the Question below in natural language only, no snippets  allowed. If you are not able, return empty string.
+[PromptTemplateTypeEnum.EXPLORATION_OUTPUT]:`Act as an experienced Data Analyst, receiving the raw data the Input Data that is already filtered by the desired period, pivoted and sorted and try to answer the question below as best as you can with only the data provided and in natural language only, no code snippets  allowed.
 InputData: {{serializedModelFields}}
 Question: {{userInput}}
 `,
