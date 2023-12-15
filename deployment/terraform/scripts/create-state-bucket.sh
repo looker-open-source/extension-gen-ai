@@ -1,10 +1,10 @@
 #!/bin/sh
-export PROJECT_ID=$(gcloud config get-value project)
+PROJECT_ID=$(gcloud config get-value project)
 echo "selecting active project ($PROJECT_ID)..."
 echo "making sure cloud resource manager service is enabled..."
 gcloud services enable cloudresourcemanager.googleapis.com
-export BUCKET_PREFIX="looker-gen-ai-tf-state-"
-export BUCKET_NAME="$BUCKET_PREFIX$PROJECT_ID"
+BUCKET_PREFIX="looker-gen-ai-tf-state-"
+BUCKET_NAME="$BUCKET_PREFIX$PROJECT_ID"
 # Check if the bucket exists
 gsutil ls -b gs://$BUCKET_NAME
 echo "checking if tf state bucket exists ($BUCKET_NAME)"
