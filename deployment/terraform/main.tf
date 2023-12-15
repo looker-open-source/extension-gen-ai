@@ -17,13 +17,6 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-terraform {
-  backend "gcs" {    
-    bucket = "{STATE_BUCKET_NAME}" # this gets replaced by .deploystack/scripts/preinit.sh
-  }
-}
-
-
 module "project-services" {
   source                      = "terraform-google-modules/project-factory/google//modules/project_services"
   version                     = "14.2.1"
