@@ -5,6 +5,7 @@ echo "making sure cloud resource manager service is enabled..."
 gcloud services enable cloudresourcemanager.googleapis.com
 BUCKET_PREFIX="looker-gen-ai-tf-state-"
 BUCKET_NAME="$BUCKET_PREFIX$PROJECT_ID"
+PROVIDER_FILE_PATH="./provider.tf"
 # Check if the bucket exists
 gsutil ls -b gs://$BUCKET_NAME
 echo "checking if tf state bucket exists ($BUCKET_NAME)"
@@ -15,5 +16,12 @@ if [ $? -ne 0 ]; then
 else
  echo "bucket $BUCKET_NAME already exists..."
 fi
-sed -i "s/{STATE_BUCKET_NAME}/$BUCKET_NAME/g" ./deployment/main.tf
-echo "Replacing project id on main.tf"
+
+echo "adding gcs backend configuration to $PROVIDER_FILE_PATH"
+cat > $PROVIDER_FILE_PATH <<- EOM
+terraform {
+  backend "gcs" {
+    bucket = "$BUCKET_NAME" # this gets replaced by scripts/create-state-bucket.sh
+  }
+}
+EOM
