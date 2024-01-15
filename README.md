@@ -1,25 +1,12 @@
 # Looker GenAI Extension 
-- [Looker GenAI Extension](#looker-genai-extension)
-  - [1. Overview](#1-overview)
-  - [2. Solutions architecture overview](#2-solutions-architecture-overview)
-    - [2.1 Data Exploration](#21-data-exploration)
-      - [Workflow for Data Exploration with BQML Remote Models](#workflow-for-data-exploration-with-bqml-remote-models)
-      - [Workflow for Data Exploration with Custom Fine Tune Model (Optional Path to be implemented)](#workflow-for-data-exploration-with-custom-fine-tune-model-optional-path-to-be-implemented)
-    - [2.2 Business Insights](#22-business-insights)
-      - [Workflow for Business Insights](#workflow-for-business-insights)
-  - [3. Getting Started](#3-getting-started)
-  - [4. Setting Up Infrastructure](#4-setting-up-infrastructure)
-    - [4.1 Enable Cloud Resource Manager API](#41-enable-cloud-resource-manager-api)
-    - [4.2 Deploy the infrastructure using Terraform](#42-deploy-the-infrastructure-using-terraform)
-  - [5. Deploying the Looker Extension](#5-deploying-the-looker-extension)
-  - [6. Using and Configuring the Extension](#6-using-and-configuring-the-extension)
-    - [6.1. Saving Example Prompts](#61-saving-example-prompts)
-  - [6. Developing the Looker Extension Environment](#6-developing-the-looker-extension-environment)
-  - [6.1. Install the dependencies with Yarn](#61-install-the-dependencies-with-yarn)
-  - [6.2 Start the development server](#62-start-the-development-server)
-  - [6.3 Build for production](#63-build-for-production)
-    - [**Advanced and Optional**: Executing the Fine Tuning Model](#advanced-and-optional-executing-the-fine-tuning-model)
-      - [Execute the Workflow](#execute-the-workflow)
+
+  - [1. Overview](#1.-overview)
+  - [2. Solutions architecture overview](#2.-solutions-architecture-overview)
+  - [3. Deploy the infrastructure using Terraform](#3.-deploy-the-infrastructure-using-terraform)
+  - [4. Deploying the Looker Extension](#4.-deploying-the-looker-extension)
+  - [5. Using and Configuring the Extension](#5.-using-and-configuring-the-extension)
+  - [6. Developing the Looker Extension Environment](#6.-developing-the-looker-extension-environment)
+
 
 ## 1. Overview
 This repository compiles prescriptive code samples demonstrating how to create a Looker Extension integrating Looker with Vertex AI Large Language Models (LLMs).
@@ -52,45 +39,29 @@ User chooses a Looker Dashboard and asks questions using natural language. In th
 #### Workflow for Business Insights
 ![Workflow](/images/looker-extension-workflow-business-insights.png)
 
-## 3. Getting Started
-First, clone the repository to Cloud Shell or your machine
-```
-git clone https://github.com/looker-open-source/extension-gen-ai
-```
-Or run directly on your Cloud Shell session:
+## 3. Deploy the infrastructure using Terraform
 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Flooker-open-source%2Fextension-gen-ai&shellonly=true&cloudshell_image=gcr.io/ds-artifacts-cloudshell/deploystack_custom_image)
-
-*Don't forget to trust the deploystack_custom_image image
-
-## 4. Setting Up Infrastructure
-
-Follow the steps below inside cloud shell with the GCP project to deploy the infrastructure needed
-
-### 4.1 Enable Cloud Resource Manager API
-```
-  gcloud services enable cloudresourcemanager.googleapis.com
-```
-
-### 4.2 Deploy the infrastructure using Terraform
 The architecture for the extension needs the following infrastructure in a GCP Project:
 - BigQuery Dataset (default name: llm)
 - BigQuery Remote Model pointing to Palm API (llm_model)
 - IAM Service Accounts to create a connection to Looker
 - IAM permission for BQ connection to connect to Vertex AI
-  
+
 These instructions will guide you through the process of installing the `extension-gen-ai` required resources using your **Google Cloud Shell**.
 
+### 3.1 Clone the repository 
 
-#### 4.2.1 Clone the repository
-
-Open Cloud Shell and clone the `extension-gen-ai` deployment files:
-
+First, clone the repository to Cloud Shell
 ```sh
 cloudshell_open --repo_url "https://github.com/looker-open-source/extension-gen-ai" --page "shell" --open_workspace "deployment/terraform" --force_new_clone
 ```
 
-#### 4.2.2 Set project ID
+Or run directly on your Cloud Shell session:
+
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Flooker-open-source%2Fextension-gen-ai&shellonly=true&cloudshell_workspace=deployment%2Fterraform)
+
+
+### 3.2 Set project ID
 
 Set the `gcloud` command to use the desired project ID:
 
@@ -98,7 +69,7 @@ Set the `gcloud` command to use the desired project ID:
 gcloud config set project PROJECT-ID
 ```
 
-#### 4.2.3 Create Terraform state buckets
+### 3.2 Create Terraform state buckets
 
 Run the script to create the Terraform state buckets:
 
@@ -106,7 +77,7 @@ Run the script to create the Terraform state buckets:
 sh scripts/create-state-bucket.sh
 ```
 
-#### 4.2.4 Initialize Terraform modules
+### 3.3 Initialize Terraform modules
 
 Initialize the Terraform modules:
 
@@ -114,7 +85,7 @@ Initialize the Terraform modules:
 terraform init
 ```
 
-### 5. Deploy resources
+### 3.4 Deploy resources
 
 Deploy the Terraform resources:
 
@@ -122,10 +93,10 @@ Deploy the Terraform resources:
 terraform apply -var="project_id=YOUR_PROJECT_ID"  
 ```
 
-While your terraform is executing, follow instructions for [5. Deploying the Looker Extension](#5-deploying-the-looker-extension) or [6.Developing and Extending the Extension](#6-deploying-the-extension)
+While your terraform is executing, follow instructions for [4. Deploying the Looker Extension](#4-deploying-the-looker-extension) or [5.Developing and Extending the Extension](#5-deploying-the-extension)
 
 
-## 5. Deploying the Looker Extension
+## 4. Deploying the Looker Extension
 
 The Extension will be available directly through Marketplace or through a manual deployment described below:
 
@@ -166,9 +137,9 @@ The Extension will be available directly through Marketplace or through a manual
 
 
 ---
-## 6. Using and Configuring the Extension
+## 5. Using and Configuring the Extension
 
-### 6.1. Saving Example Prompts
+### 5.1. Saving Example Prompts
 ```
 INSERT INTO `llm.explore_prompts` 
 VALUES("Top 3 brands in sales", "What are the top 3 brands that had the most sales price in the last 4 months?", "thelook.order_items", "explore")
