@@ -79,13 +79,47 @@ The architecture for the extension needs the following infrastructure in a GCP P
 - IAM Service Accounts to create a connection to Looker
 - IAM permission for BQ connection to connect to Vertex AI
   
-Deploy the terraform script:
+These instructions will guide you through the process of installing the `extension-gen-ai` required resources using your **Google Cloud Shell**.
 
-Run the following commands:
+
+#### 4.2.1 Clone the repository
+
+Open Cloud Shell and clone the `extension-gen-ai` deployment files:
+
+```sh
+cloudshell_open --repo_url "https://github.com/looker-open-source/extension-gen-ai" --page "shell" --open_workspace "deployment/terraform" --force_new_clone
 ```
-  cd deployment
-  terraform init
-  terraform apply -var="project_id=YOUR_PROJECT_ID"  
+
+#### 4.2.2 Set project ID
+
+Set the `gcloud` command to use the desired project ID:
+
+```sh
+gcloud config set project PROJECT-ID
+```
+
+#### 4.2.3 Create Terraform state buckets
+
+Run the script to create the Terraform state buckets:
+
+```sh
+sh scripts/create-state-bucket.sh
+```
+
+#### 4.2.4 Initialize Terraform modules
+
+Initialize the Terraform modules:
+
+```sh
+terraform init
+```
+
+### 5. Deploy resources
+
+Deploy the Terraform resources:
+
+```sh
+terraform apply -var="project_id=YOUR_PROJECT_ID"  
 ```
 
 While your terraform is executing, follow instructions for [5. Deploying the Looker Extension](#5-deploying-the-looker-extension) or [6.Developing and Extending the Extension](#6-deploying-the-extension)
