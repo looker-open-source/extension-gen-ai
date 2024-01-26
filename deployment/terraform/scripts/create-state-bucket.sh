@@ -6,16 +6,14 @@ gcloud services enable cloudresourcemanager.googleapis.com
 BUCKET_PREFIX="looker-gen-ai-tf-state-"
 BUCKET_NAME="$BUCKET_PREFIX$PROJECT_ID"
 PROVIDER_FILE_PATH="./provider.tf"
-# Check if the bucket exists
-gsutil ls -b gs://$BUCKET_NAME
 echo "checking if tf state bucket exists ($BUCKET_NAME)"
 # If the bucket does not exist, create it
-if [ $? -ne 0 ]; then
- gsutil mb gs://$BUCKET_NAME
- echo "bucket $BUCKET_NAME was created..."
+if ! gsutil ls -b "gs://$BUCKET_NAME" &>/dev/null; then
+   gsutil mb "gs://$BUCKET_NAME"
+   echo "Bucket created successfully!"
 else
- echo "bucket $BUCKET_NAME already exists..."
-fi
+   echo "Bucket already exists."
+fi 
 
 echo "adding gcs backend configuration to $PROVIDER_FILE_PATH"
 cat > $PROVIDER_FILE_PATH <<- EOM
