@@ -145,7 +145,7 @@ resource "google_bigquery_job" "create_bq_model_llm" {
   query {
     query              = <<EOF
 CREATE OR REPLACE MODEL `${var.project_id}.${var.dataset_id_name}.llm_model` 
-REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result}` 
+REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}` 
 OPTIONS (endpoint = 'text-bison-32k')
 EOF  
     create_disposition = ""
@@ -347,7 +347,7 @@ resource "google_bigquery_job" "create_bq_remote_udf" {
     query              = <<EOF
 CREATE OR REPLACE FUNCTION 
 `${var.project_id}`.llm.bq_vertex_remote(prompt STRING) RETURNS STRING
-REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result}` 
+REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}` 
 OPTIONS (endpoint = '${google_cloudfunctions2_function.functions_bq_remote_udf.url}')
 EOF  
     create_disposition = ""
