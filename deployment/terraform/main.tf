@@ -17,13 +17,6 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-terraform {
-  backend "gcs" {    
-    bucket = "{STATE_BUCKET_NAME}" # this gets replaced by .deploystack/scripts/preinit.sh
-  }
-}
-
-
 module "project-services" {
   source                      = "terraform-google-modules/project-factory/google//modules/project_services"
   version                     = "14.4.0"
@@ -148,11 +141,11 @@ resource "google_bigquery_connection" "connection" {
 }
 
 resource "google_bigquery_job" "create_bq_model_llm" {
-  job_id = "create_looker_llm_model-${random_string.random.result}"
+  job_id = "create_looker_llm_model-${formatdate("YYYYMMDDhhmmss", timestamp())"
   query {
     query              = <<EOF
 CREATE OR REPLACE MODEL `${var.project_id}.${var.dataset_id_name}.llm_model` 
-REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result}` 
+REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}` 
 OPTIONS (endpoint = 'text-bison-32k')
 EOF  
     create_disposition = ""
@@ -243,7 +236,7 @@ EOF
 
 
 resource "google_bigquery_job" "insert_default_settings" {
-  job_id = "insert_default_settings-${random_string.random.result}"
+  job_id = "insert_default_settings-${formatdate("YYYYMMDDhhmmss", timestamp())}"
   query {
     query              = <<EOF
 INSERT INTO `${var.project_id}.${var.dataset_id_name}.settings`(config, userId)
@@ -355,12 +348,12 @@ resource "google_cloudfunctions2_function" "functions_bq_remote_udf" {
 }
 
 resource "google_bigquery_job" "create_bq_remote_udf" {
-  job_id = "create_looker_bq_remote_udf-${random_string.random.result}"
+  job_id = "create_looker_bq_remote_udf-${formatdate("YYYYMMDDhhmmss", timestamp())}"
   query {
     query              = <<EOF
 CREATE OR REPLACE FUNCTION 
 `${var.project_id}`.llm.bq_vertex_remote(prompt STRING) RETURNS STRING
-REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}-${random_string.random.result}` 
+REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}` 
 OPTIONS (endpoint = '${google_cloudfunctions2_function.functions_bq_remote_udf.url}')
 EOF  
     create_disposition = ""
