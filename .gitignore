@@ -137,3 +137,5 @@ terraform.tfstate.*
 .terraform
 .terraform.lock.hcl
 .DS_Store
+
+deployment/terraform/provider.tf

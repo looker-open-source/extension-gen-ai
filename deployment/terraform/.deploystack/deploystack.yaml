@@ -5,6 +5,7 @@ duration: 5
 documentation_link: https://github.com/looker-open-source/extension-gen-ai/
 collect_project: true
 collect_region: true
+region_type: compute
 region_default: us-central1
 collect_zone: false
 products:
