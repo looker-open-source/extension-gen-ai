@@ -2,6 +2,7 @@
 PROJECT_ID=$(gcloud config get-value project)
 echo "selecting active project ($PROJECT_ID)..."
 echo "making sure cloud resource manager service is enabled..."
+gcloud services enable serviceusage.googleapis.com
 gcloud services enable cloudresourcemanager.googleapis.com
 BUCKET_PREFIX="looker-gen-ai-tf-state-"
 BUCKET_NAME="$BUCKET_PREFIX$PROJECT_ID"
