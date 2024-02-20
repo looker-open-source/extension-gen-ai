@@ -141,7 +141,7 @@ resource "google_bigquery_connection" "connection" {
 }
 
 resource "google_bigquery_job" "create_bq_model_llm" {
-  job_id = "create_looker_llm_model-${formatdate("YYYYMMDDhhmmss", timestamp())"
+  job_id = "create_looker_llm_model-${formatdate("YYYYMMDDhhmmss", timestamp())}"
   query {
     query              = <<EOF
 CREATE OR REPLACE MODEL `${var.project_id}.${var.dataset_id_name}.llm_model` 
