@@ -6,7 +6,7 @@
  * https://opensource.org/licenses/MIT.
  */
 
-import { IRequestRunQuery, ISqlQueryCreate, IWriteQuery, Looker40SDK, sql_query } from "@looker/sdk";
+import { IQuery, IRequestRunQuery, ISqlQueryCreate, IWriteQuery, Looker40SDK, sql_query } from "@looker/sdk";
 import {ITransportSettings} from "@looker/sdk-rtl";
 import { Logger } from "../utils/Logger";
 
@@ -144,4 +144,16 @@ export class LookerSQLService {
         }
         return result;
     }
+
+    public async getQueryFromId(slug:string): Promise<IQuery>
+    {
+        const result = await this.lookerSDK.query(slug);
+        if (!result.ok) {
+            throw new Error('invalid get query from id result')
+        }
+        debugger;
+        console.log(result.value);
+        return result.value;
+    }
+
 }
