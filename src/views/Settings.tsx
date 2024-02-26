@@ -25,7 +25,6 @@ export const Settings: React.FC = () => {
 
   const { core40SDK } =  useContext(ExtensionContext)
   const promptService: PromptService = new PromptService(core40SDK);
-  const configReader: ConfigReader = new ConfigReader(core40SDK);
   const [logLevel, setLogLevel] = useState<string>("info");
   const [customPrompt, setCustomPrompt] = useState<string>("");
   const { configSettings, saveSettings, resetSettings , llmModelSize, setLlmModelSize, checkUseNativeBQ, setCheckUseNativeBQ} = React.useContext(StateContext) as StateContextType;

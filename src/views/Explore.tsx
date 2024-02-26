@@ -12,45 +12,33 @@ import {
   ComponentsProvider,
   FieldTextArea,
   Space,
-  Span,
   SpaceVertical,
   Spinner,
   FieldSelect, 
-  ComboboxOptionObject,
-  ComboboxCallback,
-  MaybeComboboxOptionObject,
   TextArea,
   IconButton
 } from '@looker/components'
 import { Dialog, DialogLayout} from '@looker/components'
 import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
-import { 
-  IRequestAllLookmlModels,
-  ILookmlModel,
-  ISqlQueryCreate,
+import {   
   ILookmlModelExploreFieldset,
   ILookmlModelExploreField
 } from '@looker/sdk'
-import { Box, Heading } from '@looker/components'
 import { EmbedContainer } from './EmbedContainer'
-import { ExploreEvent, LookerEmbedSDK} from '@looker/embed-sdk'
+import { ExploreEvent, LookerEmbedLook, LookerEmbedSDK} from '@looker/embed-sdk'
 import { ExploreService, FieldMetadata } from '../services/ExploreService'
 import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/PromptTemplateService'
 import { Logger } from '../utils/Logger'
-import { ConfigReader } from '../services/ConfigReader'
 import { PromptService } from '../services/PromptService'
-import PromptModel from '../models/PromptModel'
 import { StateContext } from '../context/settingsContext'
 import { StateContextType } from '../@types/settings'
 import LookerExploreDataModel from '../models/LookerExploreData';
-import { boolean } from 'joi';
 /**
  * Looker GenAI - Explore Component
  */
 export const Explore: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
   const [message, setMessage] = useState('')
-  const [loadingLookerModels, setLoadingLookerModels] = useState<boolean>(false)
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
   const [errorMessage, setErrorMessage] = useState<string>()  
   const [currentModelName, setCurrentModelName] = useState<string>()
@@ -59,15 +47,10 @@ export const Explore: React.FC = () => {
   const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
   const [hostUrl, setHostUrl] = useState<string>()
   const [llmInsights, setLlmInsights] = useState<string>()
-  
-  const [topPromptsCombos, setTopPromptsCombos] = useState<ComboboxOptionObject[]>()  
   const { configSettings, exploreComboPromptExamples, explorePromptExamples, exploreComboModels,
     exploreCurrentComboModels,selectedModelExplore ,setExploreCurrentComboModels,
     setSelectedModelExplore, prompt, setPrompt, llmModelSize,
     checkUseNativeBQ } = React.useContext(StateContext) as StateContextType;
-
-
-  const promptService: PromptService = new PromptService(core40SDK);
 
   const [currentFields, setCurrentFields] = useState<FieldMetadata[]>();
   const [currentExploreData, setCurrentExploreData] = useState<LookerExploreDataModel>();
@@ -99,9 +82,18 @@ export const Explore: React.FC = () => {
     }
     catch{
       Logger.error("Failed to load custom prompt from Session Storage");
-    }
-        
+    }        
     setGenerativeExploreService(new ExploreService(core40SDK, promptService, llmModelSize, checkUseNativeBQ));
+
+    // window.addEventListener("message", function(event) {
+    //     console.log("Message received");
+    //     if(event.type =="message")
+    //     {
+    //       console.log(JSON.parse(event.data));    
+    //     }        
+    //     console.log(event);            
+    //   }
+    // );
 
   }
 
@@ -199,7 +191,6 @@ export const Explore: React.FC = () => {
     handleThumbs(true);
   }
 
-
   // Method that triggers sending the message to the workflow
   const handleThumbsDown = async () =>
   { 
@@ -207,21 +198,11 @@ export const Explore: React.FC = () => {
   }
 
   // Method that triggers sending the message to the workflow
-  const onExploreRunComplete = async () =>
-  { 
-    debugger;   
-    Logger.info("onExploreRunComplete");     
-  }
-
-  
-  // Method that triggers sending the message to the workflow
   const handleSend = async () =>
   { 
     const startTime = performance.now();
     handleClearAll();  
     setLoadingLLM(true);
-    
-
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
     Logger.info("1. Get the Metadata from Looker from the selected Explorer");    
     if(currentModelName!=null && currentExploreName!=null)
@@ -266,41 +247,50 @@ export const Explore: React.FC = () => {
           throw new Error('missing user prompt, unable to create query');
         }                
         Logger.info("3. Generate Prompts and Send to BigQuery");
-        const { clientId,  queryId, modelName, view, exploreData} = await generativeExploreService.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!, llmModelSize);
-        // Update the Explore with New QueryId      
-        LookerEmbedSDK.init(hostUrl!);
-        Logger.debug("explore not null: " + currentExploreId);
-        const embedExplore = LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?embed_domain=${hostUrl}&qid=${clientId}`)
-          .appendTo(exploreDivElement!)                   
-          .on('explore:run:complete', onExploreRunComplete)
-          .build()          
-          .connect()                    
-          .then()                    
-          .catch((error: Error) => {
-            Logger.error('Connection error', error);
-            setLoadingLLM(false);
-          });
-
-        setCurrentExploreData(exploreData);
-        setLoadingLLM(false);
-        // Log Default Result 
-        generativeExploreService.logLookerFilterFields(currentFields!, prompt, exploreData, 0);
-        
-        // Do something that takes time
-        const endTime = performance.now();
-        const elapsedTime = (endTime - startTime)/1000;
-        Logger.info(`Elapsed to render explore: ${elapsedTime} s`);
-        // After loading is complete,
-        // Try to see if I can answer the question in text format the same way as dashboard and getting data from the queryId
-        Logger.debug("Async try to set the LLM Insight after explore is on");        
         try
         {
-          const insight = await generativeExploreService.answerQuestionWithData(prompt, queryId);
-          setLlmInsights(insight);
+          const { clientId,  queryId, modelName, view, exploreData} = await generativeExploreService!.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!, llmModelSize);
+          // Update the Explore with New QueryId      
+          LookerEmbedSDK.init(hostUrl!);
+          Logger.debug("explore not null: " + currentExploreId + "hostUrl: " + hostUrl!);
+          // const embedExplore = LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?embed_domain=https://localhost:8080&qid=${clientId}`)
+          
+          const embedExplore = LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?qid=${clientId}`)
+            .appendTo(exploreDivElement!)                             
+            .build()          
+            .connect()                    
+            .then()                    
+            .catch((error: Error) => {
+              Logger.error('Connection error', error);
+              setLoadingLLM(false);
+            });
+  
+          setCurrentExploreData(exploreData);
+          setLoadingLLM(false);
+          // Log Default Result 
+          generativeExploreService!.logLookerFilterFields(my_fields!, prompt, exploreData!, 0);              
+          
+          // Do something that takes time
+          const endTime = performance.now();
+          const elapsedTime = (endTime - startTime)/1000;
+          Logger.info(`Elapsed to render explore: ${elapsedTime} s`);
+          // After loading is complete,
+          // Try to see if I can answer the question in text format the same way as dashboard and getting data from the queryId
+          Logger.debug("Async try to set the LLM Insight after explore is on");        
+          try
+          {
+            const insight = await generativeExploreService!.answerQuestionWithData(prompt, queryId);
+            setLlmInsights(insight);
+          }
+          catch(error)
+          {
+            Logger.error("Failed to get LLM Insight Output ", error);
+          }        
         }
         catch(error)
         {
-          Logger.error("Failed to get LLM Insight Output ", error);
+          Logger.error("Failed to generate Prompts and Send to BigQuery", error);
+          setLoadingLLM(false);
         }        
       })
     }

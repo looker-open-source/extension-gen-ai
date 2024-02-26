@@ -122,13 +122,14 @@ export class ExploreService {
 
     public async logLookerFilterFields(modelFields: FieldMetadata[], userInput: string, result: LookerExploreDataModel, thumbsUpDownNone: number):Promise<string>
     {
-        const queryToRun = `INSERT INTO ${ConfigReader.EXPLORE_LOGGING}(creation_timestamp, userInput, modelFields, llmResult, thumbsUpDown) VALUES(
+        const queryToRun = `INSERT INTO ${ConfigReader.EXPLORE_LOGGING}(creation_timestamp, userInput, modelFields, llmResult, thumbsUpDownNone) VALUES(
             CURRENT_TIMESTAMP(),
             '${userInput}',
             JSON '${JSON.stringify(modelFields)}',
             JSON '${JSON.stringify(result)}',
             ${thumbsUpDownNone}
             )`;        
+        Logger.debug("Query to Run: " + queryToRun);
         const results = await this.sql.executeLog(queryToRun);         
         return results;
     }
