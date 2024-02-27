@@ -31,6 +31,7 @@ export class LookerSQLService {
             let response = await this.lookerSDK.ok(this.lookerSDK.lookml_model('looker-genai'));
             if(response.allowed_db_connection_names!=null && response.allowed_db_connection_names.length > 0)
             {
+                // Getting the first connection name (Make sure you only have one connection allowed for the model)
                 this.connectionName = response.allowed_db_connection_names[0];
             }
             else
@@ -42,14 +43,14 @@ export class LookerSQLService {
     }
 
     public async executeLog(query: string): Promise<string> {
-              
+                
         const queryCreate: ISqlQueryCreate = {
             connection_name: await this.getCurrentConnectionName(),
             sql: query,
         }        
         const result = await this.lookerSDK.create_sql_query(queryCreate, LookerSQLService.transportTimeoutCustom);        
         if (!result.ok) {
-            Logger.debug('unable to execute Log: ' + query);
+            Logger.debug('unable to execute Log: ' + query + " - Connection Name: " + this.connectionName);
             return "error - not able to execute Log";
         }
         if (!result.value.slug) {
@@ -57,7 +58,7 @@ export class LookerSQLService {
             return "error - no slug";
         }
         const slug: string = result.value.slug;
-        return await this.runLogSlug(slug);
+        return "executeLog sucessful";
     }
 
     /**
@@ -73,7 +74,7 @@ export class LookerSQLService {
         }        
         const result = await this.lookerSDK.create_sql_query(queryCreate, LookerSQLService.transportTimeoutCustom);        
         if (!result.ok) {
-            throw new Error('unable to create SQL query: ' + query);
+            throw new Error('unable to create SQL query: ' + query + " - Connection Name: " + this.connectionName);
         }
         if (!result.value.slug) {
             throw new Error('invalid SQL query results. Missing slug');
@@ -117,21 +118,7 @@ export class LookerSQLService {
         return result.value as unknown as Array<T>;
     }
 
-    /**
-     * Retrieves a Query result calling LookerSDK using slug
-     * @param slug
-     * @returns
-     */
-    private async runLogSlug(slug: string):Promise<string>
-    {        
-        const result = await this.lookerSDK.run_sql_query(slug, "txt", undefined,LookerSQLService.transportTimeoutCustom);
-        if (!result.ok) {
-            Logger.error('unable to run Log slug query');            
-        }
-        return "";
-    }
-
-
+    
     /**
      * Creates a new WriteQuery calling LookerSDK
      * @param query
