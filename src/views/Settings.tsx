@@ -94,9 +94,10 @@ export const Settings: React.FC = () => {
   return (
     <ComponentsProvider>          
       <Box display="flex" m="large">
-          <SpaceVertical>          
+          <SpaceVertical>                    
+          <Space>
           <Label>Console Log Level</Label>
-          <Combobox  width={"300px"} value={logLevel} onChange={handleChangeCombo}>
+          <Combobox  width={"200px"} value={logLevel} onChange={handleChangeCombo}>
             <ComboboxInput />
             <ComboboxList>
               <ComboboxOption value="trace"/>
@@ -107,13 +108,13 @@ export const Settings: React.FC = () => {
             </ComboboxList>
           </Combobox>
           <Label>LLM Model Size</Label>
-          <Combobox width={"300px"} value={llmModelSize} onChange={handleChangeModelSize}>
+          <Combobox width={"100px"} value={llmModelSize} onChange={handleChangeModelSize}>
             <ComboboxInput />
             <ComboboxList>
-              <ComboboxOption value="8"/>
               <ComboboxOption value="32" />
             </ComboboxList>
           </Combobox>
+          </Space>          
           <FieldCheckbox
           label="Yes - Use Native BQML.GENERATE_TEXT"
           checked={checkUseNativeBQ} 
