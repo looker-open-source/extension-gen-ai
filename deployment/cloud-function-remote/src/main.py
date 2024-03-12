@@ -2,8 +2,8 @@ import vertexai
 import functions_framework
 import logging
 from flask import jsonify
-from vertexai.preview.language_models import TextGenerationModel
-from vertexai.preview.generative_models import GenerativeModel, Part
+from vertexai.language_models import TextGenerationModel
+from vertexai.generative_models import GenerativeModel, Part
 
 import json
 
