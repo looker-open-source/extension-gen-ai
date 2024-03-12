@@ -5,34 +5,28 @@
  * license that can be found in the LICENSE file or at
  * https://opensource.org/licenses/MIT.
  */
-import React, { useContext, useEffect, useState , FormEvent, useCallback} from 'react'
+import {
+    Button,
+    ComponentsProvider, Dialog, DialogLayout, FieldSelect, FieldTextArea, IconButton, Space,
+    SpaceVertical,
+    Spinner, TextArea
+} from '@looker/components';
+import { LookerEmbedSDK } from '@looker/embed-sdk';
+import { ExtensionContext, ExtensionContextData } from '@looker/extension-sdk-react';
+import {
+    ILookmlModelExploreField, ILookmlModelExploreFieldset
+} from '@looker/sdk';
 import * as Icons from '@styled-icons/material';
-import { 
-  Button, 
-  ComponentsProvider,
-  FieldTextArea,
-  Space,
-  SpaceVertical,
-  Spinner,
-  FieldSelect, 
-  TextArea,
-  IconButton
-} from '@looker/components'
-import { Dialog, DialogLayout} from '@looker/components'
-import { ExtensionContext , ExtensionContextData } from '@looker/extension-sdk-react'
-import {   
-  ILookmlModelExploreFieldset,
-  ILookmlModelExploreField
-} from '@looker/sdk'
-import { EmbedContainer } from './EmbedContainer'
-import { ExploreEvent, LookerEmbedLook, LookerEmbedSDK} from '@looker/embed-sdk'
-import { ExploreService, FieldMetadata } from '../services/ExploreService'
-import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/PromptTemplateService'
-import { Logger } from '../utils/Logger'
-import { PromptService } from '../services/PromptService'
-import { StateContext } from '../context/settingsContext'
-import { StateContextType } from '../@types/settings'
+import React, { FormEvent, useCallback, useContext, useEffect, useState } from 'react';
+import { StateContextType } from '../@types/settings';
+import { StateContext } from '../context/settingsContext';
 import LookerExploreDataModel from '../models/LookerExploreData';
+import { ExploreService, FieldMetadata } from '../services/ExploreService';
+import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/PromptTemplateService';
+import { Logger } from '../utils/Logger';
+import './../assets/style.css';
+import { EmbedContainer } from './EmbedContainer';
+
 /**
  * Looker GenAI - Explore Component
  */
@@ -40,9 +34,9 @@ export const Explore: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
   const [message, setMessage] = useState('')
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
-  const [errorMessage, setErrorMessage] = useState<string>()  
+  const [errorMessage, setErrorMessage] = useState<string>()
   const [currentModelName, setCurrentModelName] = useState<string>()
-  const [currentExploreName, setCurrentExploreName] = useState<string>()  
+  const [currentExploreName, setCurrentExploreName] = useState<string>()
   const [currentExploreId, setCurrentExploreId] = useState<string>()
   const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
   const [hostUrl, setHostUrl] = useState<string>()
@@ -58,11 +52,11 @@ export const Explore: React.FC = () => {
 
 
   useEffect(() => {
-    loadExplores();  
+    loadExplores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadExplores = async () => { 
+  const loadExplores = async () => {
     Logger.debug("Loading Explores");
     setExploreCurrentComboModels(exploreComboModels);
     if(selectedModelExplore)
@@ -70,10 +64,10 @@ export const Explore: React.FC = () => {
       selectComboExplore(selectedModelExplore);
     }
     setErrorMessage(undefined);
-    
+
     var promptService = new PromptTemplateService();
-    try {      
-      
+    try {
+
       const customPrompt = configSettings.customPrompt!;
       const customTemplate =  {
         [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: customPrompt
@@ -82,16 +76,16 @@ export const Explore: React.FC = () => {
     }
     catch{
       Logger.error("Failed to load custom prompt from Session Storage");
-    }        
+    }
     setGenerativeExploreService(new ExploreService(core40SDK, promptService, llmModelSize, checkUseNativeBQ));
 
     // window.addEventListener("message", function(event) {
     //     console.log("Message received");
     //     if(event.type =="message")
     //     {
-    //       console.log(JSON.parse(event.data));    
-    //     }        
-    //     console.log(event);            
+    //       console.log(JSON.parse(event.data));
+    //     }
+    //     console.log(event);
     //   }
     // );
 
@@ -101,29 +95,29 @@ export const Explore: React.FC = () => {
   const selectComboExplore = ((selectedValue: string) => {
     const splittedArray = selectedValue.split(".");
     if(splittedArray.length > 0 && splittedArray[0]!=null && splittedArray[1]!=null){
-      setCurrentModelName(splittedArray[0]);    
-      setCurrentExploreName(splittedArray[1]);              
-    } 
+      setCurrentModelName(splittedArray[0]);
+      setCurrentExploreName(splittedArray[1]);
+    }
     else{
       Logger.error("Error selecting combobox, modelName and exploreName are null or not divided by .");
-    }       
+    }
     setSelectedModelExplore(selectedValue);
   });
 
-  const selectTopPromptCombo = ((selectedValue: string) => {  
-    const comboExploreArray = selectedValue.split("@@@");    
+  const selectTopPromptCombo = ((selectedValue: string) => {
+    const comboExploreArray = selectedValue.split("@@@");
     selectComboExplore(comboExploreArray[0]);
     explorePromptExamples.forEach(topPrompt => {
       if(topPrompt.prompt === comboExploreArray[1])
       {
-        setPrompt(topPrompt.prompt);        
+        setPrompt(topPrompt.prompt);
       }
-    });    
+    });
   });
 
-  
+
   const onFilterComboBox = ((filteredTerm: string) => {
-    
+
     Logger.info("Filtering");
     setExploreCurrentComboModels(exploreComboModels?.filter(explore => explore.label!.toLowerCase().includes(filteredTerm.toLowerCase())));
   });
@@ -133,18 +127,18 @@ export const Explore: React.FC = () => {
   }
 
   // Method that clears the explores under the chat
-  const handleClear = () => {    
+  const handleClear = () => {
     // Removes the first child    )
     exploreDivElement?.removeChild(exploreDivElement.firstChild!);
   }
-  
-  const handleClearAll = () => {    
+
+  const handleClearAll = () => {
     // Removes the first child
     if(exploreDivElement!=null && exploreDivElement.children!=null)
     {
       for(var i = 0; i < exploreDivElement.children.length; i++)
       {
-        exploreDivElement?.removeChild(exploreDivElement.lastChild!);  
+        exploreDivElement?.removeChild(exploreDivElement.lastChild!);
       }
     }
     setLlmInsights("");
@@ -154,7 +148,7 @@ export const Explore: React.FC = () => {
   const handleChange = (e: FormEvent<HTMLTextAreaElement>) => {
     setPrompt(e.currentTarget.value)
   }
-  
+
   function transformArrayToString(array: string[]): string {
     return array.join('\\n');
   }
@@ -164,9 +158,9 @@ export const Explore: React.FC = () => {
 
 
   const embedCtrRef = useCallback((el) => {
-    setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);    
+    setHostUrl(extensionContext?.extensionSDK?.lookerHostData?.hostUrl);
     // set the explore div element outside
-    setExploreDivElement(el);           
+    setExploreDivElement(el);
   }, [])
 
   function handleThumbs(upDown: boolean) {
@@ -181,30 +175,30 @@ export const Explore: React.FC = () => {
     if(currentFields == null)
     {
       Logger.error("currentFields is null");
-    }    
-    generativeExploreService!.logLookerFilterFields(currentFields!, prompt, currentExploreData!, upDown?1:0);    
+    }
+    generativeExploreService!.logLookerFilterFields(currentFields!, prompt, currentExploreData!, upDown?1:0);
   }
 
   // Method that triggers sending the message to the workflow
   const handleThumbsUp = async () =>
-  {     
+  {
     handleThumbs(true);
   }
 
   // Method that triggers sending the message to the workflow
   const handleThumbsDown = async () =>
-  { 
+  {
     handleThumbs(false);
   }
 
   // Method that triggers sending the message to the workflow
   const handleSend = async () =>
-  { 
+  {
     const startTime = performance.now();
-    handleClearAll();  
+    handleClearAll();
     setLoadingLLM(true);
     // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
-    Logger.info("1. Get the Metadata from Looker from the selected Explorer");    
+    Logger.info("1. Get the Metadata from Looker from the selected Explorer");
     if(currentModelName!=null && currentExploreName!=null)
     {
       core40SDK.lookml_model_explore(currentModelName, currentExploreName, "id, name, description, fields, label").then
@@ -233,8 +227,8 @@ export const Explore: React.FC = () => {
                 // "sql": dimension.sql,
               };
               my_fields.push(field_def);
-            }            
-          }          
+            }
+          }
         }
         setCurrentFields(my_fields);
         // 3. Generate Prompts and Send to BigQuery
@@ -245,38 +239,38 @@ export const Explore: React.FC = () => {
         const viewName = exploreResult.value.name;
         if (!prompt) {
           throw new Error('missing user prompt, unable to create query');
-        }                
+        }
         Logger.info("3. Generate Prompts and Send to BigQuery");
         try
         {
           const { clientId,  queryId, modelName, view, exploreData} = await generativeExploreService!.generatePromptSendToBigQuery(my_fields, prompt, currentModelName, viewName!, llmModelSize);
-          // Update the Explore with New QueryId      
+          // Update the Explore with New QueryId
           LookerEmbedSDK.init(hostUrl!);
           Logger.debug("explore not null: " + currentExploreId + "hostUrl: " + hostUrl!);
           // const embedExplore = LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?embed_domain=https://localhost:8080&qid=${clientId}`)
-          
+
           const embedExplore = LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?qid=${clientId}`)
-            .appendTo(exploreDivElement!)                             
-            .build()          
-            .connect()                    
-            .then()                    
+            .appendTo(exploreDivElement!)
+            .build()
+            .connect()
+            .then()
             .catch((error: Error) => {
               Logger.error('Connection error', error);
               setLoadingLLM(false);
             });
-  
+
           setCurrentExploreData(exploreData);
           setLoadingLLM(false);
-          // Log Default Result 
-          generativeExploreService!.logLookerFilterFields(my_fields!, prompt, exploreData!, 0);              
-          
+          // Log Default Result
+          generativeExploreService!.logLookerFilterFields(my_fields!, prompt, exploreData!, 0);
+
           // Do something that takes time
           const endTime = performance.now();
           const elapsedTime = (endTime - startTime)/1000;
           Logger.info(`Elapsed to render explore: ${elapsedTime} s`);
           // After loading is complete,
           // Try to see if I can answer the question in text format the same way as dashboard and getting data from the queryId
-          Logger.debug("Async try to set the LLM Insight after explore is on");        
+          Logger.debug("Async try to set the LLM Insight after explore is on");
           try
           {
             const insight = await generativeExploreService!.answerQuestionWithData(prompt, queryId);
@@ -285,75 +279,75 @@ export const Explore: React.FC = () => {
           catch(error)
           {
             Logger.error("Failed to get LLM Insight Output ", error);
-          }        
+          }
         }
         catch(error)
         {
           Logger.error("Failed to generate Prompts and Send to BigQuery", error);
           setLoadingLLM(false);
-        }        
+        }
       })
     }
     else
     {
       setLoadingLLM(false);
-    }    
+    }
   }
 
-  
-  return (      
-    <ComponentsProvider>            
-      <Space align="start">        
-        <SpaceVertical align="start" width="350px" paddingLeft="15px">                                      
-            <FieldSelect 
-              id="topExamplesId"           
+
+  return (
+    <ComponentsProvider>
+      <Space align="start">
+        <SpaceVertical align="start" width="350px" paddingLeft="15px">
+            <FieldSelect
+              id="topExamplesId"
               label="Top Examples to Try"
-              onChange={selectTopPromptCombo}           
+              onChange={selectTopPromptCombo}
               options={exploreComboPromptExamples}
               width="100%"
             />
-            <FieldSelect                       
+            <FieldSelect
               isFilterable
               onFilter={onFilterComboBox}
               label="All Explores"
-              onChange={selectComboExplore}            
+              onChange={selectComboExplore}
               options={exploreCurrentComboModels}
               width="100%"
               value={selectedModelExplore}
-            />    
-            <FieldTextArea            
+            />
+            <FieldTextArea
+              className="prompt-input-area"
               width="100%"
-              label="Type your question"  
+              label="Type your question testing"
               value={prompt}
               onChange={handleChange}
             />
             <Space>
               <Button onClick={handleSend}>Send</Button>
               <IconButton icon={<Icons.ThumbUp/>}  label="Up" onClick={handleThumbsUp}/>
-              <IconButton icon={<Icons.ThumbDown/>}  label="Down" onClick={handleThumbsDown}/>                             
+              <IconButton icon={<Icons.ThumbDown/>}  label="Down" onClick={handleThumbsDown}/>
             </Space>
             <SpaceVertical stretch>
-              <TextArea                        
+              <TextArea
+                className="prompt-input-area"
                 placeholder="[Experimental] LLM Text Answer"
                 value={llmInsights}
                 readOnly
                 height="200px"
               />
-              </SpaceVertical>         
+              </SpaceVertical>
             <Dialog isOpen={loadingLLM}>
               <DialogLayout header="Loading LLM Data to Explore...">
                 <Spinner size={80}>
                 </Spinner>
-              </DialogLayout>            
+              </DialogLayout>
             </Dialog>
-        </SpaceVertical>                                                                 
+        </SpaceVertical>
         <Space stretch>
-          <EmbedContainer ref={embedCtrRef}>          
+          <EmbedContainer ref={embedCtrRef}>
           </EmbedContainer>
         </Space>
       </Space>
     </ComponentsProvider>
   )
 }
-
-
