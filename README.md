@@ -214,3 +214,8 @@ gcloud workflows execute fine_tuning_model
 ```
 
 Refactor the SQL endpoints to use the new SQL syntax to use UDFs and BigQuery (Can check earlier commits on the repo)
+
+### Optional styling for the extensions
+
+Refer the following documentation to modify your front end for looker.
+[Looker/Components](https://looker-open-source.github.io/components/latest/?path=/docs/home--docs)
