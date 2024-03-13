@@ -22,6 +22,7 @@ import { ExploreService, FieldMetadata } from '../services/ExploreService';
 import { PromptTemplateService, PromptTemplateTypeEnum } from '../services/PromptTemplateService';
 import { Logger } from '../utils/Logger';
 import { EmbedContainer } from './EmbedContainer';
+import './../assets/style.css';
 /**
  * Looker GenAI - Explore Component
  */
@@ -166,7 +167,6 @@ export const Explore: React.FC = () => {
   // Method that triggers sending the message to the workflow
   const handleSend = async () =>
   {
-
     try {
       const startTime = performance.now();
       handleClearAll();
@@ -244,6 +244,7 @@ export const Explore: React.FC = () => {
               value={selectedModelExplore}
             />
             <FieldTextArea
+              className="prompt-input-area"
               width="100%"
               label="Type your question"
               value={prompt}
@@ -256,6 +257,7 @@ export const Explore: React.FC = () => {
             </Space>
             <SpaceVertical stretch>
               <TextArea
+                className="prompt-input-area"
                 placeholder="[Experimental] LLM Text Answer"
                 value={llmInsights}
                 readOnly
