@@ -47,7 +47,6 @@ export const Explore: React.FC = () => {
 
   useEffect(() => {
     loadExplores();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadExplores = async () => {
@@ -191,20 +190,26 @@ export const Explore: React.FC = () => {
         throw new Error('missing user prompt, unable to create query');
       }
       Logger.info("generate prompts and send to bigquery");
-      const { clientId,  queryId, modelName, view, exploreData} = await generativeExploreService!.generatePromptSendToBigQuery(fieldDefinitions, prompt, currentModelName, viewName!, llmModelSize);
+
+      const exploreData: LookerExploreDataModel = await generativeExploreService.generateExploreData(fieldDefinitions, prompt);
+      const exploreQuery = await generativeExploreService.createExploreQuery(exploreData, currentModelName, viewName!);
+      if (!hostUrl) {
+        throw new Error('unable to find correct looker hostname to generate explore URL');
+      }
+      const exploreURL = exploreQuery.generateExploreURL(hostUrl);
       // Update the Explore with New QueryId
-      LookerEmbedSDK.init(hostUrl!);
-      LookerEmbedSDK.createExploreWithUrl(hostUrl+ `/embed/explore/${modelName}/${view}?qid=${clientId}`)
-                                               .appendTo(exploreDivElement!)
-                                               .build()
-                                               .connect();
+      LookerEmbedSDK.init(hostUrl);
+      LookerEmbedSDK.createExploreWithUrl(exploreURL)
+                    .appendTo(exploreDivElement!)
+                    .build()
+                    .connect();
       setCurrentExploreData(exploreData);
-      generativeExploreService!.logLookerFilterFields(fieldDefinitions!, prompt, exploreData!, 0);
+      generativeExploreService.logLookerFilterFields(fieldDefinitions, prompt, exploreData, 0);
       // Try to see if I can answer the question in text format the same way as dashboard and getting data from the queryId
       Logger.debug("Async try to set the LLM Insight after explore is on");
       try
       {
-        const insight = await generativeExploreService!.answerQuestionWithData(prompt, queryId);
+        const insight = await generativeExploreService.answerQuestionWithData(prompt, exploreQuery.queryId);
         setLlmInsights(insight);
       }
       catch(error)
@@ -261,7 +266,6 @@ export const Explore: React.FC = () => {
                 placeholder="[Experimental] LLM Text Answer"
                 value={llmInsights}
                 readOnly
-                height="200px"
               />
               </SpaceVertical>
             <Dialog isOpen={loadingLLM}>

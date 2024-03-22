@@ -47,6 +47,7 @@ export abstract class BaseSchema {
      * clears all defined properties from class scope
      */
     protected schemafyClear() {
-        Object.keys(this).forEach((key) => delete this[key]);
+        // @ts-ignore
+        Object.keys(this).forEach((key: string) => delete this[key]);
     }
 }
