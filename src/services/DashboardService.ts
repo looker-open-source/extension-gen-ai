@@ -173,7 +173,7 @@ export class DashboardService {
         const arraySelect: Array<string> = [];
         promptArray.forEach((promptField) =>{
              const singleLineString = UtilsHelper.escapeBreakLine(promptField);
-             var subselect = UtilsHelper.getQueryFromPrompt(singleLineString, useNativeBQ);                          
+             var subselect = UtilsHelper.getQueryFromPrompt(singleLineString, useNativeBQ, "Dashboard");
              arraySelect.push(subselect);
         });
          // Join all the selects with union all
