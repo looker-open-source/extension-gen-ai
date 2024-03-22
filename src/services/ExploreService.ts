@@ -123,18 +123,27 @@ export class ExploreService {
         `;
     }
 
-    public async logLookerFilterFields(modelFields: FieldMetadata[], userInput: string, result: LookerExploreDataModel, thumbsUpDownNone: number):Promise<string>
-    {
-        const queryToRun = `INSERT INTO ${ConfigReader.EXPLORE_LOGGING}(creation_timestamp, userInput, modelFields, llmResult, thumbsUpDownNone) VALUES(
-            CURRENT_TIMESTAMP(),
-            '${userInput}',
-            JSON '${JSON.stringify(modelFields)}',
-            JSON '${JSON.stringify(result)}',
-            ${thumbsUpDownNone}
-            )`;
-        Logger.debug("Query to Run: " + queryToRun);
-        const results = await this.sql.executeLog(queryToRun);
-        return results;
+    public async logLookerFilterFields(modelFields: FieldMetadata[], userInput: string, result: LookerExploreDataModel, thumbsUpDownNone: number)
+    {    
+        try{
+            const queryToRun = `#Looker ExtGenAI logging filter Fields - v: ${ConfigReader.CURRENT_VERSION}
+            BEGIN
+            INSERT INTO ${ConfigReader.EXPLORE_LOGGING}(creation_timestamp, userInput, modelFields, llmResult, thumbsUpDownNone) VALUES(
+                CURRENT_TIMESTAMP(),
+                '${userInput}',
+                JSON '${JSON.stringify(modelFields)}',
+                JSON '${JSON.stringify(result)}',
+                ${thumbsUpDownNone}
+                );
+            SELECT 1; 
+            END`;        
+            const results = await this.sql.executeLog(queryToRun);
+            Logger.info("Settings saved sucessfully: "+ results);             
+        }
+        catch(err)
+        {
+            Logger.error("Failed to persist user preferences on BigQuery - working only during the session");
+        }        
     }
 
 
