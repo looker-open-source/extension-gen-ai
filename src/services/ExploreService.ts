@@ -138,12 +138,12 @@ export class ExploreService {
                 );
             SELECT 1; 
             END`;        
-            const results = await this.sql.executeLog(queryToRun);
-            Logger.info("Settings saved sucessfully: "+ results);             
+            const results = await this.sql.execute(queryToRun);
+            Logger.info("looker filter logs persisted sucessfuly", results);
         }
-        catch(err)
+        catch(error)
         {
-            Logger.error("Failed to persist user preferences on BigQuery - working only during the session");
+            Logger.error("unable to persist logs", error);
         }        
     }
 
