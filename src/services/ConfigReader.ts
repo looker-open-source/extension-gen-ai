@@ -56,8 +56,8 @@ export class ConfigReader {
             const results = await this.sql.execute<ISettings>(queryToRun);                         
             return results[0];
         }
-        catch(err){
-            Logger.error("Could not get custom settings from BigQuery, make sure the table and data exists in the tableReference llm.settings, loading default: "+ err);
+        catch(error){
+            Logger.error("Could not get custom settings from BigQuery, make sure the table and data exists in the tableReference llm.settings, loading default: ", error);
             return {userId: userId, logLevel: "info", useNativeBQ: "true", llmModelSize: ConfigReader.DEFAULT_MODEL_SIZE, customPrompt: this.promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS)};            
         }
     }
@@ -77,15 +77,14 @@ export class ConfigReader {
             VALUES(JSON_OBJECT('logLevel', "${updatedSettings.logLevel}", 'llmModelSize', "${updatedSettings.llmModelSize}",
             'useNativeBQ', ${updatedSettings.useNativeBQ}, 'customPrompt', """${updatedSettings.customPrompt}"""), "${userId}");
             END`;        
-            const results = await this.sql.executeLog(queryToRun);
+            const results = await this.sql.execute(queryToRun);
             Logger.info("Settings saved sucessfully: "+ results);             
         }
-        catch(err)
+        catch(error)
         {
-            Logger.error("Failed to persist user preferences on BigQuery - working only during the session");
+            Logger.error("Failed to persist user preferences on BigQuery - working only during the session", error);
         }
-        
-    }  
+    }
 
     public async resetDefaultSettings(userId: string)
     {
@@ -93,12 +92,12 @@ export class ConfigReader {
             const queryToRun = `#Looker ExtGenAI resetUserSettings - v: ${ConfigReader.CURRENT_VERSION} 
             DELETE FROM ${ConfigReader.SETTINGS_TABLE}         
             WHERE userId = "${userId}"`;        
-            const results = await this.sql.executeLog(queryToRun);
+            const results = await this.sql.execute(queryToRun);
             Logger.debug("Reset  settings: "+ results);                                                
         }   
         catch(error)
         {
-            Logger.error("Could not reset settings on BigQuery");
+            Logger.error("Could not reset settings on BigQuery", error);
         }          
     }
 

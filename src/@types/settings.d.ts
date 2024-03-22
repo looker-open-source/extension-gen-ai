@@ -1,6 +1,5 @@
-import { ILookmlModel } from "@looker/sdk";
-import PromptModel from "../models/PromptModel";
 import { ComboboxOptionObject } from "@looker/components";
+import PromptModel from "../models/PromptModel";
 
 export interface ISettings {
     userId: string;
@@ -10,15 +9,15 @@ export interface ISettings {
     useNativeBQ: string;
 }
 export type StateContextType = {
-  configSettings: ISettings;  
+  configSettings: ISettings;
   saveSettings: (set: ISettings) => Promise<void>;
-  resetSettings: () => Promise<ISettings>;  
+  resetSettings: () => Promise<ISettings>;
   setExploreCurrentComboModels: (models: ComboboxOptionObject[]) => void;
   setSelectedModelExplore:(exp:string) => void;
   setPrompt:(prompt:string) => void;
   exploreComboModels: ComboboxOptionObject[];
   exploreComboPromptExamples: ComboboxOptionObject[];
-  explorePromptExamples: PromptModel[];  
+  explorePromptExamples: PromptModel[];
   exploreCurrentComboModels:ComboboxOptionObject[];
   selectedModelExplore:string;
   dashboardCombo: ComboboxOptionObject[];

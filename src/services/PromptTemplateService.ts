@@ -11,7 +11,6 @@ import { UtilsHelper } from "../utils/Helper";
 export enum PromptTemplateTypeEnum {
     FIELDS_FILTERS_PIVOTS_SORTS,
     PIVOTS,
-    LIMITS,
     EXPLORE_VALIDATE_MERGED,
     DASH_SUMMARIZE,
     EXPLORATION_OUTPUT
@@ -86,19 +85,6 @@ List of Fields: [ wiki100_m.day, wiki100_m.language, wiki100_m.count]
 Question: "What are the top 15 count, language and day. Pivot per day"
 {"pivots": ["wiki100_m.day"]}
 `,
-
-        [PromptTemplateTypeEnum.LIMITS]: `
-Based on the Question: {{userInput}}
-Extract the amount of records that the question wants.
-The limit should be an integer from 1 to 500.
-If nothing can be inferred from the question, use the default value: 500.
-Examples:
-Q: What are the top 10 languages?
-10
-Q: What are the top 50 products with the largest sales amount?
-50
-Q: What are the total sales per month?
-500`,
         [PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED]:`Context: {{mergedResults}}
 The Context provided contains all the possible field_names, filters, pivots and sort.
 Return the JSON with only the fields needed to answer following Question.
@@ -137,7 +123,4 @@ Question: {{userInput}}
         replacedPrompt = UtilsHelper.escapeSpecialCharacter(replacedPrompt);            
         return replacedPrompt;
     }
-
-
-
 }

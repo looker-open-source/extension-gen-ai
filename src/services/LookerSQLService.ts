@@ -6,60 +6,36 @@
  * https://opensource.org/licenses/MIT.
  */
 
-import { IQuery, IRequestRunQuery, ISqlQueryCreate, IWriteQuery, Looker40SDK, sql_query } from "@looker/sdk";
-import {ITransportSettings} from "@looker/sdk-rtl";
+import { IQuery, IRequestRunQuery, ISqlQueryCreate, IWriteQuery, Looker40SDK } from "@looker/sdk";
+import { ITransportSettings } from "@looker/sdk-rtl";
 import { Logger } from "../utils/Logger";
 
 export class LookerSQLService {
     private lookerSDK: Looker40SDK;
-    private connectionName: string = "";
+    private connectionName: string | undefined;
 
     public constructor(lookerSDK: Looker40SDK) {
-       this.lookerSDK = lookerSDK;       
+       this.lookerSDK = lookerSDK;
     }
 
-    private static transportTimeoutCustom: Partial<ITransportSettings> = 
+    private static transportTimeoutCustom: Partial<ITransportSettings> =
     {
         timeout: 600000
     };
 
     private async getCurrentConnectionName(): Promise<string>
     {
-        if(this.connectionName == "")
-        {
-            // TODO: try to get dynamically the looker-genai modelName    
-            let response = await this.lookerSDK.ok(this.lookerSDK.lookml_model('looker-genai'));
-            if(response.allowed_db_connection_names!=null && response.allowed_db_connection_names.length > 0)
-            {
-                // Getting the first connection name (Make sure you only have one connection allowed for the model)
-                this.connectionName = response.allowed_db_connection_names[0];
-            }
-            else
-            {
-                throw new Error("Problem getting the Dynamic DB connection to Run Queries");
-            }
-        } 
-        return this.connectionName; 
-    }
-
-    public async executeLog(query: string): Promise<string> {
-                
-        const queryCreate: ISqlQueryCreate = {
-            connection_name: await this.getCurrentConnectionName(),
-            sql: query,
-        }        
-        const result = await this.lookerSDK.create_sql_query(queryCreate, LookerSQLService.transportTimeoutCustom);        
-        if (!result.ok) {
-            Logger.debug('unable to execute Log: ' + query + " - Connection Name: " + this.connectionName);
-            return "error - not able to execute Log";
+        if (this.connectionName) {
+            return this.connectionName;
         }
-        if (!result.value.slug) {
-            Logger.debug('Invalid Log Results. Missing slug');
-            return "error - no slug";
+        // TODO: try to get dynamically the looker-genai modelName
+        let response = await this.lookerSDK.ok(this.lookerSDK.lookml_model('looker-genai'));
+        if (!response.allowed_db_connection_names || response.allowed_db_connection_names.length < 1) {
+            throw new Error("Problem getting the Dynamic DB connection to Run Queries");
         }
-        const slug: string = result.value.slug;                
-        await this.runQuerySlugLog(slug);                  
-        return "executeLog sucessful";
+        // Getting the first connection name (Make sure you only have one connection allowed for the model)
+        this.connectionName = response.allowed_db_connection_names[0];
+        return this.connectionName;
     }
 
     /**
@@ -68,13 +44,11 @@ export class LookerSQLService {
      * @returns
      */
     public async execute<T>(query: string): Promise<Array<T>> {
-               
-        
         const queryCreate: ISqlQueryCreate = {
             connection_name: await this.getCurrentConnectionName(),
             sql: query,
-        }        
-        const result = await this.lookerSDK.create_sql_query(queryCreate, LookerSQLService.transportTimeoutCustom);        
+        }
+        const result = await this.lookerSDK.create_sql_query(queryCreate, LookerSQLService.transportTimeoutCustom);
         if (!result.ok) {
             throw new Error('unable to create SQL query: ' + query + " - Connection Name: " + this.connectionName);
         }
@@ -112,41 +86,14 @@ export class LookerSQLService {
      */
     private async runQuerySlug<T>(slug: string): Promise<Array<T>>
     {
-        
         const result = await this.lookerSDK.run_sql_query(slug, "json",undefined,LookerSQLService.transportTimeoutCustom);
         if (!result.ok) {
+            Logger.error('invalid create query result', result)
             throw new Error('unable to run SQL query');
         }
         return result.value as unknown as Array<T>;
     }
 
-
-        /**
-     * Retrieves a Query result calling LookerSDK using slug
-     * @param slug
-     * @returns
-     */
-    private async runQuerySlugLog(slug: string): Promise<Array<string>>
-    {              
-        try
-        {
-            const result = await this.lookerSDK.run_sql_query(slug, "json",undefined,LookerSQLService.transportTimeoutCustom);
-            if (!result.ok) {
-                
-                throw new Error(''+ result.error.message);
-            }
-            return result.value as unknown as Array<string>;
-        }
-        catch(error)
-        {
-            Logger.debug('unable to run Query Slug Log - Check BigQuery - Schema might be mismatching')
-        }
-        return Array<string>();
-    }
-    
-    
-        
-    
     /**
      * Creates a new WriteQuery calling LookerSDK
      * @param query
