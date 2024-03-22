@@ -192,7 +192,7 @@ export const Explore: React.FC = () => {
       Logger.info("generate prompts and send to bigquery");
 
       const exploreData: LookerExploreDataModel = await generativeExploreService.generateExploreData(fieldDefinitions, prompt);
-      const exploreQuery = await generativeExploreService.createExploreQuery(exploreData, currentModelName, viewName!);
+      const exploreQuery = await generativeExploreService.createExploreQuery(exploreData, currentModelName, viewName);
       if (!hostUrl) {
         throw new Error('unable to find correct looker hostname to generate explore URL');
       }
@@ -205,10 +205,10 @@ export const Explore: React.FC = () => {
                     .connect();
       setCurrentExploreData(exploreData);
       generativeExploreService.logLookerFilterFields(fieldDefinitions, prompt, exploreData, 0);
-      // Try to see if I can answer the question in text format the same way as dashboard and getting data from the queryId
-      Logger.debug("Async try to set the LLM Insight after explore is on");
       try
       {
+        // Try to see if I can answer the question in text format the same way as dashboard and getting data from the queryId
+        Logger.debug("try to set the LLM Insight after explore is on");
         const insight = await generativeExploreService.answerQuestionWithData(prompt, exploreQuery.queryId);
         setLlmInsights(insight);
       }
@@ -216,7 +216,6 @@ export const Explore: React.FC = () => {
       {
         Logger.error("Failed to get LLM Insight Output ", error);
       }
-
       const endTime = performance.now();
       const elapsedTime = (endTime - startTime)/1000;
       Logger.info(`Elapsed to render explore: ${elapsedTime} s`);

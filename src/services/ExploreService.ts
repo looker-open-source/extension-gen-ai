@@ -61,21 +61,15 @@ export class ExploreService {
         return generatedPromptsArray;
     }
 
-
     private generatePrompt(
         modelFields: FieldMetadata[],
         userInput: string,
         promptTypeEnum: PromptTemplateTypeEnum,
         potentialFields?:string,
         mergedResults?:string):Array<string> {
-
         const shardedPrompts:Array<string> = [];
-        // Prompt for Limits only needs the userInput
         switch(promptTypeEnum)
         {
-            case PromptTemplateTypeEnum.LIMITS:
-                shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput }));
-                break;
             case PromptTemplateTypeEnum.PIVOTS:
                 if(potentialFields!=null)
                 {
@@ -207,7 +201,7 @@ export class ExploreService {
                 throw new Error('LLM result does not contain a valid JSON');
             }
         }
-        // call LLM to ask for Limits and Pivots
+        // call LLM to ask for Pivots
         const pivotsFromLLM = await this.findPivotsFromLLM(userInput, mergedResults.field_names);
         if (pivotsFromLLM) {
             mergedResults.pivots = pivotsFromLLM;
@@ -248,7 +242,6 @@ export class ExploreService {
         try
         {
             const potentialFieldsString = JSON.stringify(potentialFields);
-            // Generate Prompt returns an array, gets the first for the LIMIT
             const promptPivots = this.generatePrompt([], userInput, PromptTemplateTypeEnum.PIVOTS, potentialFieldsString);
             const results  = await this.retrieveLookerParametersFromLLM(promptPivots);
             const pivotResult = UtilsHelper.firstElement(results).r;
@@ -265,7 +258,6 @@ export class ExploreService {
         }
         catch (err) {
             return arrayPivots;
-            // throw new Error("Pivot not returning fields, going to default");
         }
     }
 
