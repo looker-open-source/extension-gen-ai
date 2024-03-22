@@ -268,7 +268,15 @@ export const Explore: React.FC = () => {
           setCurrentExploreData(exploreData);
           setLoadingLLM(false);
           // Log Default Result 
-          generativeExploreService!.logLookerFilterFields(my_fields!, prompt, exploreData!, 0);              
+          try
+          {
+            generativeExploreService!.logLookerFilterFields(my_fields!, prompt, exploreData!, 0);              
+          }
+          catch(error)
+          {            
+            // TODO: Render in the UI
+            Logger.error("Could not log Looker Filters: check bigquery logs");
+          }        
           
           // Do something that takes time
           const endTime = performance.now();

@@ -57,7 +57,8 @@ export class LookerSQLService {
             Logger.debug('Invalid Log Results. Missing slug');
             return "error - no slug";
         }
-        const slug: string = result.value.slug;
+        const slug: string = result.value.slug;                
+        await this.runQuerySlugLog(slug);                  
         return "executeLog sucessful";
     }
 
@@ -68,6 +69,7 @@ export class LookerSQLService {
      */
     public async execute<T>(query: string): Promise<Array<T>> {
                
+        
         const queryCreate: ISqlQueryCreate = {
             connection_name: await this.getCurrentConnectionName(),
             sql: query,
@@ -118,6 +120,32 @@ export class LookerSQLService {
         return result.value as unknown as Array<T>;
     }
 
+
+        /**
+     * Retrieves a Query result calling LookerSDK using slug
+     * @param slug
+     * @returns
+     */
+    private async runQuerySlugLog(slug: string): Promise<Array<string>>
+    {              
+        try
+        {
+            const result = await this.lookerSDK.run_sql_query(slug, "json",undefined,LookerSQLService.transportTimeoutCustom);
+            if (!result.ok) {
+                
+                throw new Error(''+ result.error.message);
+            }
+            return result.value as unknown as Array<string>;
+        }
+        catch(error)
+        {
+            Logger.debug('unable to run Query Slug Log - Check BigQuery - Schema might be mismatching')
+        }
+        return Array<string>();
+    }
+    
+    
+        
     
     /**
      * Creates a new WriteQuery calling LookerSDK
@@ -138,7 +166,6 @@ export class LookerSQLService {
         if (!result.ok) {
             throw new Error('invalid get query from id result')
         }
-        debugger;
         console.log(result.value);
         return result.value;
     }
