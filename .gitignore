@@ -1,3 +1,6 @@
+# Dist
+dist/tsc/*
+
 */venv/*
 optional-fine-tuning-model/cloud-function-remote/venv/*
 # Logs
