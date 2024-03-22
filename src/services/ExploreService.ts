@@ -48,7 +48,7 @@ export class ExploreService {
 
     //    Method that breaks the exploreFields into chunks based on the max number of tokens
     private breakFieldsPerToken(modelFields: FieldMetadata[]): Array<FieldMetadata[]>{
-        const generatedPromptsArray = new Array<FieldMetadata[]>;
+        const generatedPromptsArray: Array<FieldMetadata[]> = [];
         // get the total length of the json array
         var totalLength = JSON.stringify(modelFields).length;
         // divide by n elements

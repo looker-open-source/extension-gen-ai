@@ -47,7 +47,6 @@ export const Explore: React.FC = () => {
 
   useEffect(() => {
     loadExplores();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadExplores = async () => {
@@ -261,7 +260,6 @@ export const Explore: React.FC = () => {
                 placeholder="[Experimental] LLM Text Answer"
                 value={llmInsights}
                 readOnly
-                height="200px"
               />
               </SpaceVertical>
             <Dialog isOpen={loadingLLM}>
