@@ -12,6 +12,7 @@ import {
     ILookmlModelExploreField
 } from "@looker/sdk";
 import LookerExploreDataModel from "../models/LookerExploreData";
+import LookerExploreQueryModel from "../models/LookerExploreQuery";
 import { UtilsHelper } from "../utils/Helper";
 import { Logger } from "../utils/Logger";
 import { ConfigReader } from "./ConfigReader";
@@ -171,7 +172,7 @@ export class ExploreService {
          return results;
     }
 
-    private async getExplorePayloadFromLLM(
+    public async generateExploreData(
         modelFields: FieldMetadata[],
         userInput: string): Promise<LookerExploreDataModel>
     {
@@ -199,23 +200,18 @@ export class ExploreService {
                 const exploreDataChunk = new LookerExploreDataModel(llmChunkResult, allowedFieldNames);
                 mergedResults.merge(exploreDataChunk);
             } catch (error) {
-                // @ts-ignore
+                if (!(error instanceof Error)) {
+                    throw new Error('unexpected error trying to generate explore data');
+                }
                 Logger.error(error.message, chunkResult);
-                // throw new Error('LLM result does not contain a valid JSON');
+                throw new Error('LLM result does not contain a valid JSON');
             }
         }
         // call LLM to ask for Limits and Pivots
-        // const limitFromLLMPromise = this.findLimitsFromLLM(userInput);
         const pivotsFromLLM = await this.findPivotsFromLLM(userInput, mergedResults.field_names);
-        // const [limitFromLLM, pivotsFromLLM] = await Promise.all([limitFromLLMPromise, pivotsFromLLMPromise]);
-
         if (pivotsFromLLM) {
             mergedResults.pivots = pivotsFromLLM;
         }
-        // // replace limit
-        // if (limitFromLLM) {
-        //     mergedResults.limit = limitFromLLM;
-        // }
         // Only execute merged from LLM logic if needed
         if(llmChunkedResults.length > 1)
         {
@@ -232,8 +228,6 @@ export class ExploreService {
             mergedResults.pivots = [];
         }
         return mergedResults;
-
-
     }
 
     private validateInputForPivots(userInput: string):boolean {
@@ -301,23 +295,10 @@ export class ExploreService {
         }
     }
 
-
-
-    public async generatePromptSendToBigQuery(
-        modelFields: FieldMetadata[],
-        userInput: string,
+    public async createExploreQuery(
+        exploreData: LookerExploreDataModel,
         modelName: string,
-        viewName: string,
-        llmModelSize: string): Promise<{
-            clientId: string,
-            queryId: string,
-            modelName: string,
-            view: string,
-            exploreData: LookerExploreDataModel
-        }> {
-        // Call LLM to find the fields
-        const exploreData = await this.getExplorePayloadFromLLM(modelFields, userInput);
-
+        viewName: string): Promise<LookerExploreQueryModel> {
         try {
             const llmQueryResult = await this.sql.createQuery({
                 model: modelName,
@@ -333,14 +314,14 @@ export class ExploreService {
             if (!queryId) {
                 throw new Error('unable to retrieve query id from created query');
             }
-            Logger.info("llmQuery: " + JSON.stringify(exploreData, null, 2));
-            return {
+            const exploreQuery = new LookerExploreQueryModel({
                 clientId,
                 queryId,
                 modelName,
-                view: viewName,
-                exploreData
-            }
+                viewName,
+            });
+            Logger.trace("explore query created", { exploreQuery, exploreData });
+            return exploreQuery;
         } catch (err) {
             Logger.error("LLM does not contain valid JSON: ");
             throw new Error('LLM result does not contain a valid JSON');
@@ -390,18 +371,22 @@ export class ExploreService {
         {
             throw new Error(`invalid looker response ${exploreResult.error.message}`);
         }
+        if (!exploreResult.value.fields) {
+            throw new Error('unable to find field definition for given model')
+        }
+        if (!exploreResult.value.name) {
+            throw new Error('unable to identity view name in explore field definitions result');
+        }
+        const viewName: string = exploreResult.value.name;
         const fields: ILookmlModelExploreFieldset = exploreResult.value.fields;
         const fieldDimensions: ILookmlModelExploreField[]  =  fields.dimensions!;
         const fieldMeasures: ILookmlModelExploreField[]  =  fields.measures!;
-        const flattenDimensionsAndMeasures = fieldDimensions.concat(fieldMeasures);
+        const dimensionsAndMeasures = fieldDimensions.concat(fieldMeasures);
         var fieldDefinitions: Array<FieldMetadata> = [];
-
-        if(!flattenDimensionsAndMeasures) {
+        if(!dimensionsAndMeasures) {
             throw new Error("missing measures / dimensions");
         }
-
-
-        for(var field of flattenDimensionsAndMeasures)
+        for(var field of dimensionsAndMeasures)
         {
             // skip hidden fields
             if (field.hidden === true) {
@@ -415,7 +400,6 @@ export class ExploreService {
             };
             fieldDefinitions.push(fieldMetadata);
         }
-        const viewName = exploreResult.value.name;
         return {
             viewName,
             fieldDefinitions,
