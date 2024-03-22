@@ -33,8 +33,8 @@ def get_model_result(prompt):
     generation_config={
         "temperature": 0.05,
         "max_output_tokens": 1024,
-        "top_p": 1.0,
-        "top_k": 40,
+        "top_p": 0.98,
+        "top_k": 1,
     },
     stream=False)
     return genai_responses.candidates[0].content.parts[0].text
@@ -43,8 +43,8 @@ def get_model_result(prompt):
     prompt=prompt,
     temperature= 0.05,
     max_output_tokens= 1024,
-    top_p= 0.8,
-    top_k= 40
+    top_p= 0.98,
+    top_k= 1
     )
     return genai_return.text
 

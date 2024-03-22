@@ -100,7 +100,7 @@ export class ExploreService {
     {
         if(this.useNativeBQ == false)
         {
-            return `#Looker Ext GenAI UDF - ${type} - v: ${ConfigReader.CURRENT_VERSION}           
+            return `#Looker Ext GenAI Limit - ${type} - v: ${ConfigReader.CURRENT_VERSION}           
             ${selectPrompt}`;
         }
         return `#Looker Ext GenAI - ${type} - v: ${ConfigReader.CURRENT_VERSION}
@@ -120,18 +120,29 @@ export class ExploreService {
         `;
     }
 
-    public async logLookerFilterFields(modelFields: FieldMetadata[], userInput: string, result: LookerExploreDataModel, thumbsUpDownNone: number):Promise<string>
+    public async logLookerFilterFields(modelFields: FieldMetadata[], userInput: string, result: LookerExploreDataModel, thumbsUpDownNone: number)
     {
-        const queryToRun = `INSERT INTO ${ConfigReader.EXPLORE_LOGGING}(creation_timestamp, userInput, modelFields, llmResult, thumbsUpDownNone) VALUES(
-            CURRENT_TIMESTAMP(),
-            '${userInput}',
-            JSON '${JSON.stringify(modelFields)}',
-            JSON '${JSON.stringify(result)}',
-            ${thumbsUpDownNone}
-            )`;        
-        Logger.debug("Query to Run: " + queryToRun);
-        const results = await this.sql.executeLog(queryToRun);         
-        return results;
+       
+        try{
+            const queryToRun = `#Looker ExtGenAI logging filter Fields - v: ${ConfigReader.CURRENT_VERSION}
+            BEGIN
+            INSERT INTO ${ConfigReader.EXPLORE_LOGGING}(creation_timestamp, userInput, modelFields, llmResult, thumbsUpDownNone) VALUES(
+                CURRENT_TIMESTAMP(),
+                '${userInput}',
+                JSON '${JSON.stringify(modelFields)}',
+                JSON '${JSON.stringify(result)}',
+                ${thumbsUpDownNone}
+                );
+            SELECT 1; 
+            END`;        
+            const results = await this.sql.executeLog(queryToRun);
+            Logger.info("Settings saved sucessfully: "+ results);             
+        }
+        catch(err)
+        {
+            Logger.error("Failed to persist user preferences on BigQuery - working only during the session");
+        }        
+    
     }
 
 
