@@ -6,16 +6,17 @@
  * https://opensource.org/licenses/MIT.
  */
 
-import { Looker40SDK } from "@looker/sdk";
-import { IDictionary } from "@looker/sdk-rtl";
+import {
+    Looker40SDK,
+    ILookmlModelExploreFieldset,
+    ILookmlModelExploreField
+} from "@looker/sdk";
 import LookerExploreDataModel from "../models/LookerExploreData";
 import { UtilsHelper } from "../utils/Helper";
+import { Logger } from "../utils/Logger";
+import { ConfigReader } from "./ConfigReader";
 import { LookerSQLService } from "./LookerSQLService";
 import { PromptTemplateService, PromptTemplateTypeEnum } from "./PromptTemplateService";
-import { Logger } from "../utils/Logger"
-import { ConfigReader } from "./ConfigReader";
-import { slice } from "lodash";
-import { sub } from "date-fns";
 
 export interface FieldMetadata{
     label: string;
@@ -26,16 +27,18 @@ export interface FieldMetadata{
 
 
 export class ExploreService {
-    
+
+    private lookerSDK: Looker40SDK;
     private sql: LookerSQLService;
     private promptService: PromptTemplateService;
     private llmModelSize: number;
     private useNativeBQ: boolean;
-    private MAX_CHAR_PER_PROMPT: number;    
-    private FIXED_BREAK_PER_QUANTITY: number;    
+    private MAX_CHAR_PER_PROMPT: number;
+    private FIXED_BREAK_PER_QUANTITY: number;
 
     public constructor(lookerSDK: Looker40SDK, promptService: PromptTemplateService, llmModelSize:string, useNativeBQ:boolean) {
-        this.sql = new LookerSQLService(lookerSDK);
+        this.lookerSDK = lookerSDK;
+        this.sql = new LookerSQLService(this.lookerSDK);
         this.promptService = promptService;
         this.llmModelSize = parseInt(llmModelSize);
         this.MAX_CHAR_PER_PROMPT = this.llmModelSize * 2500;
@@ -63,9 +66,9 @@ export class ExploreService {
         userInput: string,
         promptTypeEnum: PromptTemplateTypeEnum,
         potentialFields?:string,
-        mergedResults?:string):Array<string> {        
+        mergedResults?:string):Array<string> {
 
-        const shardedPrompts:Array<string> = [];        
+        const shardedPrompts:Array<string> = [];
         // Prompt for Limits only needs the userInput
         switch(promptTypeEnum)
         {
@@ -76,14 +79,14 @@ export class ExploreService {
                 if(potentialFields!=null)
                 {
                     shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput, potentialFields}));
-                }                
+                }
                 break;
-            case PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED:            
+            case PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED:
                 if(mergedResults!=null && userInput!=null)
                 {
                     shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput, mergedResults}));
                 }
-                break;                        
+                break;
             default:
                 const generatedPromptsArray:Array<FieldMetadata[]> = this.breakFieldsPerToken(modelFields);
                 for(const fieldGroup of generatedPromptsArray){
@@ -91,8 +94,8 @@ export class ExploreService {
                     const generatedPrompt = this.promptService.fillByType(promptTypeEnum, {serializedModelFields, userInput});
                     shardedPrompts.push(generatedPrompt);
                 }
-                break;        
-        }        
+                break;
+        }
         return shardedPrompts;
     }
 
@@ -100,7 +103,7 @@ export class ExploreService {
     {
         if(this.useNativeBQ == false)
         {
-            return `#Looker Ext GenAI Limit - ${type} - v: ${ConfigReader.CURRENT_VERSION}           
+            return `#Looker Ext GenAI UDF - ${type} - v: ${ConfigReader.CURRENT_VERSION}
             ${selectPrompt}`;
         }
         return `#Looker Ext GenAI - ${type} - v: ${ConfigReader.CURRENT_VERSION}
@@ -121,8 +124,7 @@ export class ExploreService {
     }
 
     public async logLookerFilterFields(modelFields: FieldMetadata[], userInput: string, result: LookerExploreDataModel, thumbsUpDownNone: number)
-    {
-       
+    {    
         try{
             const queryToRun = `#Looker ExtGenAI logging filter Fields - v: ${ConfigReader.CURRENT_VERSION}
             BEGIN
@@ -142,7 +144,6 @@ export class ExploreService {
         {
             Logger.error("Failed to persist user preferences on BigQuery - working only during the session");
         }        
-    
     }
 
 
@@ -150,7 +151,7 @@ export class ExploreService {
     {
         const arraySelect: Array<string> = [];
         promptArray.forEach((promptField) =>{
-             const singleLineString = UtilsHelper.escapeBreakLine(promptField);                   
+             const singleLineString = UtilsHelper.escapeBreakLine(promptField);
              arraySelect.push(UtilsHelper.getQueryFromPrompt(singleLineString, this.useNativeBQ));
         });
          // Join all the selects with union all
@@ -162,11 +163,11 @@ export class ExploreService {
         }
          // query to run
          const queryToRun = this.buildBigQueryLLMWithType(queryContents, "Explore");
-         Logger.debug("Query to Run: " + queryToRun);                 
+         Logger.debug("Query to Run: " + queryToRun);
          const results = await this.sql.execute<{
              r: string
              status: string
-         }>(queryToRun);         
+         }>(queryToRun);
          return results;
     }
 
@@ -207,7 +208,7 @@ export class ExploreService {
         // const limitFromLLMPromise = this.findLimitsFromLLM(userInput);
         const pivotsFromLLM = await this.findPivotsFromLLM(userInput, mergedResults.field_names);
         // const [limitFromLLM, pivotsFromLLM] = await Promise.all([limitFromLLMPromise, pivotsFromLLMPromise]);
-        
+
         if (pivotsFromLLM) {
             mergedResults.pivots = pivotsFromLLM;
         }
@@ -222,7 +223,7 @@ export class ExploreService {
             // send the merged results to a final LLM to validate the merged Results
             const checkMergedFromLLM:LookerExploreDataModel = await this.checkMergedFromLLM(mergedResults, userInput, allowedFieldNames);
             // remove pivots if not mentioned explicitly
-            mergedResults = checkMergedFromLLM;                               
+            mergedResults = checkMergedFromLLM;
         }
         // Validate if word Pivots is present
         if(!this.validateInputForPivots(userInput))
@@ -231,8 +232,8 @@ export class ExploreService {
             mergedResults.pivots = [];
         }
         return mergedResults;
-        
-       
+
+
     }
 
     private validateInputForPivots(userInput: string):boolean {
@@ -244,18 +245,18 @@ export class ExploreService {
         return false;
     }
 
-    private async findPivotsFromLLM( 
+    private async findPivotsFromLLM(
         userInput: string,
         potentialFields: Array<string>
         ): Promise<Array<string>>
-    {       
-        let arrayPivots:Array<string> = [];    
+    {
+        let arrayPivots:Array<string> = [];
         try
-        {            
+        {
             const potentialFieldsString = JSON.stringify(potentialFields);
             // Generate Prompt returns an array, gets the first for the LIMIT
             const promptPivots = this.generatePrompt([], userInput, PromptTemplateTypeEnum.PIVOTS, potentialFieldsString);
-            const results  = await this.retrieveLookerParametersFromLLM(promptPivots);                
+            const results  = await this.retrieveLookerParametersFromLLM(promptPivots);
             const pivotResult = UtilsHelper.firstElement(results).r;
             const cleanResult = UtilsHelper.cleanResult(pivotResult);
             // TODO: Validate result from schema joi
@@ -265,7 +266,7 @@ export class ExploreService {
                 arrayPivots = arrayPivots.concat(llmResultLine.pivots);
             }
             // Validate results
-            arrayPivots.concat(pivotResult);  
+            arrayPivots.concat(pivotResult);
             return arrayPivots;
         }
         catch (err) {
@@ -274,20 +275,20 @@ export class ExploreService {
         }
     }
 
-    private async checkMergedFromLLM( 
+    private async checkMergedFromLLM(
         mergedModel: LookerExploreDataModel,
         userInput: string,
         allowedFieldNames: string[]
         ): Promise<LookerExploreDataModel>
-    {       
-        let arrayPivots:Array<string> = [];    
+    {
+        let arrayPivots:Array<string> = [];
         try
         {
             const mergedResultsString = JSON.stringify(mergedModel);
             // Generate Prompt returns an array, gets the first for the LIMIT
             const promptCheckMerged = this.generatePrompt([], userInput, PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED, undefined, mergedResultsString);
             const results  = await this.retrieveLookerParametersFromLLM(promptCheckMerged);
-            const mergedChecked = UtilsHelper.firstElement(results).r;               
+            const mergedChecked = UtilsHelper.firstElement(results).r;
             const cleanResult = UtilsHelper.cleanResult(mergedChecked);
             var llmResultLine = JSON.parse(cleanResult);
             return new LookerExploreDataModel(llmResultLine, allowedFieldNames);
@@ -300,13 +301,13 @@ export class ExploreService {
         }
     }
 
-    
+
 
     public async generatePromptSendToBigQuery(
         modelFields: FieldMetadata[],
         userInput: string,
         modelName: string,
-        viewName: string, 
+        viewName: string,
         llmModelSize: string): Promise<{
             clientId: string,
             queryId: string,
@@ -316,7 +317,7 @@ export class ExploreService {
         }> {
         // Call LLM to find the fields
         const exploreData = await this.getExplorePayloadFromLLM(modelFields, userInput);
-    
+
         try {
             const llmQueryResult = await this.sql.createQuery({
                 model: modelName,
@@ -332,7 +333,7 @@ export class ExploreService {
             if (!queryId) {
                 throw new Error('unable to retrieve query id from created query');
             }
-            Logger.info("llmQuery: " + JSON.stringify(exploreData, null, 2));            
+            Logger.info("llmQuery: " + JSON.stringify(exploreData, null, 2));
             return {
                 clientId,
                 queryId,
@@ -346,9 +347,9 @@ export class ExploreService {
         }
     }
 
-    public async answerQuestionWithData(prompt: string, queryId: string): Promise<string> {                        
-        const userInput = prompt;        
-        Logger.info("Getting the raw data from the explore");            
+    public async answerQuestionWithData(prompt: string, queryId: string): Promise<string> {
+        const userInput = prompt;
+        Logger.info("Getting the raw data from the explore");
         let elementData: Array<any> = await this.sql.executeByQueryId(queryId);
         // max number of elements to pass to dashboard
         let totalChars = 0;
@@ -358,7 +359,7 @@ export class ExploreService {
             if (totalChars > this.MAX_CHAR_PER_PROMPT) {
                 limitData = elementData.slice(0, i);
                 break;
-            }            
+            }
         }
         const serializedModelFields = JSON.stringify(limitData);
         Logger.info("Generate Prompt passing the data");
@@ -368,18 +369,56 @@ export class ExploreService {
         const results = await this.sql.execute<{
             r: string
             status: string
-        }>(queryToRun); 
-        
-        let result_string = "";        
+        }>(queryToRun);
+
+        let result_string = "";
         for(const queryResult of results)
         {
             const status = queryResult.status;
             if (status!="" && status!=null) {
-                // Log instead of breaking the application                
+                // Log instead of breaking the application
                 throw new Error("some of the llm results had an error: " + status);
-            }                        
-            result_string = result_string.concat(queryResult.r + " \n");            
-        }        
+            }
+            result_string = result_string.concat(queryResult.r + " \n");
+        }
         return result_string;
+    }
+
+    public async getExplorerFieldDefinitions(modelName: string, exploreName: string) {
+        const exploreResult = await this.lookerSDK.lookml_model_explore(modelName, exploreName, "id, name, description, fields, label");
+        if(!exploreResult.ok)
+        {
+            throw new Error(`invalid looker response ${exploreResult.error.message}`);
+        }
+        const fields: ILookmlModelExploreFieldset = exploreResult.value.fields;
+        const fieldDimensions: ILookmlModelExploreField[]  =  fields.dimensions!;
+        const fieldMeasures: ILookmlModelExploreField[]  =  fields.measures!;
+        const flattenDimensionsAndMeasures = fieldDimensions.concat(fieldMeasures);
+        var fieldDefinitions: Array<FieldMetadata> = [];
+
+        if(!flattenDimensionsAndMeasures) {
+            throw new Error("missing measures / dimensions");
+        }
+
+
+        for(var field of flattenDimensionsAndMeasures)
+        {
+            // skip hidden fields
+            if (field.hidden === true) {
+                continue;
+            }
+            var fieldMetadata: FieldMetadata = {
+                label : field.label!,
+                name: field.name!,
+                type: field.type!,
+                description: field.description!
+            };
+            fieldDefinitions.push(fieldMetadata);
+        }
+        const viewName = exploreResult.value.name;
+        return {
+            viewName,
+            fieldDefinitions,
+        }
     }
 }
