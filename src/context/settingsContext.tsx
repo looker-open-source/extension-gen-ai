@@ -104,8 +104,9 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   }
 
   function generateCombosForTopPrompts(prompts: Array<PromptModel>) {
+    const sortedModels = prompts.sort((a:PromptModel,b:PromptModel) => (a.description!=null&&b.description!=null)?a.description.localeCompare(b.description):0)
     var allValues:ComboboxOptionObject[] = [];
-    prompts.forEach(promptModel => {
+    sortedModels.forEach(promptModel => {
       allValues.push({
         label: promptModel.description,
         value: promptModel.modelExplore + "@@@" + promptModel.prompt
