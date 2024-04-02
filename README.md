@@ -12,15 +12,21 @@
 This repository compiles prescriptive code samples demonstrating how to create a Looker Extension integrating Looker with Vertex AI Large Language Models (LLMs).
 
 Looker GenAI is an extension created to showcase interactivity between Looker and LLM with 2 main applications:
-1.  Data Exploration using NLP and GenAI (ask a looker explore). Using Natural Language to ask your data about specific things. The LLM Model will try to find the right fields, filters, sorts, pivots and limits to explore the data.
-2.  Business Insights on top of Dashboards. With this feature, we ingest all the data from the selected Dashboard as a context and can ask the LLM model a question based on the context provided
+
+1.1.  **Generative Explore:** Using Natural Language to ask your data about specific things. The LLM Model will try to find the right fields, filters, sorts, pivots and limits to explore the data.
+  
+![Data Exploration](/images/gif-explore.gif)
+
+1.2.  **Generative Insights on Dashboards:** With this feature, we ingest all the data from the selected Dashboard as a context and can ask the LLM model a question based on the context provided.
+   
+![Generative Insights on Dashboards](/images/gif-dashboard.gif)
 
 ## 2. Solutions architecture overview
 
 ![Architecture](/images/looker-extension-architecture-overview.png)
 
 There are two tabs on the extension:
-### 2.1 Data Exploration
+### 2.1 Generative Explore
 User chooses a Looker Explore and asks questions using natural language. The application gathers the metadata from the explore and creates a prompt to the LLM model that will return an explore with the appropriate fields, filters, sorts and pivots rendered on the Extension. The user can select a Visualization and add it to a Dashboard.
 
 #### Workflow for Data Exploration with BQML Remote Models
@@ -28,22 +34,26 @@ The current default implementation uses the native integration between BigQuery 
 
 ![Workflow](/images/looker-extension-workflow-data-exploration.png)
 
+#### Workflow for Data Exploration with BQML Remote UDF with Vertex AI
+For production environment, it is recommended to use the deployment using BigQuery Remote UDFs, which uses a Google Cloud Function that will connect to Vertex AI API's. This option is more flexible as it is easy to change the Model, parameters and also give a fine-tuned endpoint (when gemini-pro supports it in the near future.) [https://cloud.google.com/bigquery/docs/remote-functions]
+
+
 #### Workflow for Data Exploration with Custom Fine Tune Model (Optional Path to be implemented)
 Optionally, users can train their own custom fine tune model, giving more examples to make it more accurate than the default model.
-If users want to follow this path, on this repo there is a Terraform Deployment Example on how to achieve that using Cloud Workflows to orchestrate the creation of the Fine Tuned Model, the Cloud Function and BigQuery UDF calling the Cloud Function. Users needs to adapt the code and SQL queries to do the execution using the fine tuned model.
+If users want to follow this path, on this repo there is a Terraform Deployment Example on how to achieve that using Cloud Workflows to orchestrate the creation of the Fine Tuned Model. After fine-tuning the model, you can change the endpoint on the Cloud Function (Remote UDF option).
 
 ![Workflow](/images/looker-extension-workflow-data-exploration-fine-tuned-model.png)
 
-### 2.2 Business Insights
+### 2.2 Generative Insights on Dashboards
 User chooses a Looker Dashboard and asks questions using natural language. In this scenario, the Extension builds a prompt and sends all the data from all tiles to the LLM model as a context and the question from the user.
-#### Workflow for Business Insights
+#### Workflow for Generative Insights on Dashboards
 ![Workflow](/images/looker-extension-workflow-business-insights.png)
 
 ## 3. Deploy the infrastructure using Terraform
 
 The architecture for the extension needs the following infrastructure in a GCP Project:
 - BigQuery Dataset (default name: llm)
-- BigQuery Remote Model pointing to Palm API (llm_model)
+- BigQuery Remote Model pointing to gemini-pro API (llm_model)
 - IAM Service Accounts to create a connection to Looker
 - IAM permission for BQ connection to connect to Vertex AI
 
@@ -135,6 +145,8 @@ The Extension will be available directly through Marketplace or through a manual
    
 9. If you have any doubts, questions, feel free to e-mail: looker-genai-extension@google.com. We also have a debug table in BigQuery called explore_logs which you can export to CSV and send to us.
 
+![Looker Installation](/images/gif-deploy-looker.gif)
+
 
 ---
 ## 5. Using and Configuring the Extension
@@ -144,6 +156,9 @@ The Extension will be available directly through Marketplace or through a manual
 INSERT INTO `llm.explore_prompts` 
 VALUES("Top 3 brands in sales", "What are the top 3 brands that had the most sales price in the last 4 months?", "thelook.order_items", "explore")
 ```
+
+The values to be inserted are as the following:
+**name of example**,  **prompt**, **model.explore**, **type (explore or dashboard)**
 
 ## 6. Developing the Looker Extension Environment
 
@@ -183,6 +198,8 @@ yarn develop
 ```
 
     The development server is now running and serving the JavaScript at https://localhost:8080/bundle.js.
+
+![Developing](/images/gif-developing.gif)
 
 ## 6.3 Build for production
 
