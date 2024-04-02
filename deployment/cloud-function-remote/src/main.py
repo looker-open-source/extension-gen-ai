@@ -31,10 +31,10 @@ def get_model_result(prompt):
     genai_responses = gemini_pro_model.generate_content(
     prompt,
     generation_config={
-        "temperature": 0.05,
+        "temperature": 0.10,
         "max_output_tokens": 1024,
-        "top_p": 0.98,
-        "top_k": 1,
+        "top_p": 0.9,
+        "top_k": 5,
     },
     stream=False)
     return genai_responses.candidates[0].content.parts[0].text
