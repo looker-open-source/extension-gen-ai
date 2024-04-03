@@ -1,11 +1,11 @@
-# Looker GenAI Extension 
+# Looker GenAI Extension ∏
 
-  - [1. Overview](#1.-overview)
-  - [2. Solutions architecture overview](#2.-solutions-architecture-overview)
-  - [3. Deploy the infrastructure using Terraform](#3.-deploy-the-infrastructure-using-terraform)
-  - [4. Deploying the Looker Extension](#4.-deploying-the-looker-extension)
-  - [5. Using and Configuring the Extension](#5.-using-and-configuring-the-extension)
-  - [6. Developing the Looker Extension Environment](#6.-developing-the-looker-extension-environment)
+  - [1. Overview](#1-overview)
+  - [2. Solutions architecture overview](#2-solutions-architecture-overview)
+  - [3. Deploy the infrastructure using Terraform](#3-deploy-the-infrastructure-using-terraform)
+  - [4. Deploying the Looker Extension](#4-deploying-the-looker-extension)
+  - [5. Using and Configuring the Extension](#5-using-and-configuring-the-extension)
+  - [6. Developing the Looker Extension Environment](#6-developing-the-looker-extension-environment)
 
 
 ## 1. Overview
