@@ -33,7 +33,6 @@ export const Dashboard: React.FC = () => {
   const [loadingCombobox, setLoadingCombobox] = useState<boolean>(false)
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
   const [lookerDashboards, setLookerDashboards] = useState<IDashboardBase[]>([])
-  const [errorMessage, setErrorMessage] = useState<string>()
   const [allCombo, setAllCombo] = useState<ComboboxOptionObject[]>()
   const [currentCombo, setCurrentCombo] = useState<ComboboxOptionObject[]>()
   const [currentDashName, setCurrentDashName] = useState<string>()
@@ -47,7 +46,7 @@ export const Dashboard: React.FC = () => {
   const defaultWelcomePrompt = "`Act as an experienced Business Data Analyst with PHD and answer the question having into";
   const defaultPromptValue = "Can you summarize the following datasets in 10 bullet points?";
 
-  const { dashboardCombo, checkUseNativeBQ } = React.useContext(StateContext) as StateContextType;
+  const { dashboardCombo, checkUseNativeBQ , setShowError, setErrorMessage } = React.useContext(StateContext) as StateContextType;
 
   useEffect(() => {
     loadDashboards();    
@@ -104,8 +103,12 @@ export const Dashboard: React.FC = () => {
     .then((dash)=> {
       setCurrentDashboard(dash);
     })    
-    .catch((error: Error) => {
+    .catch((error: Error) => {     
+      const errorMessage: string = error?.message || "unknown error message";
+      setErrorMessage(errorMessage);
+      setShowError(true); 
       console.error('Connection error', error)
+
     });
 
   });
