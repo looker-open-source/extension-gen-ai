@@ -40,9 +40,9 @@ export class DashboardService {
         this.dashboardService = new LookerDashboardService(lookerSDK, this.sql);                
     }
     
-    static readonly MAX_CHAR_PER_PROMPT: number = 20000*3;
-    static readonly MAX_CHAR_PER_TILE: number = 20000*3;
-    static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 8000*3;
+    static readonly MAX_CHAR_PER_PROMPT: number = 54000;
+    static readonly MAX_CHAR_PER_TILE: number = 54000;
+    static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 24000;
 
     /**
      * Lists all available dashboards

@@ -325,7 +325,7 @@ resource "google_storage_bucket_object" "functions_bq_remote_udf" {
 resource "google_cloudfunctions2_function" "functions_bq_remote_udf" {
   name = "looker-extension-genai-bq-remote-${random_string.random.result}"
   location = var.deployment_region
-  description = "Cloud Function to connect BigQuery UDF to Vertex AI text-bison"
+  description = "Cloud Function to connect BigQuery UDF to Vertex AI"
 
   build_config {
     runtime = "python311"
