@@ -152,13 +152,34 @@ The Extension will be available directly through Marketplace or through a manual
 ## 5. Using and Configuring the Extension
 
 ### 5.1. Saving Example Prompts
-```
+```sql
 INSERT INTO `llm.explore_prompts` 
 VALUES("Top 3 brands in sales", "What are the top 3 brands that had the most sales price in the last 4 months?", "thelook.order_items", "explore")
 ```
 
 The values to be inserted are as the following:
 **name of example**,  **prompt**, **model.explore**, **type (explore or dashboard)**
+
+### 5.2. Configuring Settings for Default Users or All Users
+
+All user-level settings are stored within your BigQuery project under the `llm` dataset. You can manage these settings in the "Developer Settings" tab.  Adjustable configurations include:
+
+- Console Log Level: Controls the verbosity of logs sent to the console.
+- Use Native BQML or Remote UDF: Determines whether to use native BigQuery ML functions or custom remote User-Defined Functions (UDFs). Remote UDFs are generally recommended for production workloads.
+- Custom Prompt to be used for your userId.
+
+**Modifying Settings with SQL in BigQuery**
+
+This SQL below changes the settings for all users. 
+```sql
+UPDATE `llm.settings` SET config = (SELECT config from `llm.settings` WHERE userId = "YOUR_USER_ID") WHERE True 
+```
+The default settins is when userId is NULL;
+You can change just for the default settings if you want.
+```sql
+UPDATE `llm.settings` SET config = (SELECT config from `llm.settings` WHERE userId = "YOUR_USER_ID") WHERE userId IS NULL 
+```
+
 
 ## 6. Developing the Looker Extension Environment
 
