@@ -10,6 +10,8 @@ import { IDashboardBase, ILookmlModel, IRequestAllLookmlModels, IUser } from '@l
 import PromptModel from '../models/PromptModel';
 import { DashboardService } from '../services/DashboardService';
 import { Logger } from '../utils/Logger';
+import './../assets/style.css';
+
 
 export const StateContext = React.createContext<StateContextType | null>(null);
 
@@ -169,7 +171,7 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
           </Space>
         </DialogLayout>            
       </Dialog>
-      <Dialog isOpen={showError} width={350}>
+      <Dialog isOpen={showError} width={500}>
         <DialogLayout header="Error" 
           footer={
             <>
@@ -177,8 +179,11 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
             </>
           }
         >
-          {errorMessage}
-        </DialogLayout>      
+          <pre className='error-dialog-message'>
+            {errorMessage}
+          </pre>          
+        </DialogLayout>
+             
     </Dialog>
     </StateContext.Provider>
   );
