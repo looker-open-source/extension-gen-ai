@@ -71,7 +71,7 @@ export class LookerSQLService {
         };
         const queryResult = await this.lookerSDK.run_query(runQueryRequest, LookerSQLService.transportTimeoutCustom);
         if (!queryResult.ok) {
-            throw new Error('unable to execute query by id');
+            throw new Error('unable to execute query by id: - trace: \n'+ queryResult.error.message);
         }
         if (!Array.isArray(queryResult.value)) {
             throw new Error('invalid query result value type');
@@ -88,8 +88,8 @@ export class LookerSQLService {
     {
         const result = await this.lookerSDK.run_sql_query(slug, "json",undefined,LookerSQLService.transportTimeoutCustom);
         if (!result.ok) {
-            Logger.error('invalid create query result', result)
-            throw new Error('unable to run SQL query');
+            Logger.error('nvalid create query result', result)
+            throw new Error('Unable to run SQL query - check BigQuery Logs : \n'+ result.error.message);
         }
         return result.value as unknown as Array<T>;
     }
@@ -102,7 +102,7 @@ export class LookerSQLService {
     public async createQuery(query: Partial<IWriteQuery>) {
         const result = await this.lookerSDK.create_query(query, undefined , LookerSQLService.transportTimeoutCustom);
         if (!result.ok) {
-            throw new Error('invalid create query result')
+            throw new Error('invalid create query result: \n: trace: \n ' + result.error.message);
         }
         return result;
     }

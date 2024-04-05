@@ -15,6 +15,9 @@ export type StateContextType = {
   setExploreCurrentComboModels: (models: ComboboxOptionObject[]) => void;
   setSelectedModelExplore:(exp:string) => void;
   setPrompt:(prompt:string) => void;
+  setErrorMessage:(message:string) => void;
+  setShowError:(show: boolean) => void;
+  errorMessage:string;
   exploreComboModels: ComboboxOptionObject[];
   exploreComboPromptExamples: ComboboxOptionObject[];
   explorePromptExamples: PromptModel[];
