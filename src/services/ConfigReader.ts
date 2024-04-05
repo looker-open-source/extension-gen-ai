@@ -16,8 +16,8 @@ import { ISettings } from "../@types/settings";
 
 
 export class ConfigReader {
-    public static readonly CURRENT_VERSION = "2.8";
-    public static readonly LAST_UPDATED = "04/02/2024";
+    public static readonly CURRENT_VERSION = "2.9";
+    public static readonly LAST_UPDATED = "04/05/2024";
     public static readonly BQML_MODEL = "llm.llm_model";
     public static readonly EXPLORE_LOGGING = "llm.explore_logging";
     public static readonly SETTINGS_TABLE = "llm.settings";

@@ -163,15 +163,11 @@ export const Dashboard: React.FC = () => {
       const promptResult = await generativeDashboardService.sendPrompt(dashboardElementsData, prompt, checkUseNativeBQ)
       // update interface with results
       setLlmInsights(promptResult)
-    } catch (error) {
-      if(error instanceof Error)
-      {
-        setLlmInsights(`Unexpected error: ${error.message}`);
-      }
-      else
-      {
-        setLlmInsights(`Unexpected error:` + error);
-      }      
+    } catch (error: any) {
+      const errorMessage: string = error?.message || "unknown error message";
+      Logger.error('unable load dashboard insights', errorMessage);
+      setErrorMessage(errorMessage);
+      setShowError(true);
     } finally {
       setLoadingLLM(false);
     }
