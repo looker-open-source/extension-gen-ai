@@ -40,9 +40,9 @@ export class DashboardService {
         this.dashboardService = new LookerDashboardService(lookerSDK, this.sql);                
     }
     
-    static readonly MAX_CHAR_PER_PROMPT: number = 54000;
-    static readonly MAX_CHAR_PER_TILE: number = 54000;
-    static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 24000;
+    static readonly MAX_CHAR_PER_PROMPT: number = 40000;
+    static readonly MAX_CHAR_PER_TILE: number = 40000;
+    static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 20000;
 
     /**
      * Lists all available dashboards
@@ -176,23 +176,18 @@ export class DashboardService {
             const prompt = this.getPromptService().fillByType(PromptTemplateTypeEnum.DASH_SUMMARIZE, {tileContext, serializedModelFields, userInput});
             promptArray.push(prompt);            
         }
-
-        const arraySelect: Array<string> = [];
+        
+        const promiseArray: Array<Promise<string>> = [];
         promptArray.forEach((promptField) =>{
              const singleLineString = UtilsHelper.escapeBreakLine(promptField);
              var subselect = UtilsHelper.getQueryFromPrompt(singleLineString, useNativeBQ);                          
-             arraySelect.push(subselect);
+             promiseArray.push(this.getResultsFromBigQuery(subselect, useNativeBQ));
         });
-         // Join all the selects with union all
-        const queryContents = arraySelect.join(" UNION ALL ");
-0
-        if(queryContents == null || queryContents.length == 0)
-        {
-            throw new Error('Could not generate field arrays on Prompt');
-        }
 
         // Concat strings and send to LLM again
-        return await this.getResultsFromBigQuery(queryContents, useNativeBQ);
+        return Promise.all(promiseArray).then((values) => {
+            return values.join("\n");
+        }); 
 
     }
 
