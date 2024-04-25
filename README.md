@@ -71,13 +71,28 @@ Or run directly on your Cloud Shell session:
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Flooker-open-source%2Fextension-gen-ai&shellonly=true&cloudshell_workspace=deployment%2Fterraform)
 
 
-### 3.2 Set project ID
+### 3.2.1 Set project ID
 
 Set the `gcloud` command to use the desired project ID:
 
 ```sh
 gcloud config set project PROJECT-ID
 ```
+
+### 3.2.2 Required IAM Roles
+
+The following IAM roles are essential for the successful deployment and operation of the Looker GenAI Extension. These roles should be assigned at the project level of the PROJECT-ID set above
+
+*   `roles/browser`
+*   `roles/cloudfunctions.developer`
+*   `roles/iam.serviceAccountUser`
+*   `roles/storage.admin`
+*   `roles/bigquery.user`
+*   `roles/bigquery.connectionAdmin`
+*   `roles/resourcemanager.projectIamAdmin`
+*   `roles/iam.serviceAccountCreator`
+
+more info regarding IAM can be found at [deployment/terraform/iam-issues.md](deployment/terraform/iam-issues.md)
 
 ### 3.2 Create Terraform state buckets
 
