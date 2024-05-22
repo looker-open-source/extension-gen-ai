@@ -15,7 +15,8 @@ vertexai.init(location=LOCATION)
 
 
 if(GEMINI):
-  gemini_pro_model = GenerativeModel("gemini-pro")
+  # Using gemini 15-pro preview for better accuracy
+  gemini_pro_model = GenerativeModel(model="gemini-1.5-pro-preview-0514")
 else:
   vertex_model = TextGenerationModel.from_pretrained("text-bison-32k")
 
