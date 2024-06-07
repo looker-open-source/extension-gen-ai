@@ -86,7 +86,7 @@ export class ExploreService {
             SELECT 1; 
             END`;        
             const results = await this.sql.execute(queryToRun);
-            Logger.info("looker filter logs persisted sucessfuly", results);
+            Logger.debug("looker filter logs persisted sucessfuly", results);
         }
         catch(error)
         {
@@ -124,18 +124,13 @@ export class ExploreService {
     {
         // Generate the Base Prompt
         const serializedModelFields: string = JSON.stringify(modelFields);
-        const prompt = this.promptService.fillByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS, {
+        const prompt = this.promptService.fillByType(PromptTemplateTypeEnum.EXPLORE_QUERY, {
             serializedModelFields,
             userInput,
         });
         const promptResult = await this.sendPromptToBigQuery(prompt);
         const allowedFieldNames: string[] = modelFields.map(field => field.name);
-        const exploreData = new LookerExploreDataModel(promptResult, allowedFieldNames);
-        // call LLM to ask for Pivots
-        const pivotsFromLLM = await this.findPivotsFromLLM(userInput, exploreData.field_names);
-        if (pivotsFromLLM) {
-            exploreData.pivots = pivotsFromLLM;
-        }
+        const exploreData = new LookerExploreDataModel(promptResult, allowedFieldNames);        
         // Validate if word Pivots is present
         if(!this.validateInputForPivots(userInput))
         {
@@ -152,33 +147,6 @@ export class ExploreService {
             return true;
         }
         return false;
-    }
-
-    private async findPivotsFromLLM(
-        userInput: string,
-        potentialFields: Array<string>
-        ): Promise<Array<string>>
-    {
-        let arrayPivots:Array<string> = [];
-        try
-        {
-            const prompt = this.promptService.fillByType(PromptTemplateTypeEnum.PIVOTS, {
-                potentialFields: JSON.stringify(potentialFields),
-                userInput,
-            });
-            const pivotResult = await this.sendPromptToBigQuery(prompt);
-            // TODO: Validate result from schema joi
-            if(pivotResult.pivots != null && pivotResult.pivots.length > 0)
-            {
-                arrayPivots = arrayPivots.concat(pivotResult.pivots);
-            }
-            // Validate results
-            arrayPivots.concat(pivotResult);
-            return arrayPivots;
-        }
-        catch (err) {
-            return arrayPivots;
-        }
     }
 
     public async createExploreQuery(
@@ -228,7 +196,7 @@ export class ExploreService {
             }
         }
         const serializedModelFields = JSON.stringify(limitData);
-        Logger.info("Generate Prompt passing the data");
+        Logger.debug("Generate Prompt passing the data");
         const prompt = this.promptService.fillByType(PromptTemplateTypeEnum.EXPLORATION_OUTPUT, { serializedModelFields, userInput });
         const promptQuery = UtilsHelper.getQueryFromPrompt(UtilsHelper.escapeBreakLine(prompt), this.useNativeBQ, "Output");
         const results = await this.sql.execute<{
