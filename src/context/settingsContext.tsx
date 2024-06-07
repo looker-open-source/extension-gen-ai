@@ -4,12 +4,14 @@ import { StateContextType, ISettings } from '../@types/settings';
 import { ExtensionContext } from '@looker/extension-sdk-react';
 import { ConfigReader } from '../services/ConfigReader';
 import { setConfig } from 'react-hot-loader';
-import { ComboboxOptionObject, Dialog, DialogLayout, Space, Spinner } from '@looker/components';
+import { ComboboxOptionObject, Dialog, DialogLayout, Space, Spinner, Button} from '@looker/components';
 import { PromptService } from '../services/PromptService';
 import { IDashboardBase, ILookmlModel, IRequestAllLookmlModels, IUser } from '@looker/sdk';
 import PromptModel from '../models/PromptModel';
 import { DashboardService } from '../services/DashboardService';
 import { Logger } from '../utils/Logger';
+import './../assets/style.css';
+
 
 export const StateContext = React.createContext<StateContextType | null>(null);
 
@@ -20,6 +22,8 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   const promptService = new PromptService(core40SDK);
   const dashboardService = new DashboardService(core40SDK);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showError, setShowError] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [configSettings, setConfigSettings] = useState<ISettings>({"userId":"", "llmModelSize": "32", "customPrompt": "default", "logLevel": "info", "useNativeBQ": "true"});
   
   // Explores
@@ -104,8 +108,9 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
   }
 
   function generateCombosForTopPrompts(prompts: Array<PromptModel>) {
+    const sortedModels = prompts.sort((a:PromptModel,b:PromptModel) => (a.description!=null&&b.description!=null)?a.description.localeCompare(b.description):0)
     var allValues:ComboboxOptionObject[] = [];
-    prompts.forEach(promptModel => {
+    sortedModels.forEach(promptModel => {
       allValues.push({
         label: promptModel.description,
         value: promptModel.modelExplore + "@@@" + promptModel.prompt
@@ -156,7 +161,7 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
     setExploreCurrentComboModels, setSelectedModelExplore, exploreComboModels,
     explorePromptExamples, exploreComboPromptExamples, exploreCurrentComboModels, 
     selectedModelExplore, prompt, setPrompt, llmModelSize, setLlmModelSize,
-    dashboardCombo, userId, checkUseNativeBQ, setCheckUseNativeBQ}}>
+    dashboardCombo, userId, checkUseNativeBQ, setCheckUseNativeBQ, setShowError, setErrorMessage, errorMessage}}>
       {isMounted && children}
       <Dialog isOpen={isLoading} width={350} >
         <DialogLayout header="Loading Extension...">
@@ -166,6 +171,20 @@ const StateProvider: React.FC<React.ReactNode> = ({ children }) => {
           </Space>
         </DialogLayout>            
       </Dialog>
+      <Dialog isOpen={showError} width={500}>
+        <DialogLayout header="Error" 
+          footer={
+            <>
+              <Button onClick={() => setShowError(false)}>OK</Button>          
+            </>
+          }
+        >
+          <pre className='error-dialog-message'>
+            {errorMessage}
+          </pre>          
+        </DialogLayout>
+             
+    </Dialog>
     </StateContext.Provider>
   );
 };

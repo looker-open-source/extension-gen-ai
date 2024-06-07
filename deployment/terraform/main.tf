@@ -142,6 +142,7 @@ resource "google_bigquery_connection" "connection" {
 
 resource "google_bigquery_job" "create_bq_model_llm" {
   job_id = "create_looker_llm_model-${formatdate("YYYYMMDDhhmmss", timestamp())}"
+  location = var.bq_region
   query {
     query              = <<EOF
 CREATE OR REPLACE MODEL `${var.project_id}.${var.dataset_id_name}.llm_model` 
@@ -237,6 +238,7 @@ EOF
 
 resource "google_bigquery_job" "insert_default_settings" {
   job_id = "insert_default_settings-${formatdate("YYYYMMDDhhmmss", timestamp())}"
+  location = var.bq_region
   query {
     query              = <<EOF
 INSERT INTO `${var.project_id}.${var.dataset_id_name}.settings`(config, userId)
@@ -322,8 +324,8 @@ resource "google_storage_bucket_object" "functions_bq_remote_udf" {
 
 resource "google_cloudfunctions2_function" "functions_bq_remote_udf" {
   name = "looker-extension-genai-bq-remote-${random_string.random.result}"
-  location = "us-central1"
-  description = "Cloud Function to connect BigQuery UDF to Vertex AI text-bison"
+  location = var.deployment_region
+  description = "Cloud Function to connect BigQuery UDF to Vertex AI"
 
   build_config {
     runtime = "python311"
@@ -349,6 +351,7 @@ resource "google_cloudfunctions2_function" "functions_bq_remote_udf" {
 
 resource "google_bigquery_job" "create_bq_remote_udf" {
   job_id = "create_looker_bq_remote_udf-${formatdate("YYYYMMDDhhmmss", timestamp())}"
+  location = var.bq_region
   query {
     query              = <<EOF
 CREATE OR REPLACE FUNCTION 
