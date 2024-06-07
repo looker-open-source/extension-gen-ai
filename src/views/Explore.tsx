@@ -173,7 +173,7 @@ export const Explore: React.FC = () => {
       handleClearAll();
       setLoadingLLM(true);
       // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
-      Logger.info("getting the metadata from looker from the selected explorer");
+      Logger.debug("getting the metadata from looker from the selected explorer");
       if(!currentModelName || !currentExploreName)
       {
         throw new Error('missing model / explore name');
