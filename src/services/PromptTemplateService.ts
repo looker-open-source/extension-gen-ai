@@ -20,7 +20,7 @@ export type PromptTypeMapperType = { [key in PromptTemplateTypeEnum]: string };
 
 export class PromptTemplateService {
     private PromptTypeMapper: PromptTypeMapperType = {
-        [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: `Act as Looker SDK expert, taking into consideration how to run the create_query API with IWriteQuery parameters.
+        [PromptTemplateTypeEnum.EXPLORE_QUERY]: `Act as Looker SDK expert, taking into consideration how to run the create_query API with IWriteQuery parameters.
 Given the context and natural language question, follow the instructions.
 
 Context: {{serializedModelFields}}
