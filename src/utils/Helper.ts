@@ -78,17 +78,26 @@ export class UtilsHelper {
             .map(key => enumerator[key]);
     }
 
-    public static getQueryFromPrompt(singleLineString: string, useNativeBQ: boolean)
+    public static getQueryFromPrompt(prompt: string, useNativeBQ: boolean, promptType: string = "UNSET")
     {
-        var subselect = "";
         if(useNativeBQ == false)
         {            
-            subselect = `SELECT llm.bq_vertex_remote('` + singleLineString + `') AS r, '' AS status `;                        
+            return `#Looker Ext GenAI UDF - ${promptType} - v: ${ConfigReader.CURRENT_VERSION}
+SELECT llm.bq_vertex_remote('${prompt}') AS r, '' AS status`;
         }
-        else
-        {
-           subselect = `SELECT '` + singleLineString + `' AS prompt`;                        
-        } 
-        return subselect;
+        return `#Looker Ext GenAI - ${promptType} - v: ${ConfigReader.CURRENT_VERSION}
+SELECT ml_generate_text_llm_result as r, ml_generate_text_status as status
+FROM
+ML.GENERATE_TEXT(
+    MODEL ${ConfigReader.BQML_MODEL},
+    (
+        SELECT '${prompt}' AS prompt
+    ),
+    STRUCT(
+    0.05 AS temperature,
+    1024 AS max_output_tokens,
+    0.98 AS top_p,
+    TRUE AS flatten_json_output,
+    1 AS top_k));`;
     }
 }

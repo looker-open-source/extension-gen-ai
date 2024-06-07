@@ -9,9 +9,7 @@
 import { UtilsHelper } from "../utils/Helper";
 
 export enum PromptTemplateTypeEnum {
-    FIELDS_FILTERS_PIVOTS_SORTS,
-    PIVOTS,
-    LIMITS,
+    EXPLORE_QUERY,
     EXPLORE_VALIDATE_MERGED,
     DASH_SUMMARIZE,
     EXPLORATION_OUTPUT
@@ -21,7 +19,10 @@ export type PromptTypeMapperType = { [key in PromptTemplateTypeEnum]: string };
 
 export class PromptTemplateService {
     private PromptTypeMapper: PromptTypeMapperType = {
-        [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: `Context: {{serializedModelFields}}
+        [PromptTemplateTypeEnum.EXPLORE_QUERY]: `Act as Looker SDK expert, taking into consideration how to run the create_query API with IWriteQuery parameters.
+Given the context and natural language question, follow the instructions.
+
+Context: {{serializedModelFields}}
 Question: {{userInput}}
 
 1. Extract the exact fields names, filters and sorts from the Context in a JSON format that can help answer the Question.
@@ -32,15 +33,15 @@ Question: {{userInput}}
 6. field_names only contains a list of field_names with the format "table.field"
 7. limit is string and default value is "500" if empty.
 8. Filters have the syntax from Looker
-9. When filtering applying a contains, use the syntax "%word%".
-10.The result must be a valid JSON.
+9. Only add pivot columns to the output if the word "pivot"  or verb "pivotting" is mentioned inside the question.
 
 JSON output format has only the following keys
 {
 "field_names": [],
 "filters": {},
 "sorts": [], 
-"limit": "500"
+"pivots": [],
+"limit": "500",
 }
 
 Examples:
@@ -48,10 +49,10 @@ Q: "What are the top 10 total sales price per brand. With brands: Levi's, Calvin
 {"field_names":["products.brand","order_items.total_sale_price"],"filters":{"products.brand":"Levi's, Calvin Klein, Columbia"}, "limit": "10"}
 
 Q: "What are the top sales price, category, cost pivot per day and filter only orders with more than 15 items"
-{"field_names":["order_items.total_sale_price", "products.category", "inventory_items.cost", "orders.created_date"], "filters": {"order_items.count": "> 15"}, "sorts": ["order_items.total_sales_price desc"]}
+{"field_names":["order_items.total_sale_price", "products.category", "inventory_items.cost", "order_items.created_at_date"], "filters": {"order_items.count": "> 15"}, "sorts": ["order_items.total_sales_price desc"]}
 
 Q: "How many orders were created in the past 7 days"
-{"field_names": ["orders.count"], "filters": {"sales_order.created_date": "7 days"}, "sorts": []}
+{"field_names": ["orders.count"], "filters": {"order_items.created_at_date": "7 days"}, "sorts": []}
 
 Q: "What are the top 10 languages?"
 {"field_names": ["wiki100_m.language","wiki100_m.count"], "filters":{}, "sorts": ["wiki100_m.count desc"], "limit": "10"}
@@ -60,45 +61,15 @@ Q: "What are the states that had the most orders, filter state: California, Neva
 {"field_names": ["orders.count"], "filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}, "sorts": []}
 
 Q: "What are the top 7 brands that had the most sales price in the last 4 months?"
-{"field_names": [ "products.brand", "order_items.total_sale_price" ], "filters": { "order_items.created_date": "4 months" }, "pivots": [], "sorts": ["order_items.total_sale_price desc"], "limit": "7"}        
+{"field_names": [ "products.brand", "order_items.total_sale_price" ], "filters": { "order_items.created_at_date": "4 months" }, "pivots": [], "sorts": ["order_items.total_sale_price desc"], "limit": "7"}
 
-Q: "What are the total views with title containing test in the past 4 years"
-{"field_names":[ "wikipedia_v3_partition.total_views" ], "filters": { "wikipedia_v3_partition.title": "%test%","wikipedia_v3_partition.datehour_year": "4 years ago"},"pivots": [], "sorts": [], "limit": "500"}
+
+Generate the JSON Ouput A.
+Check if the JSON Output A is compliant with looker SDK create_query method
+If not, re-generate it and produce the JSON Output B.
+
+Your response should be ONLY the raw JSON Output B.
 `,
-[PromptTemplateTypeEnum.PIVOTS]: `
-List of Fields: {{potentialFields}}
-Question: {{userInput}}
-
-Analyze the Question above, if it contains the word "pivot" or "pivotting", pick the appropriate fields exclusively from the List of Fields provided.
-Ouput in JSON format:
-{"pivots": [field1, field2]}
-
-Examples:
-List of Fields: [products.brand, products.category, inventory_items.cost, order_items.total_sale_price, orders.created_date]
-Question: "What are the top sales price, category, brand, cost and created day. pivot per created day"
-{"pivots": ["orders.created_date"]}
-
-List of Fields: [products.brand, inventory_items.cost, order_items.total_sale_price, orders.created_date]
-Question: "What are the top sales price per brand and per cost pivotting per date"
-{"pivots": ["orders.created_date"]}
-
-List of Fields: [ wiki100_m.day, wiki100_m.language, wiki100_m.count]
-Question: "What are the top 15 count, language and day. Pivot per day"
-{"pivots": ["wiki100_m.day"]}
-`,
-
-        [PromptTemplateTypeEnum.LIMITS]: `
-Based on the Question: {{userInput}}
-Extract the amount of records that the question wants.
-The limit should be an integer from 1 to 500.
-If nothing can be inferred from the question, use the default value: 500.
-Examples:
-Q: What are the top 10 languages?
-10
-Q: What are the top 50 products with the largest sales amount?
-50
-Q: What are the total sales per month?
-500`,
         [PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED]:`Context: {{mergedResults}}
 The Context provided contains all the possible field_names, filters, pivots and sort.
 Return the JSON with only the fields needed to answer following Question.
@@ -137,7 +108,4 @@ Question: {{userInput}}
         replacedPrompt = UtilsHelper.escapeSpecialCharacter(replacedPrompt);            
         return replacedPrompt;
     }
-
-
-
 }

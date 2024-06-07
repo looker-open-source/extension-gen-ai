@@ -147,7 +147,7 @@ resource "google_bigquery_job" "create_bq_model_llm" {
     query              = <<EOF
 CREATE OR REPLACE MODEL `${var.project_id}.${var.dataset_id_name}.llm_model` 
 REMOTE WITH CONNECTION `${var.project_id}.${var.bq_region}.${var.bq_remote_connection_name}` 
-OPTIONS (endpoint = 'gemini-pro')
+OPTIONS (endpoint = 'gemini-1.5-flash-preview-0514')
 EOF  
     create_disposition = ""
     write_disposition  = ""
@@ -242,8 +242,11 @@ resource "google_bigquery_job" "insert_default_settings" {
   query {
     query              = <<EOF
 INSERT INTO `${var.project_id}.${var.dataset_id_name}.settings`(config, userId)
-VALUES(JSON_OBJECT('logLevel', "info", 'llmModelSize', '32', 'useNativeBQ', "true", 'customPrompt', 
+VALUES(JSON_OBJECT('logLevel', "info", 'llmModelSize', '1000', 'useNativeBQ', "true", 'customPrompt', 
 """
+Act as Looker SDK expert, taking into consideration how to run the create_query API with IWriteQuery parameters.
+Given the context and natural language, follow the instructions.
+
 Context: {{serializedModelFields}}
 Question: {{userInput}}
 
@@ -255,16 +258,15 @@ Question: {{userInput}}
 6. field_names only contains a list of field_names with the format "table.field"
 7. limit is string and default value is "500" if empty.
 8. Filters have the syntax from Looker
-9. When filtering applying a contains, use the syntax "%word%".
-10.Produce a valid complete JSON.
-
+9. Only add pivot columns to the output if the word "pivot"  or verb "pivotting" is mentioned inside the question.
 
 JSON output format has only the following keys
 {
 "field_names": [],
 "filters": {},
 "sorts": [], 
-"limit": "500"
+"pivots": [],
+"limit": "500",
 }
 
 Examples:
@@ -272,10 +274,10 @@ Q: "What are the top 10 total sales price per brand. With brands: Levi's, Calvin
 {"field_names":["products.brand","order_items.total_sale_price"],"filters":{"products.brand":"Levi's, Calvin Klein, Columbia"}, "limit": "10"}
 
 Q: "What are the top sales price, category, cost pivot per day and filter only orders with more than 15 items"
-{"field_names":["order_items.total_sale_price", "products.category", "inventory_items.cost", "orders.created_date"], "filters": {"order_items.count": "> 15"}, "sorts": ["order_items.total_sales_price desc"]}
+{"field_names":["order_items.total_sale_price", "products.category", "inventory_items.cost", "order_items.created_at_date"], "filters": {"order_items.count": "> 15"}, "sorts": ["order_items.total_sales_price desc"]}
 
 Q: "How many orders were created in the past 7 days"
-{"field_names": ["orders.count"], "filters": {"sales_order.created_date": "7 days"}, "sorts": []}
+{"field_names": ["orders.count"], "filters": {"order_items.created_at_date": "7 days"}, "sorts": []}
 
 Q: "What are the top 10 languages?"
 {"field_names": ["wiki100_m.language","wiki100_m.count"], "filters":{}, "sorts": ["wiki100_m.count desc"], "limit": "10"}
@@ -284,10 +286,14 @@ Q: "What are the states that had the most orders, filter state: California, Neva
 {"field_names": ["orders.count"], "filters": {"sales_order.state": "California, Nevada, Washington, Oregon"}, "sorts": []}
 
 Q: "What are the top 7 brands that had the most sales price in the last 4 months?"
-{"field_names": [ "products.brand", "order_items.total_sale_price" ], "filters": { "order_items.created_date": "4 months" }, "pivots": [], "sorts": ["order_items.total_sale_price desc"], "limit": "7"}
+{"field_names": [ "products.brand", "order_items.total_sale_price" ], "filters": { "order_items.created_at_date": "4 months" }, "pivots": [], "sorts": ["order_items.total_sale_price desc"], "limit": "7"}
 
-Q: "What are the total views with title containing test in the past 4 years"
-{"field_names":[ "wikipedia_v3_partition.total_views" ], "filters": { "wikipedia_v3_partition.title": "%test%","wikipedia_v3_partition.datehour_year": "4 years ago"},"pivots": [], "sorts": [], "limit": "500"}
+
+Generate the JSON Ouput A.
+Check if the JSON Output A is compliant with looker SDK create_query method
+If not, re-generate it and produce the JSON Output B.
+
+Your response should be ONLY the raw JSON Output B.
 
 """
 ), null);

@@ -16,14 +16,15 @@ import { ISettings } from "../@types/settings";
 
 
 export class ConfigReader {
-    public static readonly CURRENT_VERSION = "2.9";
-    public static readonly LAST_UPDATED = "04/05/2024";
+
+    public static readonly CURRENT_VERSION = "3.0";
+    public static readonly LAST_UPDATED = "06/07/2024";
     public static readonly BQML_MODEL = "llm.llm_model";
     public static readonly EXPLORE_LOGGING = "llm.explore_logging";
     public static readonly SETTINGS_TABLE = "llm.settings";
     public static readonly EXPLORE_MODELS = "llm.looker_explores";
     public static readonly DEFAULT_USER_ID = "defaultUser";
-    public static readonly DEFAULT_MODEL_SIZE = "32";
+    public static readonly DEFAULT_MODEL_SIZE = "1000";
 
     private sql: LookerSQLService;
     private lookerSDK: Looker40SDK;
@@ -48,7 +49,7 @@ export class ConfigReader {
             const queryToRun = `#Looker GenAI Extension - version: ${ConfigReader.CURRENT_VERSION} - getConfig
     SELECT "${userId}" as userId,
     COALESCE(JSON_VALUE(config["logLevel"]), "info") as logLevel,
-    COALESCE(JSON_VALUE(config["llmModelSize"]), "${ConfigReader.DEFAULT_MODEL_SIZE}") as llmModelSize,
+    "${ConfigReader.DEFAULT_MODEL_SIZE}" as llmModelSize,
     JSON_VALUE(config["customPrompt"]) as customPrompt,
     COALESCE(userId, "-1") as priority, 
     COALESCE(JSON_VALUE(config["useNativeBQ"]), "true") as useNativeBQ
@@ -58,7 +59,7 @@ export class ConfigReader {
         }
         catch(error){
             Logger.error("Could not get custom settings from BigQuery, make sure the table and data exists in the tableReference llm.settings, loading default: ", error);
-            return {userId: userId, logLevel: "info", useNativeBQ: "true", llmModelSize: ConfigReader.DEFAULT_MODEL_SIZE, customPrompt: this.promptService.getByType(PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS)};            
+            return {userId: userId, logLevel: "info", useNativeBQ: "true", llmModelSize: ConfigReader.DEFAULT_MODEL_SIZE, customPrompt: this.promptService.getByType(PromptTemplateTypeEnum.EXPLORE_QUERY)};            
         }
     }
 

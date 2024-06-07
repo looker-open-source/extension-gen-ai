@@ -61,7 +61,7 @@ export const Explore: React.FC = () => {
 
       const customPrompt = configSettings.customPrompt!;
       const customTemplate =  {
-        [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: customPrompt
+        [PromptTemplateTypeEnum.EXPLORE_QUERY]: customPrompt
       };
       promptService = new PromptTemplateService(customTemplate);
     }
@@ -173,7 +173,7 @@ export const Explore: React.FC = () => {
       handleClearAll();
       setLoadingLLM(true);
       // 1. Generate Prompt based on the current selected Looker Explore (Model + ExploreName)
-      Logger.info("getting the metadata from looker from the selected explorer");
+      Logger.debug("getting the metadata from looker from the selected explorer");
       if(!currentModelName || !currentExploreName)
       {
         throw new Error('missing model / explore name');
@@ -191,13 +191,19 @@ export const Explore: React.FC = () => {
       if (!prompt) {
         throw new Error('missing user prompt, unable to create query');
       }
-      Logger.info("generate prompts and send to bigquery");
+      Logger.debug("generate prompts and send to bigquery");
 
       const exploreData: LookerExploreDataModel = await generativeExploreService.generateExploreData(fieldDefinitions, prompt);
-      const exploreQuery = await generativeExploreService.createExploreQuery(exploreData, currentModelName, viewName!);
+      var endTime = performance.now();
+      var elapsedTime = (endTime - startTime)/1000;
+      Logger.info(`Elapsed to get exploreData: ${elapsedTime} s`);
+      Logger.info("ExploreData: " + JSON.stringify(exploreData, null, 2));
+
+      const exploreQuery = await generativeExploreService.createExploreQuery(exploreData, currentModelName, viewName);
       if (!hostUrl) {
         throw new Error('unable to find correct looker hostname to generate explore URL');
       }
+      setLoadingLLM(false);
       const exploreURL = exploreQuery.generateExploreURL(hostUrl);
       // Update the Explore with New QueryId
       LookerEmbedSDK.init(hostUrl);
@@ -207,10 +213,10 @@ export const Explore: React.FC = () => {
                     .connect();
       setCurrentExploreData(exploreData);
       generativeExploreService.logLookerFilterFields(fieldDefinitions, prompt, exploreData, 0);
-      // Try to see if I can answer the question in text format the same way as dashboard and getting data from the queryId
-      Logger.debug("Async try to set the LLM Insight after explore is on");
       try
       {
+        // Try to see if I can answer the question in text format the same way as dashboard and getting data from the queryId
+        Logger.debug("try to set the LLM Insight after explore is on");
         const insight = await generativeExploreService.answerQuestionWithData(prompt, exploreQuery.queryId);
         setLlmInsights(insight);
       }
@@ -220,9 +226,8 @@ export const Explore: React.FC = () => {
         setErrorMessage(errorMessage);
         setShowError(true);
       }
-
-      const endTime = performance.now();
-      const elapsedTime = (endTime - startTime)/1000;
+      endTime = performance.now();
+      elapsedTime = (endTime - startTime)/1000;
       Logger.info(`Elapsed to render explore: ${elapsedTime} s`);
     } catch (error: any) {
       const errorMessage: string = error?.message || "unknown error message";
