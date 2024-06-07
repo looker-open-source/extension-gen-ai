@@ -10,7 +10,6 @@ import { UtilsHelper } from "../utils/Helper";
 
 export enum PromptTemplateTypeEnum {
     EXPLORE_QUERY,
-    PIVOTS,
     EXPLORE_VALIDATE_MERGED,
     DASH_SUMMARIZE,
     EXPLORATION_OUTPUT
