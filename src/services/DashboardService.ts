@@ -40,9 +40,9 @@ export class DashboardService {
         this.dashboardService = new LookerDashboardService(lookerSDK, this.sql);                
     }
     
-    static readonly MAX_CHAR_PER_PROMPT: number = 20000*3;
-    static readonly MAX_CHAR_PER_TILE: number = 20000*3;
-    static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 8000*3;
+    static readonly MAX_CHAR_PER_PROMPT: number = 54000;
+    static readonly MAX_CHAR_PER_TILE: number = 54000;
+    static readonly MIN_SUMMARIZE_CHAR_PER_TILE: number = 24000;
 
     /**
      * Lists all available dashboards
@@ -114,10 +114,17 @@ export class DashboardService {
     {    
         
         const arrayBatchesOfDash:Array<Array<DashboardTile<unknown>>> = [];   
-        // Logic to break the dashboard tiles into batches following the max size of tokens per LLM response
+        // Logic to break the dashboard tiles into batches following the max size of tokens per LLM response        
         for (const element of dashboardElementData.elements) {
             // Data Length
             const tileLength = JSON.stringify(element.data).length;
+            // Needs to check if a single tile exceeds the number of elements, if so, consider 
+            // TODO: in the future get the png and send multimodal prompt
+            if (tileLength > DashboardService.MAX_CHAR_PER_PROMPT)
+            {
+                Logger.debug("Tile data is too large. Ignoring this tile: " + element.title + "length: " + tileLength + " > " + DashboardService.MAX_CHAR_PER_PROMPT)
+                break;
+            }
             let needsToAddElement = true;
             for(const batchOfDash of arrayBatchesOfDash)
             {

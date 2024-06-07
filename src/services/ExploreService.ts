@@ -78,9 +78,9 @@ export class ExploreService {
             BEGIN
             INSERT INTO ${ConfigReader.EXPLORE_LOGGING}(creation_timestamp, userInput, modelFields, llmResult, thumbsUpDownNone) VALUES(
                 CURRENT_TIMESTAMP(),
-                '${userInput}',
-                JSON '${JSON.stringify(modelFields)}',
-                JSON '${JSON.stringify(result)}',
+                '${UtilsHelper.escapeQueryAll(userInput)}',
+                JSON '${UtilsHelper.escapeQueryAll(JSON.stringify(modelFields))}',
+                JSON '${UtilsHelper.escapeQueryAll(JSON.stringify(result))}',
                 ${thumbsUpDownNone}
                 );
             SELECT 1; 

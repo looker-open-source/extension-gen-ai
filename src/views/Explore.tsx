@@ -29,7 +29,6 @@ import './../assets/style.css';
 export const Explore: React.FC = () => {
   const { core40SDK } =  useContext(ExtensionContext)
   const [loadingLLM, setLoadingLLM] = useState<boolean>(false)
-  const [errorMessage, setErrorMessage] = useState<string>()
   const [currentModelName, setCurrentModelName] = useState<string>()
   const [currentExploreName, setCurrentExploreName] = useState<string>()
   const [exploreDivElement, setExploreDivElement] = useState<HTMLDivElement>()
@@ -38,7 +37,7 @@ export const Explore: React.FC = () => {
   const { configSettings, exploreComboPromptExamples, explorePromptExamples, exploreComboModels,
     exploreCurrentComboModels,selectedModelExplore ,setExploreCurrentComboModels,
     setSelectedModelExplore, prompt, setPrompt, llmModelSize,
-    checkUseNativeBQ } = React.useContext(StateContext) as StateContextType;
+    checkUseNativeBQ, setShowError, setErrorMessage } = React.useContext(StateContext) as StateContextType;
 
   const [currentFields, setCurrentFields] = useState<FieldMetadata[]>();
   const [currentExploreData, setCurrentExploreData] = useState<LookerExploreDataModel>();
@@ -55,8 +54,7 @@ export const Explore: React.FC = () => {
     if(selectedModelExplore)
     {
       selectComboExplore(selectedModelExplore);
-    }
-    setErrorMessage(undefined);
+    }    
 
     var promptService = new PromptTemplateService();
     try {
@@ -82,6 +80,8 @@ export const Explore: React.FC = () => {
     }
     else{
       Logger.error("Error selecting combobox, modelName and exploreName are null or not divided by .");
+      setErrorMessage("Error selecting combobox, modelName and exploreName are null or not divided by .");
+      setShowError(true);
     }
     setSelectedModelExplore(selectedValue);
   });
@@ -146,7 +146,9 @@ export const Explore: React.FC = () => {
       }
       generativeExploreService!.logLookerFilterFields(currentFields!, prompt, currentExploreData!, upDown?1:0);
     } catch (error: any) {
-      const errorMessage = error?.message || "unknown error message";
+      const errorMessage: string = error?.message || "unknown error message";
+      setErrorMessage(errorMessage);
+      setShowError(true);
       Logger.error("unable to handle thumbs action", errorMessage);
     }
   }
@@ -212,15 +214,21 @@ export const Explore: React.FC = () => {
         const insight = await generativeExploreService.answerQuestionWithData(prompt, exploreQuery.queryId);
         setLlmInsights(insight);
       }
-      catch(error)
-      {
-        Logger.error("Failed to get LLM Insight Output ", error);
+      catch(error: any) {
+        const errorMessage: string = error?.message || "unknown error message";
+        Logger.error("Failed to get LLM Insight Output ", errorMessage);
+        setErrorMessage(errorMessage);
+        setShowError(true);
       }
       const endTime = performance.now();
       const elapsedTime = (endTime - startTime)/1000;
       Logger.info(`Elapsed to render explore: ${elapsedTime} s`);
     } catch (error: any) {
-      Logger.error('unable load LLM explore response', error?.message || "unknown error");
+      const errorMessage: string = error?.message || "unknown error message";
+      Logger.error('unable load LLM explore response', errorMessage);
+      setErrorMessage(errorMessage);
+      setShowError(true);
+
     } finally {
       setLoadingLLM(false);
     }
