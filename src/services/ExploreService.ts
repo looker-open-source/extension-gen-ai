@@ -183,7 +183,7 @@ export class ExploreService {
     }
 
     public async answerQuestionWithData(userInput: string, queryId: string): Promise<string> {
-        Logger.info("Getting the raw data from the explore");
+        Logger.debug("Getting the raw data from the explore");
         let elementData: Array<any> = await this.sql.executeByQueryId(queryId);
         // max number of elements to pass to dashboard
         let totalChars = 0;
