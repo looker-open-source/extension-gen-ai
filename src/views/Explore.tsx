@@ -61,7 +61,7 @@ export const Explore: React.FC = () => {
 
       const customPrompt = configSettings.customPrompt!;
       const customTemplate =  {
-        [PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS]: customPrompt
+        [PromptTemplateTypeEnum.EXPLORE_QUERY]: customPrompt
       };
       promptService = new PromptTemplateService(customTemplate);
     }
@@ -191,13 +191,18 @@ export const Explore: React.FC = () => {
       if (!prompt) {
         throw new Error('missing user prompt, unable to create query');
       }
-      Logger.info("generate prompts and send to bigquery");
+      Logger.debug("generate prompts and send to bigquery");
 
       const exploreData: LookerExploreDataModel = await generativeExploreService.generateExploreData(fieldDefinitions, prompt);
+      var endTime = performance.now();
+      var elapsedTime = (endTime - startTime)/1000;
+      Logger.info(`Elapsed to get exploreData: ${elapsedTime} s`);
+      Logger.info("ExploreData: " + JSON.stringify(exploreData, null, 2));
       const exploreQuery = await generativeExploreService.createExploreQuery(exploreData, currentModelName, viewName!);
       if (!hostUrl) {
         throw new Error('unable to find correct looker hostname to generate explore URL');
       }
+      setLoadingLLM(false);
       const exploreURL = exploreQuery.generateExploreURL(hostUrl);
       // Update the Explore with New QueryId
       LookerEmbedSDK.init(hostUrl);
@@ -221,8 +226,8 @@ export const Explore: React.FC = () => {
         setShowError(true);
       }
 
-      const endTime = performance.now();
-      const elapsedTime = (endTime - startTime)/1000;
+      endTime = performance.now();
+      elapsedTime = (endTime - startTime)/1000;
       Logger.info(`Elapsed to render explore: ${elapsedTime} s`);
     } catch (error: any) {
       const errorMessage: string = error?.message || "unknown error message";

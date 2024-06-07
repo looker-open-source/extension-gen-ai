@@ -14,6 +14,7 @@ import { ExtensionContext } from '@looker/extension-sdk-react'
 import { ISettings, StateContextType } from '../@types/settings'
 import { StateContext } from '../context/settingsContext'
 import { custom } from 'joi'  
+import { ConfigReader } from '../services/ConfigReader'
 
 /**
  * Settings
@@ -27,7 +28,7 @@ export const Settings: React.FC = () => {
   const promptService: PromptService = new PromptService(core40SDK);
   const [logLevel, setLogLevel] = useState<string>("info");
   const [customPrompt, setCustomPrompt] = useState<string>("");
-  const { configSettings, saveSettings, resetSettings , llmModelSize, setLlmModelSize, checkUseNativeBQ, setCheckUseNativeBQ} = React.useContext(StateContext) as StateContextType;
+  const { configSettings, saveSettings, resetSettings, checkUseNativeBQ, setCheckUseNativeBQ} = React.useContext(StateContext) as StateContextType;
   
   
 
@@ -57,15 +58,6 @@ export const Settings: React.FC = () => {
     Logger.debug(comboboxComponent.value);
   }
 
-
-  const handleChangeModelSize= (comboboxComponent: MaybeComboboxOptionObject) => {
-    if (!comboboxComponent) {
-      throw new Error('missing combobox componenet');
-    }    
-    setLlmModelSize(comboboxComponent.value);
-    Logger.debug("Model Size: "+ comboboxComponent.value);
-  }
-
   const handleChangeUseNativeBQ = () => {
     setCheckUseNativeBQ(!checkUseNativeBQ);
     Logger.debug("Use Native BQ: "+ !checkUseNativeBQ);
@@ -78,8 +70,8 @@ export const Settings: React.FC = () => {
     saveSettings({
       userId: configSettings.userId,
       logLevel: logLevel,
-      llmModelSize: llmModelSize,
       customPrompt: customPrompt,
+      llmModelSize: ConfigReader.DEFAULT_MODEL_SIZE,
       useNativeBQ: checkUseNativeBQ.toString()
     });       
   }
@@ -89,7 +81,6 @@ export const Settings: React.FC = () => {
     const resetConfig = await resetSettings();
     loadSettings(resetConfig);   
   }
-
 
   return (
     <ComponentsProvider>          
@@ -108,17 +99,11 @@ export const Settings: React.FC = () => {
             </ComboboxList>
           </Combobox>
           <Label>LLM Model Size</Label>
-          <Combobox width={"100px"} value={llmModelSize} onChange={handleChangeModelSize}>
-            <ComboboxInput />
-            <ComboboxList>
-              <ComboboxOption value="32" />
-            </ComboboxList>
-          </Combobox>
-          </Space>          
           <FieldCheckbox
           label="Yes - Use Native BQML.GENERATE_TEXT"
           checked={checkUseNativeBQ} 
           onChange={handleChangeUseNativeBQ}/>
+          </Space>          
 
           <FieldTextArea
             width="100%"

@@ -72,16 +72,7 @@ export class ExploreService {
         const shardedPrompts:Array<string> = [];
         // Prompt for Limits only needs the userInput
         switch(promptTypeEnum)
-        {
-            case PromptTemplateTypeEnum.LIMITS:
-                shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput }));
-                break;
-            case PromptTemplateTypeEnum.PIVOTS:
-                if(potentialFields!=null)
-                {
-                    shardedPrompts.push(this.promptService.fillByType(promptTypeEnum, { userInput, potentialFields}));
-                }
-                break;
+        {            
             case PromptTemplateTypeEnum.EXPLORE_VALIDATE_MERGED:
                 if(mergedResults!=null && userInput!=null)
                 {
@@ -139,7 +130,7 @@ export class ExploreService {
             SELECT 1; 
             END`;        
             const results = await this.sql.execute(queryToRun);
-            Logger.info("looker filter logs persisted sucessfuly", results);
+            Logger.debug("looker filter logs persisted sucessfuly", results);
         }
         catch(error)
         {
@@ -177,7 +168,7 @@ export class ExploreService {
         userInput: string): Promise<LookerExploreDataModel>
     {
         // Generate the Base Prompt
-        const fieldsPrompts: Array<string> = this.generatePrompt(modelFields, userInput, PromptTemplateTypeEnum.FIELDS_FILTERS_PIVOTS_SORTS);
+        const fieldsPrompts: Array<string> = this.generatePrompt(modelFields, userInput, PromptTemplateTypeEnum.EXPLORE_QUERY);
         const llmChunkedResults = await this.retrieveLookerParametersFromLLM(fieldsPrompts);
         const allowedFieldNames: string[] = modelFields.map(field => field.name);
         let mergedResults = new LookerExploreDataModel({
@@ -206,12 +197,7 @@ export class ExploreService {
                 Logger.error(error.message, chunkResult);
                 throw new Error('LLM result does not contain a valid JSON');
             }
-        }
-        // call LLM to ask for Limits and Pivots
-        const pivotsFromLLM = await this.findPivotsFromLLM(userInput, mergedResults.field_names);
-        if (pivotsFromLLM) {
-            mergedResults.pivots = pivotsFromLLM;
-        }
+        }               
         // Only execute merged from LLM logic if needed
         if(llmChunkedResults.length > 1)
         {
@@ -239,35 +225,35 @@ export class ExploreService {
         return false;
     }
 
-    private async findPivotsFromLLM(
-        userInput: string,
-        potentialFields: Array<string>
-        ): Promise<Array<string>>
-    {
-        let arrayPivots:Array<string> = [];
-        try
-        {
-            const potentialFieldsString = JSON.stringify(potentialFields);
-            // Generate Prompt returns an array, gets the first for the LIMIT
-            const promptPivots = this.generatePrompt([], userInput, PromptTemplateTypeEnum.PIVOTS, potentialFieldsString);
-            const results  = await this.retrieveLookerParametersFromLLM(promptPivots);
-            const pivotResult = UtilsHelper.firstElement(results).r;
-            const cleanResult = UtilsHelper.cleanResult(pivotResult);
-            // TODO: Validate result from schema joi
-            var llmResultLine = JSON.parse(cleanResult);
-            if(llmResultLine.pivots != null && llmResultLine.pivots.length > 0)
-            {
-                arrayPivots = arrayPivots.concat(llmResultLine.pivots);
-            }
-            // Validate results
-            arrayPivots.concat(pivotResult);
-            return arrayPivots;
-        }
-        catch (err) {
-            return arrayPivots;
-            // throw new Error("Pivot not returning fields, going to default");
-        }
-    }
+    // private async findPivotsFromLLM(
+    //     userInput: string,
+    //     potentialFields: Array<string>
+    //     ): Promise<Array<string>>
+    // {
+    //     let arrayPivots:Array<string> = [];
+    //     try
+    //     {
+    //         const potentialFieldsString = JSON.stringify(potentialFields);
+    //         // Generate Prompt returns an array, gets the first for the LIMIT
+    //         const promptPivots = this.generatePrompt([], userInput, PromptTemplateTypeEnum.PIVOTS, potentialFieldsString);
+    //         const results  = await this.retrieveLookerParametersFromLLM(promptPivots);
+    //         const pivotResult = UtilsHelper.firstElement(results).r;
+    //         const cleanResult = UtilsHelper.cleanResult(pivotResult);
+    //         // TODO: Validate result from schema joi
+    //         var llmResultLine = JSON.parse(cleanResult);
+    //         if(llmResultLine.pivots != null && llmResultLine.pivots.length > 0)
+    //         {
+    //             arrayPivots = arrayPivots.concat(llmResultLine.pivots);
+    //         }
+    //         // Validate results
+    //         arrayPivots.concat(pivotResult);
+    //         return arrayPivots;
+    //     }
+    //     catch (err) {
+    //         return arrayPivots;
+    //         // throw new Error("Pivot not returning fields, going to default");
+    //     }
+    // }
 
     private async checkMergedFromLLM(
         mergedModel: LookerExploreDataModel,
@@ -330,7 +316,7 @@ export class ExploreService {
 
     public async answerQuestionWithData(prompt: string, queryId: string): Promise<string> {
         const userInput = prompt;
-        Logger.info("Getting the raw data from the explore");
+        Logger.debug("Getting the raw data from the explore");
         let elementData: Array<any> = await this.sql.executeByQueryId(queryId);
         // max number of elements to pass to dashboard
         let totalChars = 0;
@@ -343,7 +329,7 @@ export class ExploreService {
             }
         }
         const serializedModelFields = JSON.stringify(limitData);
-        Logger.info("Generate Prompt passing the data");
+        Logger.debug("Generate Prompt passing the data");
         const promptToRun = this.promptService.fillByType(PromptTemplateTypeEnum.EXPLORATION_OUTPUT, { serializedModelFields, userInput});
         var queryPrompt = UtilsHelper.getQueryFromPrompt(UtilsHelper.escapeBreakLine(promptToRun), this.useNativeBQ);
         const queryToRun = this.buildBigQueryLLMWithType(queryPrompt, "Output");
