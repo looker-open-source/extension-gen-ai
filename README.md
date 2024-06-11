@@ -11,6 +11,8 @@
 ## 1. Overview
 This repository compiles prescriptive code samples demonstrating how to create a Looker Extension integrating Looker with Vertex AI Large Language Models (LLMs).
 
+**Looking for the official Looker Explore Assistant?**  Check out the repository at [https://github.com/looker-open-source/looker-explore-assistant/](https://github.com/looker-open-source/looker-explore-assistant/).
+
 Looker GenAI is an extension created to showcase interactivity between Looker and LLM with 2 main applications:
 
 1.1.  **Generative Explore:** Using Natural Language to ask your data about specific things. The LLM Model will try to find the right fields, filters, sorts, pivots and limits to explore the data.
