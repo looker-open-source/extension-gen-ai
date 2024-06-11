@@ -1,4 +1,4 @@
-# Looker GenAI Extension ∏
+# Looker GenAI Extension
 
   - [1. Overview](#1-overview)
   - [2. Solutions architecture overview](#2-solutions-architecture-overview)
