@@ -63,6 +63,7 @@ This section guides you through deploying the necessary infrastructure using Ter
    ```
 
    Alternatively, open directly in Cloud Shell:
+   
    [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Flooker-open-source%2Fextension-gen-ai&shellonly=true&cloudshell_workspace=deployment%2Fterraform)
 
 2. **Set Project ID:**
