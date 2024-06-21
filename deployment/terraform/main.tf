@@ -98,6 +98,22 @@ resource "google_project_iam_member" "bigquery_connection_remote_model" {
 }
 
 
+resource "google_project_iam_member" "log_writer" {
+  project = google_service_account.looker_llm_service_account.project
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.looker_llm_service_account.email}"
+}
+resource "google_project_iam_member" "artifact_registry_writer" {
+  project = google_service_account.looker_llm_service_account.project
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${google_service_account.looker_llm_service_account.email}"
+}
+resource "google_project_iam_member" "storage_object_admin" {
+  project = google_service_account.looker_llm_service_account.project
+  role    = "roles/storage.objectAdmin"
+  member  = "serviceAccount:${google_service_account.looker_llm_service_account.email}"
+}
+
 
 resource "google_project_iam_member" "iam_service_account_act_as" {
   project    = var.project_id
@@ -342,6 +358,7 @@ resource "google_cloudfunctions2_function" "functions_bq_remote_udf" {
         object = google_storage_bucket_object.functions_bq_remote_udf.name
       }
     }
+    service_account = google_service_account.looker_llm_service_account.id
   }
 
   service_config {
