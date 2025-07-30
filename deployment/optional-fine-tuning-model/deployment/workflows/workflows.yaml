@@ -171,4 +171,3 @@ main:
               bindings:
                 - members: ${service_account}
                   role: "roles/cloudfunctions.invoker"
-
