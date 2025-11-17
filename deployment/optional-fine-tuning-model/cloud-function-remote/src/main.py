@@ -26,7 +26,7 @@ import os
 import json
  
 
-PROJECT_ID = os.environ.get("PROJECT_ID", "PROJECT_ID1") # @param {type:"string"}
+PROJECT_ID = os.environ.get("PROJECT_ID", "PROJECT_ID") # @param {type:"string"}
 LOCATION = os.environ.get("LOCATION", "us-central1")  # @param {type:"string"}
 TUNED_MODEL_URL = os.environ.get("TUNED_MODEL_URL", "projects/94990521171/locations/us-central1/models/7522623261755047936")
 CHAR_PER_TOKEN = 4
@@ -166,4 +166,3 @@ def generate_prompt_chunks(prompt):
 
   print(return_dict)
   return json.dumps(return_dict)
-
