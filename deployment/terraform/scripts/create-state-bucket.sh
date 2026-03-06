@@ -9,8 +9,8 @@ BUCKET_NAME="$BUCKET_PREFIX$PROJECT_ID"
 PROVIDER_FILE_PATH="./provider.tf"
 echo "checking if tf state bucket exists ($BUCKET_NAME)"
 # If the bucket does not exist, create it
-if ! gsutil ls -b "gs://$BUCKET_NAME" &>/dev/null; then
-   gsutil mb "gs://$BUCKET_NAME"
+if ! gcloud storage ls --buckets "gs://$BUCKET_NAME" &>/dev/null; then
+   gcloud storage buckets create "gs://$BUCKET_NAME"
    echo "Bucket created successfully!"
 else
    echo "Bucket already exists."
